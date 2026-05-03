@@ -24,10 +24,39 @@ type Service interface {
 	SeedLocales() error
 }
 
+	"atlas_food/internal/pkg/utils"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// Service - interface untuk business logic survey
+type Service interface {
+	CreateSurvey(req CreateSurveyRequest, createdBy string) (*SurveyResponse, error)
+	GetSurveyByID(id string) (*SurveyResponse, error)
+	ListSurveys(createdBy string, page, limit int) (*SurveyListResponse, error)
+	UpdateSurvey(id string, req UpdateSurveyRequest) (*SurveyResponse, error)
+	DeleteSurvey(id string) error
+	CloneSurvey(id string, req CloneSurveyRequest, createdBy string) (*SurveyResponse, error)
+	GenerateAccessToken(surveyID string) (*AccessTokenResponse, error)
+
+	// Public/Respondent operations
+	GetPublicSurveyByToken(token string) (*PublicSurveyResponse, error)
+	JoinSurvey(token string, userID *string, req JoinSurveyRequest) (*JoinSurveyResponse, error)
+
+	// Locale operations
+	GetAllLocales() ([]Locale, error)
+}
+
+// surveyService - implementasi Service
 type surveyService struct {
 	repo Repository
 }
 
+// NewService - factory function
 func NewService(repo Repository) Service {
 	return &surveyService{repo: repo}
 }
@@ -92,6 +121,44 @@ func (s *surveyService) Create(req CreateSurveyRequest, createdBy string) (*Surv
 	localeID := req.LocaleID
 	if localeID <= 0 {
 		localeID = 1
+// CreateSurvey - buat survey baru
+func (s *surveyService) CreateSurvey(req CreateSurveyRequest, createdBy string) (*SurveyResponse, error) {
+	// Cek slug unik
+	exists, err := s.repo.CountSurveysBySlug(req.Slug)
+	if err != nil {
+		return nil, errors.New("gagal cek slug")
+	}
+	if exists > 0 {
+		return nil, utils.NewAppError(409, "SLUG_EXISTS", "Slug sudah digunakan")
+	}
+
+	// Parse meals_config ke JSON string
+	mealsJSON, err := json.Marshal(req.MealsConfig)
+	if err != nil {
+		return nil, errors.New("gagal parse meals_config")
+	}
+
+	// Parse prompts ke JSON string
+	promptsJSON, _ := json.Marshal(req.Prompts)
+
+	// Parse dates
+	var startDate, endDate *time.Time
+	if req.StartDate != nil {
+		sd, _ := time.Parse("2006-01-02", *req.StartDate)
+		startDate = &sd
+	}
+	if req.EndDate != nil {
+		ed, _ := time.Parse("2006-01-02", *req.EndDate)
+		endDate = &ed
+	}
+
+	// Generate access token
+	accessToken := uuid.New().String()
+
+	// Default locale
+	localeID := req.LocaleID
+	if localeID == 0 {
+		localeID = 1 // default Indonesia
 	}
 
 	survey := &Survey{
@@ -106,6 +173,16 @@ func (s *surveyService) Create(req CreateSurveyRequest, createdBy string) (*Surv
 		EndDate:     endDate,
 		Status:      status,
 		AccessToken: strings.ReplaceAll(uuid.New().String(), "-", ""),
+		Slug:        req.Slug,
+		Name:        req.Name,
+		Description: req.Description,
+		MealsConfig: string(mealsJSON),
+		Prompts:     string(promptsJSON),
+		LocaleID:    localeID,
+		StartDate:   startDate,
+		EndDate:     endDate,
+		Status:      "draft",
+		AccessToken: accessToken,
 		CreatedBy:   createdBy,
 	}
 
@@ -359,5 +436,319 @@ func mapSurveyToResponse(s *Survey) SurveyResponse {
 		AccessToken: s.AccessToken,
 		CreatedBy:   s.CreatedBy,
 		CreatedAt:   s.CreatedAt.Format(time.RFC3339),
+		return nil, errors.New("gagal membuat survey")
+	}
+
+	return s.mapToResponse(survey), nil
+}
+
+// GetSurveyByID - ambil detail survey
+func (s *surveyService) GetSurveyByID(id string) (*SurveyResponse, error) {
+	survey, err := s.repo.GetSurveyByID(id)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+	return s.mapToResponse(survey), nil
+}
+
+// ListSurveys - list survey dengan pagination
+func (s *surveyService) ListSurveys(createdBy string, page, limit int) (*SurveyListResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	surveys, total, err := s.repo.ListSurveys(createdBy, page, limit)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data survey")
+	}
+
+	result := make([]ListSurveysResponse, len(surveys))
+	for i, sv := range surveys {
+		var startDate, endDate *string
+		if sv.StartDate != nil {
+			sd := sv.StartDate.Format("2006-01-02")
+			startDate = &sd
+		}
+		if sv.EndDate != nil {
+			ed := sv.EndDate.Format("2006-01-02")
+			endDate = &ed
+		}
+
+		// Hitung participant count
+		count, _ := s.repo.CountParticipantsBySurvey(sv.ID)
+
+		result[i] = ListSurveysResponse{
+			ID:               sv.ID,
+			Slug:             sv.Slug,
+			Name:             sv.Name,
+			Status:           sv.Status,
+			StartDate:        startDate,
+			EndDate:          endDate,
+			ParticipantCount: int(count),
+			CreatedAt:        sv.CreatedAt.Format("2006-01-02"),
+		}
+	}
+
+	return &SurveyListResponse{
+		Surveys: result,
+		Total:   total,
+		Page:    page,
+		Limit:   limit,
+	}, nil
+}
+
+// UpdateSurvey - update data survey
+func (s *surveyService) UpdateSurvey(id string, req UpdateSurveyRequest) (*SurveyResponse, error) {
+	survey, err := s.repo.GetSurveyByID(id)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Update field yang dikirim
+	if req.Name != "" {
+		survey.Name = req.Name
+	}
+	if req.Description != "" {
+		survey.Description = req.Description
+	}
+	if req.MealsConfig != nil {
+		mealsJSON, _ := json.Marshal(req.MealsConfig)
+		survey.MealsConfig = string(mealsJSON)
+	}
+	promptsJSON, _ := json.Marshal(req.Prompts)
+	survey.Prompts = string(promptsJSON)
+	if req.LocaleID > 0 {
+		survey.LocaleID = req.LocaleID
+	}
+	if req.Status != "" {
+		survey.Status = req.Status
+	}
+	if req.StartDate != nil {
+		sd, _ := time.Parse("2006-01-02", *req.StartDate)
+		survey.StartDate = &sd
+	}
+	if req.EndDate != nil {
+		ed, _ := time.Parse("2006-01-02", *req.EndDate)
+		survey.EndDate = &ed
+	}
+
+	if err := s.repo.UpdateSurvey(survey); err != nil {
+		return nil, errors.New("gagal update survey")
+	}
+
+	return s.mapToResponse(survey), nil
+}
+
+// DeleteSurvey - hapus survey
+func (s *surveyService) DeleteSurvey(id string) error {
+	_, err := s.repo.GetSurveyByID(id)
+	if err != nil {
+		return utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	return s.repo.DeleteSurvey(id)
+}
+
+// CloneSurvey - duplikat survey
+func (s *surveyService) CloneSurvey(id string, req CloneSurveyRequest, createdBy string) (*SurveyResponse, error) {
+	// Cek slug baru
+	exists, _ := s.repo.CountSurveysBySlug(req.NewSlug)
+	if exists > 0 {
+		return nil, utils.NewAppError(409, "SLUG_EXISTS", "Slug baru sudah digunakan")
+	}
+
+	// Ambil survey asli
+	original, err := s.repo.GetSurveyByID(id)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Buat survey baru dengan data dari original
+	newSurvey := &Survey{
+		ID:          uuid.New().String(),
+		Slug:        req.NewSlug,
+		Name:        req.NewName,
+		Description: original.Description,
+		MealsConfig: original.MealsConfig,
+		Prompts:     original.Prompts,
+		LocaleID:    original.LocaleID,
+		Status:      "draft",
+		AccessToken: uuid.New().String(),
+		CreatedBy:   createdBy,
+	}
+
+	if err := s.repo.CreateSurvey(newSurvey); err != nil {
+		return nil, errors.New("gagal clone survey")
+	}
+
+	return s.mapToResponse(newSurvey), nil
+}
+
+// GenerateAccessToken - generate token baru untuk survey
+func (s *surveyService) GenerateAccessToken(surveyID string) (*AccessTokenResponse, error) {
+	survey, err := s.repo.GetSurveyByID(surveyID)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Generate token baru
+	survey.AccessToken = uuid.New().String()
+	if err := s.repo.UpdateSurvey(survey); err != nil {
+		return nil, errors.New("gagal update token")
+	}
+
+	return &AccessTokenResponse{
+		SurveyID:    survey.ID,
+		AccessToken: survey.AccessToken,
+		AccessURL:   fmt.Sprintf("/s/%s", survey.AccessToken),
+	}, nil
+}
+
+// GetPublicSurveyByToken - untuk respondent akses survey
+func (s *surveyService) GetPublicSurveyByToken(token string) (*PublicSurveyResponse, error) {
+	survey, err := s.repo.GetSurveyByAccessToken(token)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Parse meals_config
+	var mealsConfig MealsConfig
+	json.Unmarshal([]byte(survey.MealsConfig), &mealsConfig)
+
+	// Parse prompts
+	var prompts PromptsConfig
+	json.Unmarshal([]byte(survey.Prompts), &prompts)
+
+	var startDate, endDate *string
+	if survey.StartDate != nil {
+		sd := survey.StartDate.Format("2006-01-02")
+		startDate = &sd
+	}
+	if survey.EndDate != nil {
+		ed := survey.EndDate.Format("2006-01-02")
+		endDate = &ed
+	}
+
+	return &PublicSurveyResponse{
+		ID:          survey.ID,
+		Name:        survey.Name,
+		Description: survey.Description,
+		MealsConfig: mealsConfig,
+		Prompts:     prompts,
+		Locale: LocaleInfo{
+			ID:   survey.Locale.ID,
+			Code: survey.Locale.Code,
+			Name: survey.Locale.Name,
+		},
+		StartDate: startDate,
+		EndDate:   endDate,
+		Status:    survey.Status,
+	}, nil
+}
+
+// JoinSurvey - respondent join survey
+func (s *surveyService) JoinSurvey(token string, userID *string, req JoinSurveyRequest) (*JoinSurveyResponse, error) {
+	survey, err := s.repo.GetSurveyByAccessToken(token)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Cek status survey
+	if survey.Status != "active" {
+		return nil, utils.NewAppError(403, "SURVEY_NOT_ACTIVE", "Survey tidak aktif")
+	}
+
+	// Cek tanggal
+	now := time.Now()
+	if survey.StartDate != nil && now.Before(*survey.StartDate) {
+		return nil, utils.NewAppError(403, "SURVEY_NOT_STARTED", "Survey belum dimulai")
+	}
+	if survey.EndDate != nil && now.After(*survey.EndDate) {
+		return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
+	}
+
+	// Cek apakah user sudah pernah join
+	if userID != nil {
+		existing, _ := s.repo.GetParticipantBySurveyAndUser(survey.ID, *userID)
+		if existing != nil {
+			return nil, utils.NewAppError(409, "ALREADY_JOINED", "Anda sudah bergabung di survey ini")
+		}
+	}
+
+	// Buat participant
+	participant := &SurveyParticipant{
+		ID:          uuid.New().String(),
+		SurveyID:    survey.ID,
+		UserID:      userID,
+		Alias:       req.Alias,
+		IsAnonymous: userID == nil,
+	}
+
+	if err := s.repo.CreateParticipant(participant); err != nil {
+		return nil, errors.New("gagal join survey")
+	}
+
+	// Parse meals_config & prompts untuk response
+	var mealsConfig MealsConfig
+	json.Unmarshal([]byte(survey.MealsConfig), &mealsConfig)
+	var prompts PromptsConfig
+	json.Unmarshal([]byte(survey.Prompts), &prompts)
+
+	return &JoinSurveyResponse{
+		ParticipantID: participant.ID,
+		SurveyID:      survey.ID,
+		SurveyName:    survey.Name,
+		MealsConfig:   mealsConfig,
+		Prompts:       prompts,
+	}, nil
+}
+
+// GetAllLocales - ambil semua locales
+func (s *surveyService) GetAllLocales() ([]Locale, error) {
+	return s.repo.GetAllLocales()
+}
+
+// Helper: map Survey ke SurveyResponse
+func (s *surveyService) mapToResponse(survey *Survey) *SurveyResponse {
+	// Parse meals_config
+	var mealsConfig MealsConfig
+	json.Unmarshal([]byte(survey.MealsConfig), &mealsConfig)
+
+	// Parse prompts
+	var prompts PromptsConfig
+	json.Unmarshal([]byte(survey.Prompts), &prompts)
+
+	var startDate, endDate *string
+	if survey.StartDate != nil {
+		sd := survey.StartDate.Format("2006-01-02")
+		startDate = &sd
+	}
+	if survey.EndDate != nil {
+		ed := survey.EndDate.Format("2006-01-02")
+		endDate = &ed
+	}
+
+	return &SurveyResponse{
+		ID:          survey.ID,
+		Slug:        survey.Slug,
+		Name:        survey.Name,
+		Description: survey.Description,
+		MealsConfig: mealsConfig,
+		Prompts:     prompts,
+		Locale: LocaleInfo{
+			ID:   survey.Locale.ID,
+			Code: survey.Locale.Code,
+			Name: survey.Locale.Name,
+		},
+		StartDate: startDate,
+		EndDate:   endDate,
+		Status:    survey.Status,
+		CreatedBy: survey.CreatedBy,
+		AccessURL: fmt.Sprintf("/s/%s", survey.AccessToken),
+		CreatedAt: survey.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt: survey.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}
 }

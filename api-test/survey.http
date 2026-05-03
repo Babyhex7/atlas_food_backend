@@ -1,191 +1,125 @@
-### =============================================================================
-### ATLAS FOOD — SURVEY MANAGEMENT (ADMIN)
-### =============================================================================
+# ============================================
+# SURVEY API TESTS
+# ============================================
 
-@baseUrl = http://localhost:8080/api/v1
-
-# Auth credentials untuk admin test
-# Harus cocok dengan ADMIN_SEED_* di .env
-@adminEmail = admin@mail.com
-@adminPassword = Password123!
-@adminName = Admin Atlas
-
-# Dynamic Token (Otomatis terisi setelah Login)
-@adminAccessToken = {{login.response.body.data.access_token}}
-
-### =============================================================================
-### SETUP: Register & Login Admin
-### =============================================================================
-
-### 1. Login Admin (gunakan akun seed, bukan register)
-# @name login
-POST {{baseUrl}}/auth/login
-Content-Type: application/json
-
-{
-  "email": "{{adminEmail}}",
-  "password": "{{adminPassword}}"
-}
+### LOCALES - List semua bahasa
+GET http://localhost:8080/api/v1/locales
 
 ###
 
-### =============================================================================
-### SURVEY MANAGEMENT TESTS
-### =============================================================================
+# ============================================
+# ADMIN SURVEY ENDPOINTS (Protected)
+# ============================================
 
-### 3. Create Survey
-# @name createSurvey
-POST {{baseUrl}}/admin/surveys
-Authorization: Bearer {{adminAccessToken}}
+### 1. CREATE SURVEY - Buat survey baru
+POST http://localhost:8080/api/v1/admin/surveys
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-  "name": "Survey Gizi SD Kelas 5 2024",
-  "description": "Pengumpulan data gizi siswa kelas 5 SD",
-  "meals_config": [
-    { "name": "Sarapan", "time": "06:00-08:00", "order": 1 },
-    { "name": "Snack Pagi", "time": "09:00-10:00", "order": 2 },
-    { "name": "Makan Siang", "time": "11:00-13:00", "order": 3 },
-    { "name": "Snack Sore", "time": "15:00-16:00", "order": 4 },
-    { "name": "Makan Malam", "time": "18:00-20:00", "order": 5 }
-  ],
-  "prompts": {
-    "welcome": "Selamat datang di survey gizi kami",
-    "instructions": "Silakan pilih waktu makan dan makanan yang Anda konsumsi"
+  "name": "Survey Gizi Mahasiswa 2024",
+  "slug": "survey-gizi-2024",
+  "description": "Survey asupan gizi harian mahasiswa",
+  "meals_config": {
+    "meals": [
+      { "name": "Sarapan", "time": "07:00", "required": true, "prompt": "Makanan pagi hari" },
+      { "name": "Makan Siang", "time": "12:00", "required": true, "prompt": "Makanan siang hari" },
+      { "name": "Makan Malam", "time": "19:00", "required": true, "prompt": "Makanan malam hari" },
+      { "name": "Snack", "time": "15:00", "required": false, "prompt": "Makanan ringan" }
+    ]
   },
+  "prompts": {
+    "before_meals": "Sebelum mengisi, pastikan ingat semua makanan yang dikonsumsi",
+    "after_meals": "Terima kasih telah mengisi survey",
+    "missing_food": "Tambahkan makanan yang belum ada di database"
+  },
+  "locale_id": 1,
   "start_date": "2024-01-01",
-  "end_date": "2024-12-31",
-  "status": "draft"
+  "end_date": "2024-12-31"
 }
 
-###
+### 2. LIST SURVEYS - Daftar semua survey
+GET http://localhost:8080/api/v1/admin/surveys?page=1&limit=10
+Authorization: Bearer {{accessToken}}
 
-### 4. List All Surveys
-# @name listSurveys
-GET {{baseUrl}}/admin/surveys
-Authorization: Bearer {{adminAccessToken}}
-Accept: application/json
+### 3. GET SURVEY DETAIL - Detail satu survey
+GET http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
+Authorization: Bearer {{accessToken}}
 
-###
-
-### 5. Get Survey Detail (gunakan ID dari response create survey)
-# @name getSurvey
-GET {{baseUrl}}/admin/surveys/{{createSurvey.response.body.data.id}}
-Authorization: Bearer {{adminAccessToken}}
-Accept: application/json
-
-###
-
-### 6. Update Survey
-# @name updateSurvey
-PUT {{baseUrl}}/admin/surveys/{{createSurvey.response.body.data.id}}
-Authorization: Bearer {{adminAccessToken}}
+### 4. UPDATE SURVEY - Update data survey
+PUT http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-  "name": "Survey Gizi SD Kelas 5 2024 - UPDATED",
-  "status": "active",
-  "description": "Pengumpulan data gizi siswa kelas 5 SD - Updated"
-}
-
-###
-
-### 7. Clone Survey
-# @name cloneSurvey
-POST {{baseUrl}}/admin/surveys/{{createSurvey.response.body.data.id}}/clone
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-{}
-
-###
-
-### 8. Delete Survey
-DELETE {{baseUrl}}/admin/surveys/{{createSurvey.response.body.data.id}}
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-###
-
-### =============================================================================
-### ERROR TEST CASES
-### =============================================================================
-
-### 9. Create Survey tanpa meals_config (harus error)
-POST {{baseUrl}}/admin/surveys
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-{
-  "name": "Survey tanpa meals",
-  "meals_config": []
-}
-
-###
-
-### 10. Get Survey dengan ID invalid (harus 404)
-GET {{baseUrl}}/admin/surveys/invalid-survey-id
-Authorization: Bearer {{adminAccessToken}}
-Accept: application/json
-
-###
-
-### 11. Create Survey tanpa Authorization (harus 401)
-POST {{baseUrl}}/admin/surveys
-Content-Type: application/json
-
-{
-  "name": "Survey tanpa auth",
-  "meals_config": [
-    { "name": "Sarapan", "time": "06:00", "order": 1 }
-  ]
-}
-
-###
-
-### =============================================================================
-### PUBLIC RESPONDENT SURVEY FLOW (USING ACCESS TOKEN)
-### =============================================================================
-
-### 12. Activate Survey (ubah status ke active untuk respondent test)
-# @name activateSurvey
-PUT {{baseUrl}}/admin/surveys/{{createSurvey.response.body.data.id}}
-Authorization: Bearer {{adminAccessToken}}
-Content-Type: application/json
-
-{
+  "name": "Survey Gizi Mahasiswa 2024 (Updated)",
   "status": "active"
 }
 
+### 5. REGENERATE ACCESS TOKEN - Buat token baru
+POST http://localhost:8080/api/v1/admin/surveys/{{surveyId}}/regenerate-token
+Authorization: Bearer {{accessToken}}
+
+### 6. CLONE SURVEY - Duplikat survey
+POST http://localhost:8080/api/v1/admin/surveys/{{surveyId}}/clone
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "new_name": "Survey Gizi Mahasiswa 2025",
+  "new_slug": "survey-gizi-2025"
+}
+
+### 7. DELETE SURVEY - Hapus survey
+DELETE http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
+Authorization: Bearer {{accessToken}}
+
 ###
 
-# Ambil access_token dari response activateSurvey
-@surveyAccessToken = {{activateSurvey.response.body.data.access_token}}
+# ============================================
+# PUBLIC SURVEY ENDPOINTS (No Auth)
+# ============================================
 
-### 13. Get Survey dengan Access Token (public - tanpa auth)
-GET {{baseUrl}}/surveys/{{surveyAccessToken}}
-Accept: application/json
+### 8. GET PUBLIC SURVEY - Akses survey via token
+GET http://localhost:8080/api/v1/s/{{surveyAccessToken}}
 
-###
-
-### 14. Join Survey dengan Access Token (public - tanpa auth)
-POST {{baseUrl}}/surveys/{{surveyAccessToken}}/join
+### 9. JOIN SURVEY - Respondent bergabung
+POST http://localhost:8080/api/v1/s/{{surveyAccessToken}}/join
 Content-Type: application/json
 
-{}
+{
+  "alias": "Peserta 001"
+}
 
 ###
 
-### 15. Get Survey dengan Access Token Invalid (harus 404)
-GET {{baseUrl}}/surveys/invalid-access-token-12345
-Accept: application/json
+# ============================================
+# ERROR TEST CASES
+# ============================================
 
-###
+### 10. Create dengan slug duplikat (409 Conflict)
+POST http://localhost:8080/api/v1/admin/surveys
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
-### 16. Join dengan Access Token Invalid (harus 404)
-POST {{baseUrl}}/surveys/invalid-access-token-12345/join
+{
+  "name": "Survey Duplikat",
+  "slug": "survey-gizi-2024",
+  "meals_config": {
+    "meals": [{ "name": "Test", "time": "12:00", "required": true }]
+  }
+}
+
+### 11. Get survey tidak ada (404 Not Found)
+GET http://localhost:8080/api/v1/admin/surveys/invalid-id-123
+Authorization: Bearer {{accessToken}}
+
+### 12. Create survey tanpa auth (401 Unauthorized)
+POST http://localhost:8080/api/v1/admin/surveys
 Content-Type: application/json
 
-{}
-
-###
+{
+  "name": "Test Survey",
+  "slug": "test-survey",
+  "meals_config": { "meals": [] }
+}

@@ -63,6 +63,12 @@ func Setup(db *gorm.DB) *gin.Engine {
 			publicSurveyRoutes.GET("", surveyHandler.GetPublic)
 			publicSurveyRoutes.POST("/join", surveyHandler.Join)
 		}
+		// Survey routes
+		surveyHandler := survey.NewHandler(db)
+		surveyHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// TODO: Food routes
+		// TODO: Submission routes
 	}
 
 	return r
