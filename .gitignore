@@ -1,0 +1,48 @@
+# Binary
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Output
+/bin/
+/dist/
+/tmp/
+
+# Vendor
+/vendor/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploads (kecuali folder struktur)
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/as-served/
+/uploads/as-served/*
+!/uploads/as-served/.gitkeep
+
+# Log
+*.log
+/logs/
+
+# OS
+.DS_Store
+Thumbs.db
