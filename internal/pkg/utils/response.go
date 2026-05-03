@@ -19,6 +19,26 @@ type ErrorInfo struct {
 	Message string `json:"message"`
 }
 
+// AppError - custom error struct untuk membawa status code dan error code
+type AppError struct {
+	StatusCode int
+	Code       string
+	Message    string
+}
+
+func (e *AppError) Error() string {
+	return e.Message
+}
+
+// NewAppError - factory function untuk AppError
+func NewAppError(statusCode int, code, message string) *AppError {
+	return &AppError{
+		StatusCode: statusCode,
+		Code:       code,
+		Message:    message,
+	}
+}
+
 // SuccessResponse - kirim response sukses dengan data
 func SuccessResponse(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, Response{

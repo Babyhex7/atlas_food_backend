@@ -1,0 +1,6 @@
+### Variable Definitions
+@baseUrl = http://localhost:8080
+
+### Health Check
+GET {{baseUrl}}/health
+Accept: application/json

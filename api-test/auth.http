@@ -1,0 +1,67 @@
+### =============================================================================
+### ATLAS FOOD — AUTH & PROFILE (STATIC EMAIL VERSION)
+### =============================================================================
+
+@baseUrl = http://localhost:8080/api/v1
+
+# Ganti email di sini jika ingin mengetes user lain
+@email = tester01@mail.com
+@password = Password123!
+@name = Tester Atlas
+
+# Dynamic Token (Otomatis terisi setelah Login)
+@accessToken = {{login.response.body.data.access_token}}
+@refreshToken = {{login.response.body.data.refresh_token}}
+
+### =============================================================================
+### A. AUTH SECTION
+### =============================================================================
+
+### A1. Register New User
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}",
+  "name": "{{name}}"
+}
+
+###
+
+### A2. Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+### A3. Get My Profile (Protected)
+# @name profile
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{accessToken}}
+Accept: application/json
+
+###
+
+### A4. Refresh Token
+# @name refresh
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refresh_token": "{{refreshToken}}"
+}
+
+###
+
+### A5. Get Profile with New Token
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{refresh.response.body.data.access_token}}
+Accept: application/json
