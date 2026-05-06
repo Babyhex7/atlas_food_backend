@@ -30,6 +30,11 @@ type Config struct {
 	// Upload
 	UploadPath    string
 	MaxUploadSize int64
+
+	// Seed data
+	AdminSeedEmail    string
+	AdminSeedPassword string
+	AdminSeedName     string
 }
 
 // Load - membaca konfigurasi dari environment variables
@@ -58,6 +63,11 @@ func Load() *Config {
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),
 		MaxUploadSize: parseInt64(getEnv("MAX_UPLOAD_SIZE", "10485760")),
+
+		// Seed data config
+		AdminSeedEmail:    getEnv("ADMIN_SEED_EMAIL", "admin@mail.com"),
+		AdminSeedPassword: getEnv("ADMIN_SEED_PASSWORD", "Password123!"),
+		AdminSeedName:     getEnv("ADMIN_SEED_NAME", "Admin Atlas"),
 	}
 
 	log.Println("Konfigurasi berhasil dimuat")

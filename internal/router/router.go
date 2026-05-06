@@ -2,6 +2,7 @@ package router
 
 import (
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -18,10 +19,10 @@ func Setup(db *gorm.DB) *gin.Engine {
 	r := gin.New()
 
 	// Global middleware
-	r.Use(gin.Recovery())                  // Recovery dari panic
-	r.Use(middleware.Logger())             // Log setiap request
-	r.Use(middleware.CORS())               // CORS handling
-	r.Use(middleware.ErrorHandler())       // Global error handling
+	r.Use(gin.Recovery())            // Recovery dari panic
+	r.Use(middleware.Logger())       // Log setiap request
+	r.Use(middleware.CORS())         // CORS handling
+	r.Use(middleware.ErrorHandler()) // Global error handling
 
 	// Health check endpoint (tanpa auth)
 	r.GET("/health", func(c *gin.Context) {
@@ -41,9 +42,27 @@ func Setup(db *gorm.DB) *gin.Engine {
 			authRoutes.GET("/me", middleware.JWTAuth(), authHandler.GetProfile)
 		}
 
-		// TODO: Admin routes (protected)
-		// TODO: Public survey routes
-		// TODO: Food routes
+		// Admin routes (protected)
+		surveyHandler := survey.NewHandler(db)
+		adminRoutes := v1.Group("/admin", middleware.JWTAuth(), middleware.AdminOnly())
+		{
+			surveyRoutes := adminRoutes.Group("/surveys")
+			{
+				surveyRoutes.GET("", surveyHandler.List)
+				surveyRoutes.POST("", surveyHandler.Create)
+				surveyRoutes.GET("/:id", surveyHandler.GetByID)
+				surveyRoutes.PUT("/:id", surveyHandler.Update)
+				surveyRoutes.DELETE("/:id", surveyHandler.Delete)
+				surveyRoutes.POST("/:id/clone", surveyHandler.Clone)
+			}
+		}
+
+		// Public survey routes (respondent - menggunakan accessToken)
+		publicSurveyRoutes := v1.Group("/surveys/:accessToken", middleware.SurveyAccessToken())
+		{
+			publicSurveyRoutes.GET("", surveyHandler.GetPublic)
+			publicSurveyRoutes.POST("/join", surveyHandler.Join)
+		}
 	}
 
 	return r

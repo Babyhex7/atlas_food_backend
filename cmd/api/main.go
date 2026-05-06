@@ -1,8 +1,10 @@
 package main
 
 import (
+	"atlas_food/internal/bootstrap"
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/router"
 	"log"
 )
@@ -21,9 +23,17 @@ func main() {
 	err := db.AutoMigrate(
 		&auth.User{},
 		&auth.RefreshToken{},
+		&survey.Locale{},
+		&survey.Survey{},
+		&survey.SurveyParticipant{},
 	)
 	if err != nil {
 		log.Fatalf("Gagal migrasi database: %v", err)
+	}
+
+	// Seed data awal untuk development
+	if err := bootstrap.SeedInitialData(db, cfg); err != nil {
+		log.Fatalf("Gagal seed data awal: %v", err)
 	}
 
 	// Setup router Gin dengan middleware
