@@ -2,6 +2,7 @@ package router
 
 import (
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/pkg/middleware"
 
@@ -32,43 +33,29 @@ func Setup(db *gorm.DB) *gin.Engine {
 	// API v1 group
 	v1 := r.Group("/api/v1")
 	{
-		// Auth routes (public)
+		// Auth routes
 		authHandler := auth.NewHandler(db)
-		authRoutes := v1.Group("/auth")
+		authGroup := v1.Group("/auth")
 		{
-			authRoutes.POST("/register", authHandler.Register)
-			authRoutes.POST("/login", authHandler.Login)
-			authRoutes.POST("/refresh", authHandler.RefreshToken)
-			authRoutes.GET("/me", middleware.JWTAuth(), authHandler.GetProfile)
+			authGroup.POST("/register", authHandler.Register)
+			authGroup.POST("/login", authHandler.Login)
+			authGroup.POST("/refresh", authHandler.RefreshToken)
+			authGroup.GET("/me", middleware.JWTAuth(), authHandler.GetProfile)
 		}
 
-		// Admin routes (protected)
-		surveyHandler := survey.NewHandler(db)
-		adminRoutes := v1.Group("/admin", middleware.JWTAuth(), middleware.AdminOnly())
-		{
-			surveyRoutes := adminRoutes.Group("/surveys")
-			{
-				surveyRoutes.GET("", surveyHandler.List)
-				surveyRoutes.POST("", surveyHandler.Create)
-				surveyRoutes.GET("/:id", surveyHandler.GetByID)
-				surveyRoutes.PUT("/:id", surveyHandler.Update)
-				surveyRoutes.DELETE("/:id", surveyHandler.Delete)
-				surveyRoutes.POST("/:id/clone", surveyHandler.Clone)
-			}
-		}
-
-		// Public survey routes (respondent - menggunakan accessToken)
-		publicSurveyRoutes := v1.Group("/surveys/:accessToken", middleware.SurveyAccessToken())
-		{
-			publicSurveyRoutes.GET("", surveyHandler.GetPublic)
-			publicSurveyRoutes.POST("/join", surveyHandler.Join)
-		}
-		// Survey routes
-		surveyHandler := survey.NewHandler(db)
+		// Survey domain
+		surveyRepo := survey.NewRepository(db)
+		surveyService := survey.NewService(surveyRepo)
+		surveyHandler := survey.NewHandler(surveyService)
 		surveyHandler.SetupRoutes(v1, middleware.JWTAuth())
 
-		// TODO: Food routes
-		// TODO: Submission routes
+		// Food domain
+		foodRepo := food.NewRepository(db)
+		foodService := food.NewService(foodRepo)
+		foodHandler := food.NewHandler(foodService)
+		foodHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// TODO: Submission domain
 	}
 
 	return r

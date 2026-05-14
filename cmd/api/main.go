@@ -4,6 +4,7 @@ import (
 	"atlas_food/internal/bootstrap"
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/router"
 	"log"
@@ -26,6 +27,15 @@ func main() {
 		&survey.Locale{},
 		&survey.Survey{},
 		&survey.SurveyParticipant{},
+		&food.Category{},
+		&food.Food{},
+		&food.NutrientUnit{},
+		&food.NutrientType{},
+		&food.FoodNutrient{},
+		&food.AssociatedFood{},
+		&food.PortionSizeMethod{},
+		&food.AsServedSet{},
+		&food.AsServedImage{},
 	)
 	if err != nil {
 		log.Fatalf("Gagal migrasi database: %v", err)

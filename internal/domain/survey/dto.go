@@ -1,55 +1,27 @@
 package survey
 
-import "encoding/json"
 
 // MealConfig - struktur meal untuk surveys.meals_config
 type MealConfig struct {
-	Name  string `json:"name" binding:"required,min=2,max=100"`
-	Time  string `json:"time" binding:"required"`
-	Order int    `json:"order"`
+	Name     string `json:"name" binding:"required,min=2,max=100"`
+	Time     string `json:"time" binding:"required"`
+	Required bool   `json:"required"`
+	Prompt   string `json:"prompt,omitempty"`
+}
+
+// MealsConfig - wrapper untuk list meals
+type MealsConfig struct {
+	Meals []MealConfig `json:"meals"`
+}
+
+// PromptsConfig - konfigurasi prompt survey
+type PromptsConfig struct {
+	BeforeMeals string `json:"before_meals,omitempty"`
+	AfterMeals  string `json:"after_meals,omitempty"`
+	MissingFood string `json:"missing_food,omitempty"`
 }
 
 // CreateSurveyRequest - DTO request create survey
-type CreateSurveyRequest struct {
-	Slug        string            `json:"slug" binding:"omitempty,min=3,max=100"`
-	Name        string            `json:"name" binding:"required,min=3,max=255"`
-	Description string            `json:"description" binding:"omitempty,max=1000"`
-	MealsConfig []MealConfig      `json:"meals_config" binding:"required,min=1,dive"`
-	Prompts     map[string]string `json:"prompts"`
-	LocaleID    int               `json:"locale_id" binding:"omitempty,min=1"`
-	StartDate   string            `json:"start_date" binding:"omitempty,datetime=2006-01-02"`
-	EndDate     string            `json:"end_date" binding:"omitempty,datetime=2006-01-02"`
-	Status      string            `json:"status" binding:"omitempty,oneof=draft active closed"`
-}
-
-// UpdateSurveyRequest - DTO request update survey
-type UpdateSurveyRequest struct {
-	Name        *string           `json:"name" binding:"omitempty,min=3,max=255"`
-	Description *string           `json:"description" binding:"omitempty,max=1000"`
-	MealsConfig []MealConfig      `json:"meals_config" binding:"omitempty,min=1,dive"`
-	Prompts     map[string]string `json:"prompts"`
-	LocaleID    *int              `json:"locale_id" binding:"omitempty,min=1"`
-	StartDate   *string           `json:"start_date" binding:"omitempty,datetime=2006-01-02"`
-	EndDate     *string           `json:"end_date" binding:"omitempty,datetime=2006-01-02"`
-	Status      *string           `json:"status" binding:"omitempty,oneof=draft active closed"`
-}
-
-// SurveyResponse - DTO response survey
-type SurveyResponse struct {
-	ID          string          `json:"id"`
-	Slug        string          `json:"slug"`
-	Name        string          `json:"name"`
-	Description string          `json:"description"`
-	MealsConfig json.RawMessage `json:"meals_config"`
-	Prompts     json.RawMessage `json:"prompts,omitempty"`
-	LocaleID    int             `json:"locale_id"`
-	StartDate   *string         `json:"start_date,omitempty"`
-	EndDate     *string         `json:"end_date,omitempty"`
-	Status      string          `json:"status"`
-	AccessToken string          `json:"access_token"`
-	CreatedBy   string          `json:"created_by"`
-	CreatedAt   string          `json:"created_at"`
-// CreateSurveyRequest - DTO untuk create survey
 type CreateSurveyRequest struct {
 	Name        string        `json:"name" binding:"required,min=3,max=255"`
 	Slug        string        `json:"slug" binding:"required,min=3,max=100"`
@@ -59,21 +31,22 @@ type CreateSurveyRequest struct {
 	LocaleID    int           `json:"locale_id" binding:"omitempty,min=1"`
 	StartDate   *string       `json:"start_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
 	EndDate     *string       `json:"end_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
-}
-
-// UpdateSurveyRequest - DTO untuk update survey
-type UpdateSurveyRequest struct {
-	Name        string        `json:"name" binding:"omitempty,min=3,max=255"`
-	Description string        `json:"description"`
-	MealsConfig *MealsConfig  `json:"meals_config,omitempty"`
-	Prompts     PromptsConfig `json:"prompts,omitempty"`
-	LocaleID    int           `json:"locale_id" binding:"omitempty,min=1"`
-	StartDate   *string       `json:"start_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
-	EndDate     *string       `json:"end_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
 	Status      string        `json:"status,omitempty" binding:"omitempty,oneof=draft active closed"`
 }
 
-// SurveyResponse - DTO untuk response survey
+// UpdateSurveyRequest - DTO request update survey
+type UpdateSurveyRequest struct {
+	Name        string         `json:"name" binding:"omitempty,min=3,max=255"`
+	Description string         `json:"description"`
+	MealsConfig *MealsConfig   `json:"meals_config,omitempty"`
+	Prompts     *PromptsConfig `json:"prompts,omitempty"`
+	LocaleID    int            `json:"locale_id" binding:"omitempty,min=1"`
+	StartDate   *string        `json:"start_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
+	EndDate     *string        `json:"end_date,omitempty" binding:"omitempty,datetime=2006-01-02"`
+	Status      string         `json:"status,omitempty" binding:"omitempty,oneof=draft active closed"`
+}
+
+// SurveyResponse - DTO response survey
 type SurveyResponse struct {
 	ID          string        `json:"id"`
 	Slug        string        `json:"slug"`
@@ -86,7 +59,7 @@ type SurveyResponse struct {
 	EndDate     *string       `json:"end_date,omitempty"`
 	Status      string        `json:"status"`
 	CreatedBy   string        `json:"created_by"`
-	AccessURL   string        `json:"access_url,omitempty"` // URL publik untuk akses survey
+	AccessURL   string        `json:"access_url,omitempty"`
 	CreatedAt   string        `json:"created_at"`
 	UpdatedAt   string        `json:"updated_at"`
 }
@@ -98,7 +71,7 @@ type LocaleInfo struct {
 	Name string `json:"name"`
 }
 
-// ListSurveysResponse - DTO untuk list surveys (tanpa detail lengkap)
+// ListSurveysResponse - DTO untuk list surveys
 type ListSurveysResponse struct {
 	ID               string  `json:"id"`
 	Slug             string  `json:"slug"`
@@ -106,11 +79,11 @@ type ListSurveysResponse struct {
 	Status           string  `json:"status"`
 	StartDate        *string `json:"start_date,omitempty"`
 	EndDate          *string `json:"end_date,omitempty"`
-	ParticipantCount int     `json:"participant_count,omitempty"`
+	ParticipantCount int     `json:"participant_count"`
 	CreatedAt        string  `json:"created_at"`
 }
 
-// SurveyListResponse - wrapper untuk list
+// SurveyListResponse - wrapper untuk list pagination
 type SurveyListResponse struct {
 	Surveys []ListSurveysResponse `json:"surveys"`
 	Total   int64                 `json:"total"`
@@ -118,22 +91,28 @@ type SurveyListResponse struct {
 	Limit   int                   `json:"limit"`
 }
 
-// JoinSurveyRequest - DTO untuk respondent join survey
-type JoinSurveyRequest struct {
-	Alias string `json:"alias,omitempty"` // Nama alias (optional)
+// AccessSurveyRequest - DTO untuk respondent access survey
+type AccessSurveyRequest struct {
+	Token          string `json:"token" binding:"required"`
+	Alias          string `json:"alias,omitempty"`
+	RespondentName string `json:"respondent_name,omitempty"`
 }
 
-// JoinSurveyResponse - response setelah join
-type JoinSurveyResponse struct {
-	ParticipantID string        `json:"participant_id"`
-	SurveyID      string        `json:"survey_id"`
-	SurveyName    string        `json:"survey_name"`
-	MealsConfig   MealsConfig   `json:"meals_config"`
-	Prompts       PromptsConfig `json:"prompts"`
-	AccessToken   string        `json:"access_token,omitempty"`
+// AccessSurveyResponse - response setelah access
+type AccessSurveyResponse struct {
+	Survey      PublicSurveyResponse `json:"survey"`
+	Participant ParticipantResponse  `json:"participant"`
+	AccessToken string               `json:"access_token"`
 }
 
-// PublicSurveyResponse - response untuk public access (tanpa sensitive data)
+// ParticipantResponse - detail participant untuk response
+type ParticipantResponse struct {
+	ID          string `json:"id"`
+	Alias       string `json:"alias"`
+	IsAnonymous bool   `json:"is_anonymous"`
+}
+
+// PublicSurveyResponse - response untuk public access
 type PublicSurveyResponse struct {
 	ID          string        `json:"id"`
 	Name        string        `json:"name"`
@@ -144,11 +123,6 @@ type PublicSurveyResponse struct {
 	StartDate   *string       `json:"start_date,omitempty"`
 	EndDate     *string       `json:"end_date,omitempty"`
 	Status      string        `json:"status"`
-}
-
-// GenerateAccessTokenRequest - request regenerate token
-type GenerateAccessTokenRequest struct {
-	SurveyID string `json:"survey_id" binding:"required"`
 }
 
 // AccessTokenResponse - response dengan token baru
