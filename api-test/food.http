@@ -1,0 +1,91 @@
+# ============================================
+# FOOD API TESTS
+# ============================================
+
+@baseUrl = http://localhost:8080/api/v1
+@email = tester01@mail.com
+@password = Password123!
+
+### 0. LOGIN
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@accessToken = {{login.response.body.data.access_token}}
+@foodId = {{createFood.response.body.data.id}}
+
+### 1. LIST CATEGORIES
+GET {{baseUrl}}/categories
+
+### 2. SEARCH FOODS
+GET {{baseUrl}}/foods/search?q=nasi&limit=10
+
+### 3. GET FOOD DETAIL
+GET {{baseUrl}}/foods/{{foodId}}
+
+###
+
+# ============================================
+# ADMIN FOOD ENDPOINTS (Protected)
+# ============================================
+
+### 4. CREATE FOOD
+# @name createFood
+POST {{baseUrl}}/admin/foods
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "code": "NASI-001",
+  "name": "Nasi Putih",
+  "local_name": "White Rice",
+  "description": "Nasi putih matang",
+  "category_id": "",
+  "nutrients": [
+    { "type_id": 1, "value_per_100g": 130.0 },
+    { "type_id": 2, "value_per_100g": 2.7 }
+  ]
+}
+
+### 5. LIST FOODS (Admin)
+GET {{baseUrl}}/admin/foods?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+### 6. UPDATE FOOD
+PUT {{baseUrl}}/admin/foods/{{foodId}}
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Nasi Putih Premium",
+  "nutrients": [
+    { "type_id": 1, "value_per_100g": 135.0 }
+  ]
+}
+
+### 7. ADD PORTION METHOD
+POST {{baseUrl}}/admin/foods/{{foodId}}/portion-methods
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "method_type": "as_served",
+  "label": "Sepiring Nasi",
+  "description": "Porsi standar satu piring",
+  "image_url": "https://example.com/rice.jpg",
+  "config": {
+    "setCode": "nasi-piring",
+    "maxQuantity": 3
+  }
+}
+
+### 8. DELETE FOOD
+DELETE {{baseUrl}}/admin/foods/{{foodId}}
+Authorization: Bearer {{accessToken}}

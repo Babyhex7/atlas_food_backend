@@ -2,8 +2,28 @@
 # SURVEY API TESTS
 # ============================================
 
+@baseUrl = http://localhost:8080/api/v1
+@email = tester01@mail.com
+@password = Password123!
+
+### 0. LOGIN
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@accessToken = {{login.response.body.data.access_token}}
+@surveyId = {{createSurvey.response.body.data.id}}
+@surveyToken = {{createSurvey.response.body.data.slug}}
+
 ### LOCALES - List semua bahasa
-GET http://localhost:8080/api/v1/locales
+GET {{baseUrl}}/locales
 
 ###
 
@@ -12,7 +32,8 @@ GET http://localhost:8080/api/v1/locales
 # ============================================
 
 ### 1. CREATE SURVEY - Buat survey baru
-POST http://localhost:8080/api/v1/admin/surveys
+# @name createSurvey
+POST {{baseUrl}}/admin/surveys
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
@@ -29,9 +50,8 @@ Authorization: Bearer {{accessToken}}
     ]
   },
   "prompts": {
-    "before_meals": "Sebelum mengisi, pastikan ingat semua makanan yang dikonsumsi",
-    "after_meals": "Terima kasih telah mengisi survey",
-    "missing_food": "Tambahkan makanan yang belum ada di database"
+    "welcome": "Sebelum mengisi, pastikan ingat semua makanan yang dikonsumsi",
+    "instructions": "Pilih waktu makan, lalu cari makanan yang kamu konsumsi."
   },
   "locale_id": 1,
   "start_date": "2024-01-01",
@@ -39,15 +59,15 @@ Authorization: Bearer {{accessToken}}
 }
 
 ### 2. LIST SURVEYS - Daftar semua survey
-GET http://localhost:8080/api/v1/admin/surveys?page=1&limit=10
+GET {{baseUrl}}/admin/surveys?page=1&limit=10
 Authorization: Bearer {{accessToken}}
 
 ### 3. GET SURVEY DETAIL - Detail satu survey
-GET http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
+GET {{baseUrl}}/admin/surveys/{{surveyId}}
 Authorization: Bearer {{accessToken}}
 
 ### 4. UPDATE SURVEY - Update data survey
-PUT http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
+PUT {{baseUrl}}/admin/surveys/{{surveyId}}
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
@@ -57,11 +77,11 @@ Authorization: Bearer {{accessToken}}
 }
 
 ### 5. REGENERATE ACCESS TOKEN - Buat token baru
-POST http://localhost:8080/api/v1/admin/surveys/{{surveyId}}/regenerate-token
+POST {{baseUrl}}/admin/surveys/{{surveyId}}/regenerate-token
 Authorization: Bearer {{accessToken}}
 
 ### 6. CLONE SURVEY - Duplikat survey
-POST http://localhost:8080/api/v1/admin/surveys/{{surveyId}}/clone
+POST {{baseUrl}}/admin/surveys/{{surveyId}}/clone
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
@@ -71,7 +91,7 @@ Authorization: Bearer {{accessToken}}
 }
 
 ### 7. DELETE SURVEY - Hapus survey
-DELETE http://localhost:8080/api/v1/admin/surveys/{{surveyId}}
+DELETE {{baseUrl}}/admin/surveys/{{surveyId}}
 Authorization: Bearer {{accessToken}}
 
 ###
@@ -80,16 +100,19 @@ Authorization: Bearer {{accessToken}}
 # PUBLIC SURVEY ENDPOINTS (No Auth)
 # ============================================
 
-### 8. GET PUBLIC SURVEY - Akses survey via token
-GET http://localhost:8080/api/v1/s/{{surveyAccessToken}}
-
-### 9. JOIN SURVEY - Respondent bergabung
-POST http://localhost:8080/api/v1/s/{{surveyAccessToken}}/join
+### 8. ACCESS SURVEY - Respondent masuk via token
+# @name accessSurvey
+POST {{baseUrl}}/survey/access
 Content-Type: application/json
 
 {
-  "alias": "Peserta 001"
+  "token": "survey-gizi-2024", 
+  "alias": "Peserta 001",
+  "respondent_name": "Budi Santoso"
 }
+
+### 9. GET SURVEY INFO - Ambil info survey
+GET {{baseUrl}}/survey/{{surveyId}}/info
 
 ###
 
@@ -98,7 +121,7 @@ Content-Type: application/json
 # ============================================
 
 ### 10. Create dengan slug duplikat (409 Conflict)
-POST http://localhost:8080/api/v1/admin/surveys
+POST {{baseUrl}}/admin/surveys
 Content-Type: application/json
 Authorization: Bearer {{accessToken}}
 
@@ -108,18 +131,4 @@ Authorization: Bearer {{accessToken}}
   "meals_config": {
     "meals": [{ "name": "Test", "time": "12:00", "required": true }]
   }
-}
-
-### 11. Get survey tidak ada (404 Not Found)
-GET http://localhost:8080/api/v1/admin/surveys/invalid-id-123
-Authorization: Bearer {{accessToken}}
-
-### 12. Create survey tanpa auth (401 Unauthorized)
-POST http://localhost:8080/api/v1/admin/surveys
-Content-Type: application/json
-
-{
-  "name": "Test Survey",
-  "slug": "test-survey",
-  "meals_config": { "meals": [] }
 }

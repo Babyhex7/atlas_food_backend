@@ -59,7 +59,9 @@ func (s *foodService) CreateFood(req CreateFoodRequest) (*FoodResponse, error) {
 				ValuePer100g:   n.ValuePer100g,
 			}
 		}
-		s.repo.UpsertFoodNutrients(nutrients)
+		if err := s.repo.UpsertFoodNutrients(nutrients); err != nil {
+			return nil, err
+		}
 	}
 
 	return s.GetFoodDetail(food.ID)
@@ -153,7 +155,9 @@ func (s *foodService) UpdateFood(id string, req UpdateFoodRequest) (*FoodRespons
 				ValuePer100g:   n.ValuePer100g,
 			}
 		}
-		s.repo.UpsertFoodNutrients(nutrients)
+		if err := s.repo.UpsertFoodNutrients(nutrients); err != nil {
+			return nil, err
+		}
 	}
 
 	return s.GetFoodDetail(id)

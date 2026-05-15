@@ -135,6 +135,29 @@ func (h *Handler) ListCategories(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// GetFoodsByCategory - GET /api/v1/categories/:id/foods
+// Mengambil daftar makanan berdasarkan kategori
+func (h *Handler) GetFoodsByCategory(c *gin.Context) {
+	categoryID := c.Param("id")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	foods, total, err := h.service.ListFoods(categoryID, page, limit)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{
+		"foods": foods,
+		"pagination": gin.H{
+			"page":  page,
+			"limit": limit,
+			"total": total,
+		},
+	})
+}
+
 func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	// Admin routes
 	admin := router.Group("/admin", authMiddleware, middleware.AdminOnly())
@@ -154,4 +177,5 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	router.GET("/foods/search", h.SearchFoods)
 	router.GET("/foods/:id", h.GetFood)
 	router.GET("/categories", h.ListCategories)
+	router.GET("/categories/:id/foods", h.GetFoodsByCategory)
 }

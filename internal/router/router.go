@@ -3,7 +3,9 @@ package router
 import (
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/food"
+	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
+	"atlas_food/internal/domain/upload"
 	"atlas_food/internal/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -55,8 +57,19 @@ func Setup(db *gorm.DB) *gin.Engine {
 		foodHandler := food.NewHandler(foodService)
 		foodHandler.SetupRoutes(v1, middleware.JWTAuth())
 
-		// TODO: Submission domain
+		// Submission domain
+		subRepo := submission.NewRepository(db)
+		subService := submission.NewService(subRepo)
+		subHandler := submission.NewHandler(subService)
+		subHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// Upload domain
+		uploadHandler := upload.NewHandler("./uploads")
+		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
 	}
+
+	// Serve static files (uploads)
+	r.Static("/uploads", "./uploads")
 
 	return r
 }
