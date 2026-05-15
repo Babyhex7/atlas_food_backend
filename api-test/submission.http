@@ -1,0 +1,79 @@
+# ============================================
+# SUBMISSION API TESTS
+# ============================================
+
+@baseUrl = http://localhost:8080/api/v1
+@email = tester01@mail.com
+@password = Password123!
+
+### 0. LOGIN
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+###
+
+@accessToken = {{login.response.body.data.access_token}}
+@surveyId = eebf501d-5b23-41bb-9642-1e9de495f2a1
+@submissionId = {{submitSurvey.response.body.data.id}}
+
+# ============================================
+# RESPONDENT ENDPOINTS (Public)
+# ============================================
+
+### 1. SUBMIT SURVEY
+# @name submitSurvey
+POST {{baseUrl}}/survey/submit
+Content-Type: application/json
+
+{
+  "survey_id": "{{surveyId}}",
+  "participant_id": "optional-uuid",
+  "respondent_name": "Budi Santoso",
+  "respondent_email": "budi@example.com",
+  "meals_data": [
+    {
+      "name": "Sarapan",
+      "time": "07:00",
+      "foods": [
+        {
+          "food_id": "food-uuid-1",
+          "food_code": "NASI-001",
+          "food_name": "Nasi Putih",
+          "portion_size": "1 Piring",
+          "portion_gram": 200,
+          "nutrients": {
+            "energy": 260.0,
+            "protein": 5.4,
+            "carbs": 56.0,
+            "fat": 0.4
+          }
+        }
+      ]
+    }
+  ]
+}
+
+
+# ============================================
+# ADMIN ENDPOINTS (Protected)
+# ============================================
+
+### 2. LIST SUBMISSIONS
+GET {{baseUrl}}/admin/surveys/{{surveyId}}/submissions?page=1&limit=10
+Authorization: Bearer {{accessToken}}
+
+
+### 3. GET SUBMISSION DETAIL
+GET {{baseUrl}}/admin/submissions/{{submissionId}}
+Authorization: Bearer {{accessToken}}
+
+
+### 4. EXPORT SUBMISSIONS CSV
+GET {{baseUrl}}/admin/surveys/{{surveyId}}/export
+Authorization: Bearer {{accessToken}}

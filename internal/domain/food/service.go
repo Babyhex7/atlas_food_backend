@@ -32,6 +32,7 @@ func NewService(repo Repository) Service {
 	return &foodService{repo: repo}
 }
 
+// CreateFood - menambahkan makanan baru ke database (Admin Only)
 func (s *foodService) CreateFood(req CreateFoodRequest) (*FoodResponse, error) {
 	food := &Food{
 		ID:          uuid.New().String(),
@@ -67,6 +68,7 @@ func (s *foodService) CreateFood(req CreateFoodRequest) (*FoodResponse, error) {
 	return s.GetFoodDetail(food.ID)
 }
 
+// GetFoodDetail - mengambil detail informasi makanan beserta porsi dan gizinya
 func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	food, err := s.repo.GetFoodByID(id)
 	if err != nil {
@@ -115,10 +117,12 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	}, nil
 }
 
+// ListFoods - mengambil daftar semua makanan dengan paginasi (Admin)
 func (s *foodService) ListFoods(categoryID string, page, limit int) ([]Food, int64, error) {
 	return s.repo.ListFoods(categoryID, page, limit)
 }
 
+// UpdateFood - memperbarui data makanan yang sudah ada (Admin)
 func (s *foodService) UpdateFood(id string, req UpdateFoodRequest) (*FoodResponse, error) {
 	food, err := s.repo.GetFoodByID(id)
 	if err != nil {
@@ -163,10 +167,12 @@ func (s *foodService) UpdateFood(id string, req UpdateFoodRequest) (*FoodRespons
 	return s.GetFoodDetail(id)
 }
 
+// DeleteFood - menghapus data makanan dari database (Admin)
 func (s *foodService) DeleteFood(id string) error {
 	return s.repo.DeleteFood(id)
 }
 
+// AddPortionMethod - menambahkan metode pengukuran porsi baru untuk makanan tertentu
 func (s *foodService) AddPortionMethod(foodID string, req CreatePortionMethodRequest) (*PortionMethodResponse, error) {
 	method := &PortionSizeMethod{
 		FoodID:      foodID,
@@ -191,6 +197,7 @@ func (s *foodService) AddPortionMethod(foodID string, req CreatePortionMethodReq
 	}, nil
 }
 
+// ListPortionMethods - melihat metode pengukuran porsi yang tersedia untuk satu makanan
 func (s *foodService) ListPortionMethods(foodID string) ([]PortionMethodResponse, error) {
 	methods, err := s.repo.GetPortionMethodsByFoodID(foodID)
 	if err != nil {
@@ -211,6 +218,7 @@ func (s *foodService) ListPortionMethods(foodID string) ([]PortionMethodResponse
 	return resp, nil
 }
 
+// SearchFoods - mencari makanan berdasarkan nama untuk responden (Public)
 func (s *foodService) SearchFoods(query string, categoryID string, limit int) ([]SearchFoodResponse, error) {
 	foods, err := s.repo.SearchFoods(query, categoryID, limit)
 	if err != nil {
@@ -237,6 +245,7 @@ func (s *foodService) SearchFoods(query string, categoryID string, limit int) ([
 	return resp, nil
 }
 
+// ListCategories - mengambil daftar semua kategori makanan (Public)
 func (s *foodService) ListCategories() ([]Category, error) {
 	return s.repo.ListCategories()
 }

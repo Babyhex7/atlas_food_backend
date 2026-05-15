@@ -121,29 +121,29 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ### 4.1 Model & Migration
 
-- [ ] Model `Category`
-- [ ] Model `Food`
-- [ ] Model `FoodCategory` (junction)
-- [ ] Model `NutrientUnit`
-- [ ] Model `NutrientType`
-- [ ] Model `FoodNutrient`
-- [ ] Migration `003_create_foods.sql`
+- [x] Model `Category`
+- [x] Model `Food`
+- [x] Model `FoodCategory` (junction)
+- [x] Model `NutrientUnit`
+- [x] Model `NutrientType`
+- [x] Model `FoodNutrient`
+- [x] Migration `003_create_foods.sql`
 
 ### 4.2 Admin Endpoints
 
-- [ ] CRUD Categories
-- [ ] CRUD Foods dengan search
-- [ ] Bulk import foods (CSV/JSON)
-- [ ] Manage food nutrients
+- [x] CRUD Categories
+- [x] CRUD Foods dengan search
+- [x] Bulk import foods (CSV/JSON)
+- [x] Manage food nutrients
 
 ### 4.3 Public Endpoints
 
-- [ ] `GET /api/v1/foods` - list dengan pagination & search
-- [ ] `GET /api/v1/foods/:id` - detail food
-- [ ] `GET /api/v1/categories` - list categories
-- [ ] `GET /api/v1/categories/:id/foods` - foods by category
+- [x] `GET /api/v1/foods` - list dengan pagination & search
+- [x] `GET /api/v1/foods/:id` - detail food
+- [x] `GET /api/v1/categories` - list categories
+- [x] `GET /api/v1/categories/:id/foods` - foods by category
 
-**Status: 🚧 BELUM MULAI**
+**Status: ✅ SELESAI**
 
 ---
 
@@ -151,25 +151,25 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ### 5.1 Model & Migration
 
-- [ ] Model `AssociatedFood`
-- [ ] Model `FoodPortionSizeMethod`
-- [ ] Model `AsServedSet`
-- [ ] Model `AsServedImage`
-- [ ] Migration `004_create_portion.sql`
+- [x] Model `AssociatedFood`
+- [x] Model `FoodPortionSizeMethod`
+- [x] Model `AsServedSet`
+- [x] Model `AsServedImage`
+- [x] Migration `004_create_portion.sql`
 
 ### 5.2 Admin Endpoints
 
-- [ ] Manage portion methods per food
-- [ ] Upload as-served images
-- [ ] Create as-served sets
-- [ ] Manage associated foods
+- [x] Manage portion methods per food
+- [x] Upload as-served images
+- [x] Create as-served sets
+- [x] Manage associated foods
 
 ### 5.3 Public Endpoints
 
-- [ ] `GET /api/v1/foods/:id/portion-methods` - list methods
-- [ ] `GET /api/v1/as-served-sets/:id/images` - list images
+- [x] `GET /api/v1/foods/:id/portion-methods` - list methods
+- [x] `GET /api/v1/as-served-sets/:id/images` - list images
 
-**Status: 🚧 BELUM MULAI**
+**Status: ✅ SELESAI**
 
 ---
 
@@ -177,28 +177,28 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ### 6.1 Model & Migration
 
-- [ ] Model `SurveySubmission`
-- [ ] Migration `005_create_submissions.sql`
+- [x] Model `SurveySubmission`
+- [x] Migration `005_create_submissions.sql`
 
 ### 6.2 Respondent Flow
 
-- [ ] `POST /api/v1/surveys/:accessToken/join` - join survey
-- [ ] `GET /api/v1/surveys/:accessToken` - get survey detail
-- [ ] `POST /api/v1/submissions` - submit survey
+- [x] `POST /api/v1/surveys/:accessToken/join` - join survey
+- [x] `GET /api/v1/surveys/:accessToken` - get survey detail
+- [x] `POST /api/v1/submissions` - submit survey
 
 ### 6.3 Admin Endpoints
 
-- [ ] `GET /api/v1/admin/surveys/:id/submissions` - list submissions
-- [ ] `GET /api/v1/admin/submissions/:id` - detail submission
-- [ ] `GET /api/v1/admin/submissions/export` - export CSV/Excel
+- [x] `GET /api/v1/admin/surveys/:id/submissions` - list submissions
+- [x] `GET /api/v1/admin/submissions/:id` - detail submission
+- [x] `GET /api/v1/admin/submissions/export` - export CSV/Excel
 
 ### 6.4 Nutrition Calculation
 
-- [ ] Service hitung nutrisi per meal
-- [ ] Agregasi nutrisi per hari
-- [ ] Store calculated results
+- [x] Service hitung nutrisi per meal
+- [x] Agregasi nutrisi per hari
+- [x] Store calculated results
 
-**Status: 🚧 BELUM MULAI**
+**Status: ✅ SELESAI**
 
 ---
 
@@ -206,22 +206,22 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ### 7.1 Setup
 
-- [ ] Config upload path
-- [ ] Validasi file type (image only)
-- [ ] Validasi file size (max 10MB)
+- [x] Config upload path
+- [x] Validasi file type (image only)
+- [x] Validasi file size (max 10MB)
 
 ### 7.2 Endpoints
 
-- [ ] `POST /api/v1/upload` - upload image
-- [ ] Serve static files `/uploads/*`
+- [x] `POST /api/v1/upload` - upload image
+- [x] Serve static files `/uploads/*`
 
 ### 7.3 As-Served Images
 
-- [ ] Upload ke `/uploads/as-served/`
-- [ ] Generate thumbnail
-- [ ] Store path di database
+- [x] Upload ke `/uploads/as-served/`
+- [x] Generate thumbnail
+- [x] Store path di database
 
-**Status: 🚧 BELUM MULAI**
+**Status: ✅ SELESAI**
 
 ---
 
@@ -231,11 +231,11 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 | ----- | ---------- | ---------- | -------- |
 | 1     | Foundation | ✅ Done    | 100%     |
 | 2     | Auth       | ✅ Done    | 100%     |
-| 3     | Survey     | 🚧 Next    | 0%       |
-| 4     | Food DB    | 🚧 Pending | 0%       |
-| 5     | Portion    | 🚧 Pending | 0%       |
-| 6     | Submission | 🚧 Pending | 0%       |
-| 7     | Upload     | 🚧 Pending | 0%       |
+| 3     | Survey     | ✅ Done    | 100%     |
+| 4     | Food DB    | ✅ Done    | 100%     |
+| 5     | Portion    | ✅ Done    | 100%     |
+| 6     | Submission | ✅ Done    | 100%     |
+| 7     | Upload     | ✅ Done    | 100%     |
 
 ---
 
