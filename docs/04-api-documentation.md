@@ -768,6 +768,70 @@ Response 201:
 
 ---
 
+## AI Result (Terintegrasi di Submission)
+
+> AI **tidak memiliki endpoint terpisah**. Hasil analisis nutrisi dikirim otomatis sebagai field `ai_result` di dalam response `POST /submissions`. Lihat detail lengkap di `docs/brif_ai.md`.
+
+### Submit Survey (dengan AI Result)
+```http
+POST /survey/submit
+Authorization: Bearer {survey_access_token}
+Content-Type: application/json
+
+Request: (sama seperti sebelumnya)
+{ ... }
+
+Response 201:
+{
+  "status": "success",
+  "data": {
+    "submission_id": "uuid-submission",
+    "message": "Survey submitted successfully",
+
+    "ai_result": {
+      "overall_status": "less",
+      "overall_message": "Your current nutrition is still below the recommended daily requirement. Additional balanced nutrients are needed.",
+
+      "nutritional_analysis": [
+        {
+          "label": "Calories",
+          "status": "low",
+          "description": "Current calorie level is still relatively low for optimal daily energy needs."
+        },
+        {
+          "label": "Protein",
+          "status": "low",
+          "description": "Protein source is limited and should be increased to support body recovery."
+        },
+        {
+          "label": "Balance",
+          "status": "partial",
+          "description": "Your meal already contains sufficient carbohydrates, but fiber sources are still lacking."
+        }
+      ],
+
+      "ai_recommendation": "To improve your nutritional balance, consider adding:\n- Grilled chicken or fish for additional protein\n- Vegetables such as broccoli or spinach for fiber and vitamins\n- Fruits like banana or apple for natural nutrients",
+
+      "recommended_foods": [
+        "Grilled Chicken", "Boiled Egg", "Broccoli",
+        "Spinach", "Banana", "Apple", "Greek Yogurt", "Mineral Water"
+      ],
+
+      "health_insight": {
+        "title": "Mild Nutritional Deficiency",
+        "description": "Your current meal composition is considered partially balanced, but additional protein, vegetables, and hydration are recommended."
+      },
+
+      "suggested_activities": ["Light Walking", "Yoga", "Stretching"]
+    }
+  }
+}
+```
+
+> **Catatan:** Jika Groq API gagal (timeout/error), `ai_result` akan bernilai `null`. Frontend harus handle kondisi ini dengan graceful fallback.
+
+---
+
 ## Error Responses
 
 ### Standard Error Format

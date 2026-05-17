@@ -17,6 +17,8 @@ Selamat datang di dokumentasi Atlas Food! Dokumentasi ini berisi informasi lengk
 | 7 | [07-portion-calculation.md](./07-portion-calculation.md) | Rumus perhitungan porsi dan nutrisi |
 | 8 | [08-erd.md](./08-erd.md) | Entity Relationship Diagram lengkap |
 | 9 | [09-sample-data.md](./09-sample-data.md) | Sample data SQL dan JSON |
+| 10 | [10-implementation-steps.md](./10-implementation-steps.md) | Langkah-langkah implementasi bertahap |
+| 11 | [brif_ai.md](./brif_ai.md) | 🤖 Implementasi AI Nutrition Analysis dengan Groq |
 
 ---
 

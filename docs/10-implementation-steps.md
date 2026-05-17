@@ -227,25 +227,82 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ## 📋 Ringkasan Progress
 
-| Phase | Fitur      | Status     | Progress |
-| ----- | ---------- | ---------- | -------- |
-| 1     | Foundation | ✅ Done    | 100%     |
-| 2     | Auth       | ✅ Done    | 100%     |
-| 3     | Survey     | ✅ Done    | 100%     |
-| 4     | Food DB    | ✅ Done    | 100%     |
-| 5     | Portion    | ✅ Done    | 100%     |
-| 6     | Submission | ✅ Done    | 100%     |
-| 7     | Upload     | ✅ Done    | 100%     |
+| Phase | Fitur         | Status      | Progress |
+| ----- | ------------- | ----------- | -------- |
+| 1     | Foundation    | ✅ Done     | 100%     |
+| 2     | Auth          | ✅ Done     | 100%     |
+| 3     | Survey        | ✅ Done     | 100%     |
+| 4     | Food DB       | ✅ Done     | 100%     |
+| 5     | Portion       | ✅ Done     | 100%     |
+| 6     | Submission    | ✅ Done     | 100%     |
+| 7     | Upload        | ✅ Done     | 100%     |
+| **8** | **AI (Groq)** | ⏳ Pending  | 0%       |
 
 ---
 
 ## 🎯 Prioritas Selanjutnya
 
-1. **Survey Management** - Admin bisa create/manage survey
-2. **Food Database** - CRUD foods & categories
-3. **Portion Size** - Setup portion methods
-4. **Submission Flow** - Respondent bisa submit survey
-5. **Export Data** - Admin bisa export hasil survey
+1. **AI Integration (Phase 8)** — Groq recommendation & nutritional insight
+2. Lihat detail di `docs/brif_ai.md` untuk panduan lengkap implementasi AI.
+
+---
+
+## 🤖 Phase 8: AI Integration (PENDING)
+
+> Referensi lengkap: [`docs/brif_ai.md`](./brif_ai.md)
+>
+> **Catatan penting:** AI **tidak punya endpoint tersendiri**. Groq dipanggil dari dalam `submission/service.go` setelah submission berhasil disimpan, dan hasilnya dikirim dalam response `POST /submissions` sebagai field `ai_result`.
+
+### 8.1 Setup & Konfigurasi
+
+- [ ] Tambahkan env vars Groq ke `.env` dan `.env.example`
+  ```bash
+  GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxx
+  GROQ_MODEL=llama3-8b-8192
+  GROQ_BASE_URL=https://api.groq.com/openai/v1
+  GROQ_TIMEOUT_SECONDS=15
+  GROQ_MAX_TOKENS=512
+  ```
+- [ ] Tambahkan parsing config di `internal/config/config.go`
+
+### 8.2 Groq Client Package
+
+- [ ] Buat package baru: `internal/pkg/groq/client.go`
+  - [ ] Struct `Client` dengan `apiKey`, `model`, `httpClient`
+  - [ ] Method `AnalyzeNutrition(daily DailyTotal, foodNames []string) (*AIResult, error)`
+  - [ ] Logic build system prompt + user prompt
+  - [ ] HTTP POST ke Groq API (`/chat/completions`)
+  - [ ] Parse & validasi JSON response
+
+### 8.3 Database Migration
+
+- [ ] Buat `migrations/008_create_ai_result_logs.sql` — tabel `ai_result_logs`
+- [ ] Relasi: `1:1` dengan `survey_submissions`
+- [ ] Tambahkan `AutoMigrate` di `main.go`
+
+### 8.4 Modifikasi Domain Submission
+
+- [ ] Tambahkan struct baru di `submission/dto.go`:
+  - [ ] `AIResult`
+  - [ ] `NutritionalAnalysis`
+  - [ ] `HealthInsight`
+  - [ ] Update `SubmitResponse` dengan field `AIResult`
+- [ ] Modifikasi `submission/service.go`:
+  - [ ] Inject `groq.Client` ke service struct
+  - [ ] Setelah `s.repo.Create()`, panggil `s.groqClient.AnalyzeNutrition()`
+  - [ ] Simpan hasil ke `ai_result_logs` via repo baru
+  - [ ] Pastikan error Groq **tidak** membatalkan submission (log warning saja)
+- [ ] Modifikasi `submission/handler.go`:
+  - [ ] Sertakan `ai_result` di response JSON
+
+### 8.5 Testing
+
+- [ ] Test Postman: `POST /submissions` → cek ada field `ai_result` di response
+- [ ] Cek isi `ai_result` mengandung: `overall_status`, `nutritional_analysis`, `recommended_foods`, `health_insight`, `suggested_activities`
+- [ ] Test graceful degradation: set `GROQ_API_KEY=invalid` → submission tetap `201`, `ai_result: null`
+- [ ] Verifikasi tabel `ai_result_logs` terisi setelah submission
+
+**Status: ⏳ PENDING**
 
 ---
 
@@ -256,3 +313,6 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 - Semua endpoint public/respondent menggunakan `accessToken` survey
 - Gunakan transaction untuk operasi yang melibatkan multiple tables
 - Validasi input menggunakan `go-playground/validator`
+- **AI Phase:** Groq API key diperoleh gratis di [console.groq.com](https://console.groq.com). AI hanya dipanggil saat submit, tidak ada endpoint AI terpisah.
+
+
