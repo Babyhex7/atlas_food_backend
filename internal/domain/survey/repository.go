@@ -12,6 +12,7 @@ type Repository interface {
 	GetSurveyBySlug(slug string) (*Survey, error)
 	GetSurveyByAccessToken(token string) (*Survey, error)
 	ListSurveys(createdBy string, page, limit int) ([]Survey, int64, error)
+	ListActiveSurveys(page, limit int) ([]Survey, int64, error)
 	UpdateSurvey(survey *Survey) error
 	DeleteSurvey(id string) error
 	CountSurveysBySlug(slug string) (int64, error)
@@ -81,6 +82,27 @@ func (r *surveyRepository) ListSurveys(createdBy string, page, limit int) ([]Sur
 	if createdBy != "" {
 		query = query.Where("created_by = ?", createdBy)
 	}
+
+	// Hitung total
+	query.Count(&total)
+
+	// Ambil data dengan pagination
+	offset := (page - 1) * limit
+	err := query.Preload("Locale").
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(limit).
+		Find(&surveys).Error
+
+	return surveys, total, err
+}
+
+// ListActiveSurveys - list surveys dengan status active
+func (r *surveyRepository) ListActiveSurveys(page, limit int) ([]Survey, int64, error) {
+	var surveys []Survey
+	var total int64
+
+	query := r.db.Model(&Survey{}).Where("status = ?", "active")
 
 	// Hitung total
 	query.Count(&total)

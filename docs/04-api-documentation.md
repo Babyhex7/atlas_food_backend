@@ -523,6 +523,35 @@ Response 201:
 
 ### Survey Access
 
+#### Get Active Surveys
+
+```http
+GET /survey/active
+Authorization: Bearer {access_token}
+
+Response 200:
+{
+  "status": "success",
+  "data": {
+    "surveys": [
+      {
+        "id": "uuid-survey",
+        "slug": "gizi-sd-2024",
+        "name": "Survey Gizi SD Kelas 5",
+        "status": "active",
+        "start_date": "2024-01-01",
+        "end_date": "2024-12-31",
+        "participant_count": 150,
+        "created_at": "2024-01-01"
+      }
+    ],
+    "total": 1,
+    "page": 1,
+    "limit": 10
+  }
+}
+```
+
 #### Access Survey with Token
 
 ```http

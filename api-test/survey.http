@@ -97,13 +97,18 @@ Authorization: Bearer {{accessToken}}
 ###
 
 # ============================================
-# PUBLIC SURVEY ENDPOINTS (No Auth)
+# RESPONDENT SURVEY ENDPOINTS (Guarded)
 # ============================================
+
+### 7.5. LIST ACTIVE SURVEYS - List semua survey aktif untuk respondent
+GET {{baseUrl}}/survey/active
+Authorization: Bearer {{accessToken}}
 
 ### 8. ACCESS SURVEY - Respondent masuk via token
 # @name accessSurvey
 POST {{baseUrl}}/survey/access
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
   "token": "survey-gizi-2024", 
@@ -113,6 +118,7 @@ Content-Type: application/json
 
 ### 9. GET SURVEY INFO - Ambil info survey
 GET {{baseUrl}}/survey/{{surveyId}}/info
+Authorization: Bearer {{accessToken}}
 
 ###
 

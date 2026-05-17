@@ -24,6 +24,7 @@ type Service interface {
 	// Public/Respondent operations
 	GetPublicSurveyByToken(token string) (*PublicSurveyResponse, error)
 	AccessSurvey(req AccessSurveyRequest, userID *string) (*AccessSurveyResponse, error)
+	ListActiveSurveys(page, limit int) (*SurveyListResponse, error)
 
 	// Locale operations
 	GetAllLocales() ([]Locale, error)
@@ -119,6 +120,55 @@ func (s *surveyService) ListSurveys(createdBy string, page, limit int) (*SurveyL
 	surveys, total, err := s.repo.ListSurveys(createdBy, page, limit)
 	if err != nil {
 		return nil, errors.New("gagal mengambil data survey")
+	}
+
+	result := make([]ListSurveysResponse, len(surveys))
+	for i, sv := range surveys {
+		var startDate, endDate *string
+		if sv.StartDate != nil {
+			sd := sv.StartDate.Format("2006-01-02")
+			startDate = &sd
+		}
+		if sv.EndDate != nil {
+			ed := sv.EndDate.Format("2006-01-02")
+			endDate = &ed
+		}
+
+		// Hitung participant count
+		count, _ := s.repo.CountParticipantsBySurvey(sv.ID)
+
+		result[i] = ListSurveysResponse{
+			ID:               sv.ID,
+			Slug:             sv.Slug,
+			Name:             sv.Name,
+			Status:           sv.Status,
+			StartDate:        startDate,
+			EndDate:          endDate,
+			ParticipantCount: int(count),
+			CreatedAt:        sv.CreatedAt.Format("2006-01-02"),
+		}
+	}
+
+	return &SurveyListResponse{
+		Surveys: result,
+		Total:   total,
+		Page:    page,
+		Limit:   limit,
+	}, nil
+}
+
+// ListActiveSurveys - list active surveys dengan pagination untuk respondent/public
+func (s *surveyService) ListActiveSurveys(page, limit int) (*SurveyListResponse, error) {
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 || limit > 100 {
+		limit = 10
+	}
+
+	surveys, total, err := s.repo.ListActiveSurveys(page, limit)
+	if err != nil {
+		return nil, errors.New("gagal mengambil data survey aktif")
 	}
 
 	result := make([]ListSurveysResponse, len(surveys))

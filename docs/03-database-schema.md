@@ -351,14 +351,14 @@ CREATE TABLE ai_result_logs (
 
 ### Q: Apa itu `user_survey_aliases`?
 
-**A:** Kode/token unik buat respondent masuk ke survey tanpa register/login.
+**A:** Kode/token unik buat respondent masuk ke survey setelah login.
 
 | Contoh                          | Penjelasan                             |
 | ------------------------------- | -------------------------------------- |
 | `PART-A7X9K2`                   | Alias code yang di-share ke respondent |
 | URL: `/survey/abc123?token=xyz` | Link unik dengan token                 |
 
-**Gunanya:** Respondent tinggal klik link → langsung isi survey, tanpa perlu daftar akun.
+**Gunanya:** Respondent login dulu → klik link → isi survey.
 
 ---
 

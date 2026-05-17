@@ -211,6 +211,21 @@ func (h *Handler) GetSurveyInfo(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// ListActiveSurveys - GET /api/v1/survey/active
+// Menampilkan semua kuesioner aktif yang bisa diisi oleh responden
+func (h *Handler) ListActiveSurveys(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	response, err := h.service.ListActiveSurveys(page, limit)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, response)
+}
+
 // ============ UTILITY ENDPOINTS ============
 
 // ListLocales - GET /api/v1/locales
@@ -241,6 +256,7 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	// Respondent routes
 	resp := router.Group("/survey", authMiddleware, middleware.RespondentOnly())
 	{
+		resp.GET("/active", h.ListActiveSurveys)
 		resp.POST("/access", h.AccessSurvey)
 		resp.GET("/:id/info", h.GetSurveyInfo)
 	}

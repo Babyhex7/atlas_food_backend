@@ -40,13 +40,13 @@
 
 - **Sebagai** admin
 - **Saya ingin** membagikan link survey ke responden
-- **Sehingga** responden bisa mengakses survey tanpa registrasi
+- **Sehingga** responden bisa mengakses survey setelah login
 
 **Acceptance Criteria:**
 
 - Admin dapat copy access token/link survey
 - Link bisa di-share via WhatsApp, email, dll
-- Responden bisa akses langsung dengan link
+- Responden login terlebih dahulu sebelum akses link
 - Survey bisa di-set "active" untuk dibagikan
 
 ---
