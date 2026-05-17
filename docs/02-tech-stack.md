@@ -11,6 +11,7 @@
 | **Auth**          | JWT (stateless) + Refresh Tokens | Authentication      |
 | **Validation**    | go-playground/validator          | Request validation  |
 | **Password Hash** | bcrypt                           | Password encryption |
+| **AI Service**    | Groq API (Llama 3)               | Nutrition analysis  |
 
 ---
 
@@ -57,12 +58,18 @@ atlas_food/
 │   │   │   ├── dto.go
 │   │   │   └── model.go
 │   │   │
-│   │   └── submission/
-│   │       ├── handler.go
-│   │       ├── service.go
-│   │       ├── repository.go
-│   │       ├── dto.go
-│   │       └── model.go
+│   │   ├── submission/
+│   │   │   ├── handler.go
+│   │   │   ├── service.go
+│   │   │   ├── repository.go
+│   │   │   ├── dto.go
+│   │   │   └── model.go
+│   │   │
+│   │   └── ai/                  # AI Nutrition Analysis (NEW!)
+│   │       ├── handler.go       # POST /ai/nutrition-analysis
+│   │       ├── service.go       # Orchestrate: fetch → Groq → save
+│   │       ├── repository.go    # CRUD ai_result_logs
+│   │       └── dto.go           # AI request/response structs
 │   │
 │   ├── pkg/                     # Internal shared packages
 │   │   ├── middleware/
@@ -75,6 +82,9 @@ atlas_food/
 │   │   │   ├── jwt.go
 │   │   │   ├── response.go
 │   │   │   └── validator.go
+│   │   │
+│   │   ├── groq/                # Groq AI Client (NEW!)
+│   │   │   └── client.go        # HTTP wrapper ke Groq API
 │   │   │
 │   │   └── errors/              # Custom errors
 │   │       └── errors.go
@@ -172,4 +182,11 @@ SERVER_MODE=debug
 # Upload
 UPLOAD_PATH=./uploads
 MAX_UPLOAD_SIZE=10485760  # 10MB
+
+# Groq AI (NEW!)
+GROQ_API_KEY=gsk_xxxxxxxxxxxxxxxxxxxxxxxx
+GROQ_MODEL=llama3-8b-8192
+GROQ_BASE_URL=https://api.groq.com/openai/v1
+GROQ_TIMEOUT_SECONDS=15
+GROQ_MAX_TOKENS=512
 ```

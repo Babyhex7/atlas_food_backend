@@ -135,6 +135,51 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 
 ---
 
+### Step 5: NUTRITION RESULT & AI RECOMMENDATION (NEW!)
+
+```
+┌─────────────────────────────────────────────────┐
+│  Nutrition Result                               │
+│  ─────────────────────────────────────────────  │
+│  Meal Items             [Edit List]             │
+│  ┌──────────────────────────────────────────┐   │
+│  │ Nasi Goreng    380 kcal  Carb-Heavy      │   │
+│  │ Telur Goreng   145 kcal  Protein Src     │   │
+│  │ Es Teh          20 kcal  Hydration       │   │
+│  └──────────────────────────────────────────┘   │
+├─────────────────────────────────────────────────┤
+│  Estimated Intake Total         ⚡               │
+│  545 TOTAL CALORIES (KCAL)                      │
+│  Protein  24g (18%)                             │
+│  Carbs    68g (50%)                             │
+│  Fats     18g (32%)                             │
+├─────────────────────────────────────────────────┤
+│  Actions                                        │
+│  [ ✏  Edit Portions        ]                    │
+│  [ 🤖 AI Recommendation    ]  ← KLIK INI!       │
+│  [ ↗  Export Data          ]                    │
+└─────────────────────────────────────────────────┘
+```
+
+**Alur AI Recommendation:**
+1. User klik tombol "🤖 AI Recommendation"
+2. Button berubah jadi loading state
+3. Frontend kirim `POST /ai/nutrition-analysis` dengan `submission_id`
+4. Backend:
+   - Cek cache di `ai_result_logs` (jika sudah pernah dianalisis, return dari DB)
+   - Jika belum ada, ambil data submission → panggil Groq → simpan hasil
+5. Frontend render hasil AI di bawah section Actions
+
+**Hasil AI yang ditampilkan:**
+- Overall Status (good/less/excess) dengan warna indikator
+- Nutritional Analysis (Calories, Protein, Balance)
+- AI Recommendation (saran makanan tambahan)
+- Recommended Foods (list makanan yang disarankan)
+- Health Insight (insight kesehatan)
+- Suggested Activities (aktivitas fisik yang disarankan)
+
+---
+
 ## UI Flow Lengkap dengan Portion Selection (Baru!)
 
 ### RESPONDENT JOURNEY dengan Gambar Porsi:
@@ -216,14 +261,17 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 
 ## Simplify Final Flow
 
-**Flow Lengkap Respondent (4 Step):**
+**Flow Lengkap Respondent (5 Steps):**
 
 ```
 Link ──▶ Pilih Waktu ──▶ Add Foods/Drinks ──▶ Continue ──▶
-Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit
+Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit ──▶
+Nutrition Result ──▶ [Optional] AI Recommendation
 ```
 
 **Simplify:** Tidak ada step "Pilih Metode" (In a plate/glass/weight) — langsung tampilkan gambar porsi + input manual dalam satu layar!
+
+**AI Recommendation:** On-demand via button, tidak otomatis saat submit.
 
 ---
 
@@ -269,6 +317,16 @@ Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit
 - [ ] Frontend: Step 5 - Review & Submit
 - [ ] API Submit dengan meals JSON
 - [ ] Admin: Lihat submissions & Export CSV
+
+### Phase 5: AI Nutrition Analysis (Week 4)
+
+- [ ] Setup Groq API client (`internal/pkg/groq/client.go`)
+- [ ] Domain AI (`internal/domain/ai/`)
+- [ ] Tabel `ai_result_logs` migration
+- [ ] API `POST /ai/nutrition-analysis`
+- [ ] Cache logic (check DB before calling Groq)
+- [ ] Frontend: Button "AI Recommendation" di hasil survey
+- [ ] Frontend: Render hasil AI (status, analysis, recommendations)
 
 ### SKIP (NANTI AJA setelah MVP jalan):
 

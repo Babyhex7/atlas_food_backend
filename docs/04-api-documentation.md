@@ -768,11 +768,99 @@ Response 201:
 
 ---
 
-## AI Result (Terintegrasi di Submission)
+## AI Nutrition Analysis Endpoints
 
-> AI **tidak memiliki endpoint terpisah**. Hasil analisis nutrisi dikirim otomatis sebagai field `ai_result` di dalam response `POST /submissions`. Lihat detail lengkap di `docs/brif_ai.md`.
+### Get Nutrition Analysis (On-Demand)
 
-### Submit Survey (dengan AI Result)
+> **PENTING:** AI dipanggil **on-demand** hanya ketika user klik tombol "AI Recommendation" di halaman hasil survey. Tidak dipanggil saat submission.
+
+#### Request AI Analysis
+```http
+POST /ai/nutrition-analysis
+Authorization: Bearer {access_token}
+Content-Type: application/json
+
+Request:
+{
+  "submission_id": "uuid-submission"
+}
+
+Response 200 (Fresh from Groq):
+{
+  "status": "success",
+  "source": "groq",
+  "data": {
+    "overall_status": "less",
+    "overall_message": "Your current nutrition is still below the recommended daily requirement. Additional balanced nutrients are needed.",
+    
+    "nutritional_analysis": [
+      {
+        "label": "Calories",
+        "status": "low",
+        "description": "Current calorie level is still relatively low for optimal daily energy needs."
+      },
+      {
+        "label": "Protein",
+        "status": "low",
+        "description": "Protein source is limited and should be increased to support body recovery and muscle maintenance."
+      },
+      {
+        "label": "Balance",
+        "status": "partial",
+        "description": "Your meal already contains sufficient carbohydrates, but fiber and micronutrient sources are still lacking."
+      }
+    ],
+    
+    "ai_recommendation": "To improve your nutritional balance, consider adding:\n- Grilled chicken or fish for additional protein\n- Vegetables such as broccoli or spinach for fiber and vitamins\n- Fruits like banana or apple for natural nutrients\n- More water intake to maintain hydration balance",
+    
+    "recommended_foods": [
+      "Grilled Chicken", "Boiled Egg", "Broccoli",
+      "Spinach", "Banana", "Apple", "Greek Yogurt", "Mineral Water"
+    ],
+    
+    "health_insight": {
+      "title": "Mild Nutritional Deficiency",
+      "description": "Your current meal composition is considered partially balanced, but additional protein, vegetables, and hydration are recommended to better fulfill daily nutritional needs."
+    },
+    
+    "suggested_activities": ["Light Walking", "Yoga", "Stretching"]
+  }
+}
+
+Response 200 (From Cache):
+{
+  "status": "success",
+  "source": "cache",
+  "data": { ... }  // Same structure as above
+}
+
+Response 404 (Submission Not Found):
+{
+  "status": "error",
+  "message": "Submission not found or access denied"
+}
+
+Response 503 (Groq Service Error):
+{
+  "status": "error",
+  "message": "AI service temporarily unavailable, please try again"
+}
+```
+
+**Notes:**
+- `source: "groq"` → Fresh analysis from Groq API
+- `source: "cache"` → Retrieved from database (already analyzed before)
+- Cache by `submission_id`: Same submission always returns same result
+- Ownership check: User can only analyze their own submissions
+- Groq API key never exposed to frontend
+
+---
+
+## AI Result (Terintegrasi di Submission) - DEPRECATED
+
+> ⚠️ **DEPRECATED:** Versi lama di mana AI result dikirim otomatis saat submission. Sekarang AI dipanggil on-demand via endpoint terpisah di atas.
+
+### Submit Survey (dengan AI Result) - OLD VERSION
 ```http
 POST /survey/submit
 Authorization: Bearer {survey_access_token}

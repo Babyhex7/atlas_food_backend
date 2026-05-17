@@ -50,9 +50,10 @@ Lihat [05-workflow-alur.md](./05-workflow-alur.md), [06-user-story.md](./06-user
 - **Food Database** — Database makanan dengan informasi gizi lengkap
 - **Portion Selection dengan Gambar** — Pilih porsi menggunakan visual
 - **Nutrition Calculation** — Perhitungan gizi otomatis
+- **AI Nutrition Analysis** — Analisis nutrisi & rekomendasi dengan Groq AI (on-demand)
 - **Export Data** — Export submission ke CSV/JSON
 
-### MVP V2 (16 Tabel)
+### MVP V2 (17 Tabel)
 
 | Fitur | Status |
 |-------|--------|
@@ -63,6 +64,7 @@ Lihat [05-workflow-alur.md](./05-workflow-alur.md), [06-user-story.md](./06-user
 | Nutrition Calculation | ✅ Wajib |
 | Associated Foods | ✅ Wajib |
 | Survey Submission | ✅ Wajib |
+| AI Nutrition Analysis (Groq) | ✅ Wajib |
 
 ### Tech Stack
 

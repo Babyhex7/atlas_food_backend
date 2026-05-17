@@ -16,13 +16,14 @@ Atlas Food adalah platform survey recall makanan yang memungkinkan responden unt
 3. **Food Database** — Database makanan dengan kategori dan informasi gizi
 4. **Portion Selection with Images** — Pemilihan porsi menggunakan gambar visual
 5. **Nutrition Calculation** — Perhitungan nutrisi otomatis berdasarkan porsi
-6. **Submission & Export** — Pengiriman data dan export ke CSV/JSON
+6. **AI Nutrition Analysis** — Analisis nutrisi & rekomendasi dengan Groq AI (on-demand via button)
+7. **Submission & Export** — Pengiriman data dan export ke CSV/JSON
 
 ---
 
 ## 🏗️ Arsitektur Sistem
 
-### Struktur Database (16 Tabel)
+### Struktur Database (17 Tabel)
 
 ```
 ┌─────────────┐      ┌─────────────┐      ┌─────────────┐
@@ -45,7 +46,17 @@ Atlas Food adalah platform survey recall makanan yang memungkinkan responden unt
          │ FK survey_id│     │ name        │
          │ FK part_id  │     │ nutrients   │
          │ meals(JSON) │◀────│  (JSON)     │
-         └─────────────┘     └─────────────┘
+         └──────┬──────┘     └─────────────┘
+                │
+                ▼
+         ┌─────────────┐
+         │ai_result_log│
+         ├─────────────┤
+         │ PK id       │
+         │ FK submiss..│
+         │ raw_response│
+         │ (JSON)      │
+         └─────────────┘
 ```
 
 ### Fitur yang Masuk MVP V2
@@ -61,8 +72,9 @@ Atlas Food adalah platform survey recall makanan yang memungkinkan responden unt
 | 7   | **Associated Foods**  | Sereal → susu, Roti → Selai                           |
 | 8   | **Input Flow**        | Add makanan → Continue → Portion (langsung)           |
 | 9   | **Submission JSON**   | Simpan hasil recall                                   |
+| 10  | **AI Analysis**       | Groq AI untuk analisis nutrisi (on-demand)            |
 
-**Total: 16 Tabel**
+**Total: 17 Tabel**
 
 ### Yang DI-SKIP (NANTI AJA)
 
@@ -84,15 +96,16 @@ Atlas Food adalah platform survey recall makanan yang memungkinkan responden unt
 
 ## 📊 Perbandingan: MVP V2 vs Full Intake24
 
-| Aspek               | MVP V2 (16 Tabel)            | Full Intake24 (~60+ Tabel)      |
+| Aspek               | MVP V2 (17 Tabel)            | Full Intake24 (~60+ Tabel)      |
 | ------------------- | ---------------------------- | ------------------------------- |
-| **Tabel**           | 16                           | ~60+                           |
+| **Tabel**           | 17                           | ~60+                           |
 | **Portion Methods** | as_served (food + drinks), weight | + drinkware, guide_image, standard_portion |
 | **Images**          | Upload manual                | Auto-process, multiple sizes    |
 | **Search**          | MySQL FULLTEXT               | Meilisearch/Elasticsearch       |
 | **Auth**            | JWT simple                   | JWT + RBAC + 2FA                |
 | **Sessions**        | localStorage                 | Redis + DB                      |
 | **Nutrition**       | Tabel: nutrient_types, nutrient_units, food_nutrients | Multiple sources (USDA, BPOM) + history |
+| **AI Analysis**     | Groq (on-demand)             | N/A                             |
 | **Time Estimate**   | 1 bulan                      | 6+ bulan                        |
 
 ---
@@ -105,6 +118,7 @@ Atlas Food adalah platform survey recall makanan yang memungkinkan responden unt
 | Phase 2 | Survey Admin (CRUD + Token) | 3-4 hari |
 | Phase 3 | Food DB + Portion Size | 5-7 hari |
 | Phase 4 | Survey Flow + Submit | 5-7 hari |
+| Phase 5 | AI Nutrition Analysis (Groq) | 1-2 hari |
 | Polish | Bugfix & Testing | 3-5 hari |
 | **Total** | | **3-4 minggu** |
 

@@ -121,12 +121,14 @@ food_portion_size_methods }o--|| foods : for
 ```
 survey_submissions }o--|| surveys : belongs_to
 survey_submissions }o--o| survey_participants : from
+survey_submissions ||--o| ai_result_logs : has_analysis
 ```
 
 | Relasi | Tipe | Deskripsi |
 |--------|------|-----------|
 | survey_submissions → surveys | N:1 | Submission untuk 1 survey |
 | survey_submissions → survey_participants | N:0/1 | Submission dari 1 participant (nullable) |
+| survey_submissions → ai_result_logs | 1:0/1 | Submission bisa punya 1 AI analysis result (optional) |
 
 ---
 
@@ -180,6 +182,19 @@ survey_submissions }o--o| survey_participants : from
 │   │ FK part_id    │────────┘                                            │
 │   │ meals_data    │                                                     │
 │   └───────────────┘                                                     │
+│           │                                                              │
+│           │ has_analysis                                                 │
+│           ▼                                                              │
+│   ┌───────────────┐                                                      │
+│   │ai_result_logs │                                                      │
+│   ├───────────────┤                                                      │
+│   │ PK id (uuid)  │                                                      │
+│   │ FK submiss_id │                                                      │
+│   │ input_payload │                                                      │
+│   │ raw_response  │                                                      │
+│   │ overall_status│                                                      │
+│   │ model_used    │                                                      │
+│   └───────────────┘                                                      │
 │                                                                             │
 │   ┌───────────────┐                                                      │
 │   │    locales    │                                                      │

@@ -1,6 +1,6 @@
 # 🗄️ Database Schema
 
-## Ringkasan Tabel MVP (16 Tabel)
+## Ringkasan Tabel MVP (17 Tabel)
 
 ### 1. Auth (Minimal)
 
@@ -286,6 +286,47 @@ CREATE TABLE survey_submissions (
     FOREIGN KEY (participant_id) REFERENCES survey_participants(id) ON DELETE SET NULL
 );
 ```
+
+---
+
+### 6. AI Nutrition Analysis (NEW!)
+
+#### ai_result_logs
+```sql
+CREATE TABLE ai_result_logs (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+
+    -- Relasi ke submission (UNIQUE untuk cache — 1 submission = 1 hasil AI)
+    submission_id CHAR(36) NOT NULL UNIQUE,
+
+    -- Input yang dikirim ke Groq (untuk audit/debug)
+    input_payload JSON NOT NULL,
+
+    -- Output mentah dari Groq (disimpan as-is)
+    raw_response JSON NOT NULL,
+
+    -- Field yang sudah di-parse (untuk query cepat)
+    overall_status ENUM('good', 'less', 'excess') NOT NULL,
+
+    -- Metadata Groq
+    model_used VARCHAR(50) NOT NULL DEFAULT 'llama3-8b-8192',
+    token_used INT,
+    latency_ms INT,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    -- FK ke survey_submissions
+    FOREIGN KEY (submission_id) REFERENCES survey_submissions(id) ON DELETE CASCADE,
+
+    INDEX idx_submission (submission_id),
+    INDEX idx_status (overall_status)
+);
+```
+
+**Catatan:**
+- Tabel ini bisa menggunakan **database terpisah** atau database yang sama
+- Cache logic: 1 submission_id = 1 hasil AI (tidak ada panggilan redundan ke Groq)
+- Jika pakai DB terpisah, hapus baris `FOREIGN KEY` dan handle relasi di application layer
 
 ---
 

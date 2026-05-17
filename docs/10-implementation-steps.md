@@ -242,16 +242,17 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 ## 🎯 Prioritas Selanjutnya
 
-1. **AI Integration (Phase 8)** — Groq recommendation & nutritional insight
+1. **AI Integration (Phase 8)** — Groq recommendation & nutritional insight (on-demand via button)
 2. Lihat detail di `docs/brif_ai.md` untuk panduan lengkap implementasi AI.
+3. **PENTING:** AI dipanggil on-demand, bukan otomatis saat submission!
 
 ---
 
-## 🤖 Phase 8: AI Integration (PENDING)
+## 🤖 Phase 8: AI Nutrition Analysis (PENDING)
 
-> Referensi lengkap: [`docs/brif_ai.md`](./brif_ai.md)
+> **Referensi lengkap:** [`docs/brif_ai.md`](./brif_ai.md)
 >
-> **Catatan penting:** AI **tidak punya endpoint tersendiri**. Groq dipanggil dari dalam `submission/service.go` setelah submission berhasil disimpan, dan hasilnya dikirim dalam response `POST /submissions` sebagai field `ai_result`.
+> **PENTING:** AI dipanggil **on-demand** via button "AI Recommendation" di halaman hasil survey. Tidak dipanggil otomatis saat submission.
 
 ### 8.1 Setup & Konfigurasi
 
@@ -269,40 +270,60 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 
 - [ ] Buat package baru: `internal/pkg/groq/client.go`
   - [ ] Struct `Client` dengan `apiKey`, `model`, `httpClient`
-  - [ ] Method `AnalyzeNutrition(daily DailyTotal, foodNames []string) (*AIResult, error)`
+  - [ ] Method `AnalyzeNutrition(input GroqInput) (*AIResult, int, int, error)`
   - [ ] Logic build system prompt + user prompt
   - [ ] HTTP POST ke Groq API (`/chat/completions`)
   - [ ] Parse & validasi JSON response
+  - [ ] Return: (result, latencyMs, tokenUsed, error)
 
 ### 8.3 Database Migration
 
 - [ ] Buat `migrations/008_create_ai_result_logs.sql` — tabel `ai_result_logs`
-- [ ] Relasi: `1:1` dengan `survey_submissions`
+- [ ] Relasi: `1:1` dengan `survey_submissions` (UNIQUE constraint)
 - [ ] Tambahkan `AutoMigrate` di `main.go`
 
-### 8.4 Modifikasi Domain Submission
+### 8.4 Domain AI (NEW!)
 
-- [ ] Tambahkan struct baru di `submission/dto.go`:
-  - [ ] `AIResult`
-  - [ ] `NutritionalAnalysis`
-  - [ ] `HealthInsight`
-  - [ ] Update `SubmitResponse` dengan field `AIResult`
-- [ ] Modifikasi `submission/service.go`:
-  - [ ] Inject `groq.Client` ke service struct
-  - [ ] Setelah `s.repo.Create()`, panggil `s.groqClient.AnalyzeNutrition()`
-  - [ ] Simpan hasil ke `ai_result_logs` via repo baru
-  - [ ] Pastikan error Groq **tidak** membatalkan submission (log warning saja)
-- [ ] Modifikasi `submission/handler.go`:
-  - [ ] Sertakan `ai_result` di response JSON
+- [ ] Buat domain baru: `internal/domain/ai/`
+  - [ ] `dto.go` — struct `AIAnalysisRequest`, `AIAnalysisResponse`, `AIResult`, dll
+  - [ ] `repository.go` — CRUD ke tabel `ai_result_logs`
+    - [ ] `FindBySubmissionID()` — untuk cache check
+    - [ ] `Save()` — simpan hasil AI
+  - [ ] `service.go` — orchestrate logic:
+    - [ ] Validasi submission milik user
+    - [ ] Cek cache di `ai_result_logs`
+    - [ ] Jika belum ada, panggil Groq
+    - [ ] Simpan hasil ke DB
+    - [ ] Return dengan `source: "groq"` atau `"cache"`
+  - [ ] `handler.go` — handle `POST /ai/nutrition-analysis`
+    - [ ] Extract `user_id` dari JWT
+    - [ ] Call service
+    - [ ] Return response
 
-### 8.5 Testing
+### 8.5 Routing
 
-- [ ] Test Postman: `POST /submissions` → cek ada field `ai_result` di response
-- [ ] Cek isi `ai_result` mengandung: `overall_status`, `nutritional_analysis`, `recommended_foods`, `health_insight`, `suggested_activities`
-- [ ] Test graceful degradation: set `GROQ_API_KEY=invalid` → submission tetap `201`, `ai_result: null`
-- [ ] Verifikasi tabel `ai_result_logs` terisi setelah submission
+- [ ] Tambahkan route baru di `router.go`:
+  ```go
+  aiGroup := router.Group("/ai")
+  aiGroup.Use(middleware.AuthMiddleware())
+  aiGroup.Use(middleware.RoleMiddleware("customer"))
+  {
+      aiGroup.POST("/nutrition-analysis", aiHandler.GetNutritionAnalysis)
+  }
+  ```
+
+### 8.6 Testing
+
+- [ ] Test Postman: Submit survey dulu → copy `submission_id`
+- [ ] Test `POST /ai/nutrition-analysis` dengan `submission_id`
+- [ ] Cek response ada field: `overall_status`, `nutritional_analysis`, `recommended_foods`, `health_insight`, `suggested_activities`
+- [ ] Test cache: Hit endpoint 2x dengan `submission_id` sama → response kedua `"source": "cache"`
+- [ ] Test graceful error: Set `GROQ_API_KEY` salah → endpoint return 503
+- [ ] Test ownership: User A tidak bisa akses submission user B
 
 **Status: ⏳ PENDING**
+
+**Estimasi waktu: 1-2 hari**
 
 ---
 
@@ -313,6 +334,7 @@ Dokumen ini menjelaskan langkah-langkah implementasi fitur-fitur Atlas Food API 
 - Semua endpoint public/respondent menggunakan `accessToken` survey
 - Gunakan transaction untuk operasi yang melibatkan multiple tables
 - Validasi input menggunakan `go-playground/validator`
-- **AI Phase:** Groq API key diperoleh gratis di [console.groq.com](https://console.groq.com). AI hanya dipanggil saat submit, tidak ada endpoint AI terpisah.
+- **AI Phase:** Groq API key diperoleh gratis di [console.groq.com](https://console.groq.com). AI dipanggil on-demand via endpoint terpisah `POST /ai/nutrition-analysis`, tidak otomatis saat submission.
+- **AI Cache:** Hasil AI di-cache per `submission_id` untuk menghindari panggilan redundan ke Groq.
 
 
