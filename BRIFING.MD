@@ -259,21 +259,20 @@ CREATE TABLE surveys (
     end_date DATE,
     status ENUM('draft', 'active', 'closed') DEFAULT 'draft',
 
-    -- 🔥 Simple alias/token untuk anonymous access
-    access_token VARCHAR(255),  -- Token untuk akses survey
+    -- 🔥 Token untuk akses survey
+    access_token VARCHAR(255),
 
     created_by CHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
--- user_survey_aliases (Simple - untuk anonymous atau respondent terdaftar)
+-- user_survey_aliases (Simple - untuk respondent terdaftar)
 CREATE TABLE survey_participants (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     survey_id CHAR(36) NOT NULL,
-    user_id CHAR(36),  -- NULL kalau anonymous
-    alias VARCHAR(50), -- NULL kalau respondent terdaftar
-    is_anonymous BOOLEAN DEFAULT TRUE,
+  user_id CHAR(36) NOT NULL,
+  alias VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -401,7 +400,7 @@ CREATE TABLE food_portion_size_methods (
     -- Konfigurasi pilihan (JSON)
     /*
     🔥 TIPE SELECTION:
-    
+
     1. "simple_grid" - Grid gambar ½,1,1½,2,3 (Nasi, Nuggets)
     {
       "selectionType": "simple_grid",
@@ -413,7 +412,7 @@ CREATE TABLE food_portion_size_methods (
       ],
       "allowFractions": false
     }
-    
+
     2. "as_served_quantity" - Thumbnail row + overlay counter (Pisang, Kentang!)
     {
       "selectionType": "as_served_quantity",
@@ -426,7 +425,7 @@ CREATE TABLE food_portion_size_methods (
       "defaultFraction": 0,
       "showCalculation": true         // Tampilkan "3 and ¼ of largest (617.50g)"
     }
-    
+
     3. "counter" - WHOLE + FRACTION tanpa gambar (Pack, Sandwich)
     {
       "selectionType": "counter",
@@ -437,7 +436,7 @@ CREATE TABLE food_portion_size_methods (
       "allowFractions": true,
       "fractionOptions": [0, 0.25, 0.5, 0.75]
     }
-    
+
     4. "input" - Ketik manual gram
     {
       "selectionType": "input",
@@ -501,7 +500,7 @@ CREATE TABLE as_served_images (
 
 **Contoh Data Portion Methods:**
 
-```sql
+````sql
 -- 1. Nuggets dengan foto porsi
 INSERT INTO food_portion_size_methods (food_id, method_type, label, description, image_url, config) VALUES
 ('uuid-nuggets', 'as_served', 'Chicken Nuggets', 'Select how many nuggets you had', '/nuggets-preview.jpg', '
@@ -525,7 +524,7 @@ INSERT INTO food_portion_size_methods (food_id, method_type, label, description,
 '),
 ('uuid-soda', 'as_served', 'In a glass', 'Choose glass size', '/glasses-preview.jpg', '
 {
-  "selectionType": "as_served_quantity", 
+  "selectionType": "as_served_quantity",
   "setCode": "standard-glasses",
   "maxQuantity": 3,
   "allowFractions": false
@@ -710,7 +709,7 @@ INSERT INTO associated_foods (food_id, associated_food_id, priority, is_default)
 // User pilih: 1.5 porsi dari image "nugget-3" (60g per porsi)
 const portionGram = selectedImage.weight_gram * quantity;
 // 60g * 1.5 = 90g
-```
+````
 
 **2. Counter Method (+/-) - Sesuai Screenshot!:**
 
@@ -742,13 +741,13 @@ const portionGram = userInput; // 150g
 // User pilih: gambar ke-8 (full plate = 190g) + quantity 3.25 (3 and ¼)
 const selectedImage = {
   label: "8",
-  weight_gram: 190.0,  // dari as_served_images
-  description: "Full plate (~190g)"
+  weight_gram: 190.0, // dari as_served_images
+  description: "Full plate (~190g)",
 };
 
-const quantity = 3;        // WHOLE
-const fraction = 0.25;     // FRACTION (¼)
-const totalQuantity = quantity + fraction;  // = 3.25
+const quantity = 3; // WHOLE
+const fraction = 0.25; // FRACTION (¼)
+const totalQuantity = quantity + fraction; // = 3.25
 
 // RUMUS: image_weight × totalQuantity
 const portionGram = selectedImage.weight_gram * totalQuantity;
@@ -759,6 +758,7 @@ const portionGram = selectedImage.weight_gram * totalQuantity;
 ```
 
 **Data yang disimpan di submission:**
+
 ```json
 {
   "foodId": "uuid-banana",
@@ -1115,13 +1115,13 @@ atlas_food/
 
 ### 🔥 Kenapa Structure Ini Lebih Bagus?
 
-| Aspek | Old (Layer-based) | New (Feature-based) |
-|-------|-------------------|---------------------|
-| **Scalability** | Berantakan kalau 50+ tabel | Tiap domain terisolasi |
-| **Maintainability** | Harus buka 5 folder beda | 1 folder = 1 fitur lengkap |
-| **Testing** | Susah mock layer lain | Tiap domain bisa unit test sendiri |
-| **Team Work** | Conflict di folder sama | Beda fitur = beda folder |
-| **Microservices** | Susah split | Gampang, tinggal pindahin folder `domain/xxx` |
+| Aspek               | Old (Layer-based)          | New (Feature-based)                           |
+| ------------------- | -------------------------- | --------------------------------------------- |
+| **Scalability**     | Berantakan kalau 50+ tabel | Tiap domain terisolasi                        |
+| **Maintainability** | Harus buka 5 folder beda   | 1 folder = 1 fitur lengkap                    |
+| **Testing**         | Susah mock layer lain      | Tiap domain bisa unit test sendiri            |
+| **Team Work**       | Conflict di folder sama    | Beda fitur = beda folder                      |
+| **Microservices**   | Susah split                | Gampang, tinggal pindahin folder `domain/xxx` |
 
 ### 📁 Contoh: Semua File Portion di 1 Folder
 
@@ -1184,7 +1184,7 @@ internal/domain/portion/
 ### SKIP (NANTI AJA setelah MVP jalan):
 
 - [ ] Session auto-save (DB) - pake localStorage dulu
-- [ ] Respondent register/login (anonymous dulu)
+- [ ] Respondent register/login
 - [ ] Advanced food search (synonyms, fuzzy)
 - [ ] Multi-language (i18n file JSON dulu)
 - [ ] RBAC roles & permissions
@@ -1282,17 +1282,17 @@ internal/domain/portion/
 
 ### ✅ MASUK MVP V2 (16 Tabel + Fitur)
 
-| #   | Fitur/Tabel           | Penjelasan                                            | Kenapa Masuk                     |
-| --- | --------------------- | ----------------------------------------------------- | -------------------------------- |
-| 1   | **Login/Auth**        | JWT + Refresh Token                                   | Core requirement                 |
-| 2   | **Surveys**           | Create, manage, share link                            | Core requirement                 |
-| 3   | **Food Database**     | Makanan + kategori + 🔥 nutrisi tabel                 | Core requirement                 |
-| 4   | **🔥 Portion Images** | Langsung pilih gambar porsi (tanpa pilih metode dulu) | **WAJIB** - simple & cepat       |
-| 5   | **🔥 As Served Sets** | Foto porsi ½,1,1½,2,3 + berat (food **& drinks!**)    | **WAJIB** - visual portion guide |
+| #   | Fitur/Tabel             | Penjelasan                                            | Kenapa Masuk                     |
+| --- | ----------------------- | ----------------------------------------------------- | -------------------------------- |
+| 1   | **Login/Auth**          | JWT + Refresh Token                                   | Core requirement                 |
+| 2   | **Surveys**             | Create, manage, share link                            | Core requirement                 |
+| 3   | **Food Database**       | Makanan + kategori + 🔥 nutrisi tabel                 | Core requirement                 |
+| 4   | **🔥 Portion Images**   | Langsung pilih gambar porsi (tanpa pilih metode dulu) | **WAJIB** - simple & cepat       |
+| 5   | **🔥 As Served Sets**   | Foto porsi ½,1,1½,2,3 + berat (food **& drinks!**)    | **WAJIB** - visual portion guide |
 | 6   | **🔥 Nutrisi Tabel**    | nutrient_types, nutrient_units, food_nutrients        | **WAJIB** - perhitungan akurat   |
-| 8   | **🔥 Associated Foods** | Sereal → susu, Roti → Selai                         | **WAJIB** - UX lebih baik        |
-| 9   | **Input Flow**        | Add makanan → Continue → Portion (langsung)           | **WAJIB** - 4 step saja          |
-| 10  | **Submission JSON**   | Simpan hasil recall                                   | Core requirement                 |
+| 8   | **🔥 Associated Foods** | Sereal → susu, Roti → Selai                           | **WAJIB** - UX lebih baik        |
+| 9   | **Input Flow**          | Add makanan → Continue → Portion (langsung)           | **WAJIB** - 4 step saja          |
+| 10  | **Submission JSON**     | Simpan hasil recall                                   | Core requirement                 |
 
 **Total: 16 Tabel**
 
@@ -1332,17 +1332,17 @@ internal/domain/portion/
 
 ### 📊 Perbandingan: MVP V2 vs Full Intake24
 
-| Aspek               | MVP V2 (16 Tabel)            | Full Intake24 (~60+ Tabel)      |
-| ------------------- | ---------------------------- | ------------------------------- |
-| **Tabel**           | 16 (14 → + nutrient & associated, -drinkware) | ~60+                           |
-| **Portion Methods** | as_served (food + drinks), weight | + drinkware, guide_image, standard_portion |
-| **Images**          | Upload manual                | Auto-process, multiple sizes    |
-| **Search**          | MySQL FULLTEXT               | Meilisearch/Elasticsearch       |
-| **Auth**            | JWT simple                   | JWT + RBAC + 2FA                |
-| **Sessions**        | localStorage                 | Redis + DB                      |
-| **Nutrition**       | ✅ Tabel: nutrient_types, nutrient_units, food_nutrients | Multiple sources (USDA, BPOM) + history |
-| **Associated Foods**| ✅ Ada (sereal → susu)       | Lebih complex dengan priority   |
-| **Time Estimate**   | 1 bulan                      | 6+ bulan                        |
+| Aspek                | MVP V2 (16 Tabel)                                        | Full Intake24 (~60+ Tabel)                 |
+| -------------------- | -------------------------------------------------------- | ------------------------------------------ |
+| **Tabel**            | 16 (14 → + nutrient & associated, -drinkware)            | ~60+                                       |
+| **Portion Methods**  | as_served (food + drinks), weight                        | + drinkware, guide_image, standard_portion |
+| **Images**           | Upload manual                                            | Auto-process, multiple sizes               |
+| **Search**           | MySQL FULLTEXT                                           | Meilisearch/Elasticsearch                  |
+| **Auth**             | JWT simple                                               | JWT + RBAC + 2FA                           |
+| **Sessions**         | localStorage                                             | Redis + DB                                 |
+| **Nutrition**        | ✅ Tabel: nutrient_types, nutrient_units, food_nutrients | Multiple sources (USDA, BPOM) + history    |
+| **Associated Foods** | ✅ Ada (sereal → susu)                                   | Lebih complex dengan priority              |
+| **Time Estimate**    | 1 bulan                                                  | 6+ bulan                                   |
 
 ---
 
@@ -1371,9 +1371,10 @@ Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit
 ### Formula Dasar (Intake24 Standard)
 
 **1. Query Nutrisi dari Tabel (SQL):**
+
 ```sql
 -- Ambil semua nutrisi untuk 1 makanan
-SELECT 
+SELECT
     nt.code AS nutrient_code,
     nt.name AS nutrient_name,
     nu.symbol AS unit,
@@ -1392,14 +1393,15 @@ WHERE fn.food_id = 'uuid-nasi';
 ```
 
 **2. Hitung Nutrisi per Portion (Backend):**
+
 ```javascript
 // Data dari query tabel food_nutrients (per 100g)
 const nutrientsPer100g = [
-  { code: "energy", name: "Energi", unit: "kcal", value: 130.00 },
-  { code: "protein", name: "Protein", unit: "g", value: 2.70 },
-  { code: "carbs", name: "Karbohidrat", unit: "g", value: 28.00 },
-  { code: "fat", name: "Lemak Total", unit: "g", value: 0.30 },
-  { code: "fiber", name: "Serat", unit: "g", value: 0.40 }
+  { code: "energy", name: "Energi", unit: "kcal", value: 130.0 },
+  { code: "protein", name: "Protein", unit: "g", value: 2.7 },
+  { code: "carbs", name: "Karbohidrat", unit: "g", value: 28.0 },
+  { code: "fat", name: "Lemak Total", unit: "g", value: 0.3 },
+  { code: "fiber", name: "Serat", unit: "g", value: 0.4 },
 ];
 
 // User makan 150 gram nasi
@@ -1408,17 +1410,17 @@ const portionGram = 150;
 // RUMUS: (nutrient_value / 100) × portionGram
 function calculateNutrients(nutrientsPer100g, portionGram) {
   const result = {};
-  
+
   for (const nutrient of nutrientsPer100g) {
     const calculated = (nutrient.value / 100) * portionGram;
     // Bulatkan ke 1 desimal
     result[nutrient.code] = {
       name: nutrient.name,
       unit: nutrient.unit,
-      value: Math.round(calculated * 10) / 10
+      value: Math.round(calculated * 10) / 10,
     };
   }
-  
+
   return result;
 }
 
@@ -1433,9 +1435,10 @@ function calculateNutrients(nutrientsPer100g, portionGram) {
 ```
 
 **3. SQL Query Lengkap (Hitung Langsung di DB):**
+
 ```sql
 -- Hitung nutrisi untuk portion 150g nasi
-SELECT 
+SELECT
     nt.code,
     nt.name,
     nu.symbol AS unit,
@@ -1447,15 +1450,28 @@ WHERE fn.food_id = 'uuid-nasi';
 ```
 
 **2. Hitung Total per Meal:**
+
 ```javascript
 // Contoh: Sarapan dengan 3 makanan
 const meal = {
   name: "Sarapan",
   foods: [
-    { name: "Nasi Putih", portionGram: 150, nutrients: {energy:195, protein:3.9} },
-    { name: "Telur Goreng", portionGram: 60, nutrients: {energy:90, protein:6} },
-    { name: "Kecap Manis", portionGram: 15, nutrients: {energy:45, protein:0.3} }
-  ]
+    {
+      name: "Nasi Putih",
+      portionGram: 150,
+      nutrients: { energy: 195, protein: 3.9 },
+    },
+    {
+      name: "Telur Goreng",
+      portionGram: 60,
+      nutrients: { energy: 90, protein: 6 },
+    },
+    {
+      name: "Kecap Manis",
+      portionGram: 15,
+      nutrients: { energy: 45, protein: 0.3 },
+    },
+  ],
 };
 
 // Jumlahkan semua nutrisi
@@ -1470,10 +1486,11 @@ const mealTotals = meal.foods.reduce((acc, food) => {
 ```
 
 **3. Hitung Total per Hari (Submission):**
+
 ```javascript
 // Submission dengan 5 meals
 const submission = {
-  meals: [sarapan, snackPagi, makanSiang, snackSore, makanMalam]
+  meals: [sarapan, snackPagi, makanSiang, snackSore, makanMalam],
 };
 
 // Jumlahkan semua meals
@@ -1489,18 +1506,18 @@ const dailyTotals = submission.meals.reduce((acc, meal) => {
 
 ### Standard Nutrients (Sesuai Intake24)
 
-| Nutrient | Unit | Keterangan |
-|----------|------|------------|
-| energy | kcal | Energi total |
-| protein | g | Protein |
-| carbs | g | Karbohidrat total |
-| fat | g | Lemak total |
-| fiber | g | Serat |
-| sugar | g | Gula |
-| sodium | mg | Natrium |
-| calcium | mg | Kalsium |
-| iron | mg | Zat besi |
-| vitamin_c | mg | Vitamin C |
+| Nutrient  | Unit | Keterangan        |
+| --------- | ---- | ----------------- |
+| energy    | kcal | Energi total      |
+| protein   | g    | Protein           |
+| carbs     | g    | Karbohidrat total |
+| fat       | g    | Lemak total       |
+| fiber     | g    | Serat             |
+| sugar     | g    | Gula              |
+| sodium    | mg   | Natrium           |
+| calcium   | mg   | Kalsium           |
+| iron      | mg   | Zat besi          |
+| vitamin_c | mg   | Vitamin C         |
 
 ---
 
@@ -1584,6 +1601,7 @@ uuid-123,Budi,Sarapan,Telur Goreng,60,90,6,1,6
 ## 🚀 SIAP DEVELOP?
 
 **Checklist Pra-Develop:**
+
 - [ ] Setup: Node.js + MySQL + Git
 - [ ] Design DB: Jalankan SQL schema
 - [ ] Seed: Insert data makanan Indonesia
@@ -1591,6 +1609,7 @@ uuid-123,Budi,Sarapan,Telur Goreng,60,90,6,1,6
 - [ ] Frontend: Next.js + shadcn/ui installed
 
 **Estimasi Waktu:**
+
 - Phase 1 (Auth): 3-4 hari
 - Phase 2 (Survey): 3-4 hari
 - Phase 3 (Food + Portion): 5-7 hari

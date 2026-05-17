@@ -178,6 +178,10 @@ func (s *authService) GetProfile(userID string) (*ProfileResponse, error) {
 
 // generateTokens - helper untuk generate access & refresh token
 func (s *authService) generateTokens(user *User) (accessToken, refreshToken string, expiresIn int64, err error) {
+	if user.Role != "admin" && user.Role != "respondent" {
+		return "", "", 0, errors.New("role tidak valid")
+	}
+
 	// Generate access token
 	accessToken, err = utils.GenerateJWT(user.ID, user.Email, user.Role)
 	if err != nil {

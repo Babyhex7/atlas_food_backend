@@ -12,6 +12,7 @@ Production:  https://api.atlasfood.com/api/v1
 ## Auth Endpoints
 
 ### Register Respondent
+
 ```http
 POST /auth/register
 Content-Type: application/json
@@ -38,6 +39,7 @@ Response 201:
 ```
 
 ### Login
+
 ```http
 POST /auth/login
 Content-Type: application/json
@@ -64,6 +66,7 @@ Response 200:
 ```
 
 ### Refresh Token
+
 ```http
 POST /auth/refresh
 Content-Type: application/json
@@ -85,6 +88,7 @@ Response 200:
 ```
 
 ### Get Profile
+
 ```http
 GET /auth/me
 Authorization: Bearer {access_token}
@@ -109,6 +113,7 @@ Response 200:
 ### Surveys
 
 #### List Surveys
+
 ```http
 GET /admin/surveys
 Authorization: Bearer {access_token}
@@ -131,6 +136,7 @@ Response 200:
 ```
 
 #### Create Survey
+
 ```http
 POST /admin/surveys
 Authorization: Bearer {access_token}
@@ -170,6 +176,7 @@ Response 201:
 ```
 
 #### Get Survey Detail
+
 ```http
 GET /admin/surveys/:id
 Authorization: Bearer {access_token}
@@ -193,6 +200,7 @@ Response 200:
 ```
 
 #### Update Survey
+
 ```http
 PUT /admin/surveys/:id
 Authorization: Bearer {access_token}
@@ -216,6 +224,7 @@ Response 200:
 ```
 
 #### Delete Survey
+
 ```http
 DELETE /admin/surveys/:id
 Authorization: Bearer {access_token}
@@ -230,6 +239,7 @@ Response 200:
 ### Submissions
 
 #### List Submissions
+
 ```http
 GET /admin/surveys/:id/submissions
 Authorization: Bearer {access_token}
@@ -250,6 +260,7 @@ Response 200:
 ```
 
 #### Export Submissions
+
 ```http
 GET /admin/surveys/:id/export?format=csv
 Authorization: Bearer {access_token}
@@ -265,6 +276,7 @@ uuid-123,Budi,Sarapan,Telur Goreng,60,90,6,1,6
 ### Foods
 
 #### List Foods
+
 ```http
 GET /admin/foods?page=1&limit=20&category=protein
 Authorization: Bearer {access_token}
@@ -285,6 +297,7 @@ Response 200:
 ```
 
 #### Create Food
+
 ```http
 POST /admin/foods
 Authorization: Bearer {access_token}
@@ -315,6 +328,7 @@ Response 201:
 ```
 
 #### Update Food
+
 ```http
 PUT /admin/foods/:id
 Authorization: Bearer {access_token}
@@ -334,6 +348,7 @@ Response 200:
 ```
 
 #### Delete Food
+
 ```http
 DELETE /admin/foods/:id
 Authorization: Bearer {access_token}
@@ -348,6 +363,7 @@ Response 200:
 ### Portion Size Management
 
 #### List Portion Methods per Food
+
 ```http
 GET /admin/foods/:id/portion-methods
 Authorization: Bearer {access_token}
@@ -372,6 +388,7 @@ Response 200:
 ```
 
 #### Add Portion Method
+
 ```http
 POST /admin/foods/:id/portion-methods
 Authorization: Bearer {access_token}
@@ -399,6 +416,7 @@ Response 201:
 ```
 
 #### Update Portion Method
+
 ```http
 PUT /admin/portion-methods/:id
 Authorization: Bearer {access_token}
@@ -418,6 +436,7 @@ Response 200:
 ```
 
 #### Delete Portion Method
+
 ```http
 DELETE /admin/portion-methods/:id
 Authorization: Bearer {access_token}
@@ -432,6 +451,7 @@ Response 200:
 ### As Served Sets
 
 #### List As Served Sets
+
 ```http
 GET /admin/as-served-sets
 Authorization: Bearer {access_token}
@@ -452,6 +472,7 @@ Response 200:
 ```
 
 #### Create As Served Set
+
 ```http
 POST /admin/as-served-sets
 Authorization: Bearer {access_token}
@@ -474,6 +495,7 @@ Response 201:
 ```
 
 #### Upload Portion Images
+
 ```http
 POST /admin/as-served-sets/:id/images
 Authorization: Bearer {access_token}
@@ -502,15 +524,17 @@ Response 201:
 ### Survey Access
 
 #### Access Survey with Token
+
 ```http
 POST /survey/access
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 Request:
 {
   "token": "gizi-sd-2024-abc123",
-  "alias": "PART-A7X9K2",  // optional
-  "respondent_name": "Budi Santoso"  // optional for anonymous
+  "alias": "PART-A7X9K2",
+  "respondent_name": "Budi Santoso"
 }
 
 Response 200:
@@ -525,8 +549,7 @@ Response 200:
     },
     "participant": {
       "id": "uuid-participant",
-      "alias": "PART-A7X9K2",
-      "is_anonymous": true
+      "alias": "PART-A7X9K2"
     },
     "access_token": "eyJhbGciOiJIUzI1NiIs..."  // survey session token
   }
@@ -534,9 +557,10 @@ Response 200:
 ```
 
 #### Get Survey Info
+
 ```http
 GET /survey/:id/info
-Authorization: Bearer {survey_access_token}
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -553,8 +577,10 @@ Response 200:
 ### Foods
 
 #### Search Foods
+
 ```http
 GET /foods/search?q=nasi&category=staples&limit=20
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -580,8 +606,10 @@ Response 200:
 ```
 
 #### Get Food Detail
+
 ```http
 GET /foods/:id
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -604,8 +632,10 @@ Response 200:
 ```
 
 #### Get Portion Methods per Food
+
 ```http
 GET /foods/:id/portion-methods
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -632,8 +662,10 @@ Response 200:
 ### Portion Selection
 
 #### Get Portion Options (As Served Images)
+
 ```http
 GET /portion-methods/:id/options
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -667,8 +699,10 @@ Response 200:
 ```
 
 #### Get As Served Set Images
+
 ```http
 GET /as-served-sets/:code/images
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -687,8 +721,10 @@ Response 200:
 ### Categories
 
 #### List Categories
+
 ```http
 GET /categories
+Authorization: Bearer {access_token}
 
 Response 200:
 {
@@ -705,9 +741,10 @@ Response 200:
 ### Survey Submission
 
 #### Submit Survey
+
 ```http
 POST /survey/submit
-Authorization: Bearer {survey_access_token}
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 Request:
@@ -775,6 +812,7 @@ Response 201:
 > **PENTING:** AI dipanggil **on-demand** hanya ketika user klik tombol "AI Recommendation" di halaman hasil survey. Tidak dipanggil saat submission.
 
 #### Request AI Analysis
+
 ```http
 POST /ai/nutrition-analysis
 Authorization: Bearer {access_token}
@@ -792,7 +830,7 @@ Response 200 (Fresh from Groq):
   "data": {
     "overall_status": "less",
     "overall_message": "Your current nutrition is still below the recommended daily requirement. Additional balanced nutrients are needed.",
-    
+
     "nutritional_analysis": [
       {
         "label": "Calories",
@@ -810,19 +848,19 @@ Response 200 (Fresh from Groq):
         "description": "Your meal already contains sufficient carbohydrates, but fiber and micronutrient sources are still lacking."
       }
     ],
-    
+
     "ai_recommendation": "To improve your nutritional balance, consider adding:\n- Grilled chicken or fish for additional protein\n- Vegetables such as broccoli or spinach for fiber and vitamins\n- Fruits like banana or apple for natural nutrients\n- More water intake to maintain hydration balance",
-    
+
     "recommended_foods": [
       "Grilled Chicken", "Boiled Egg", "Broccoli",
       "Spinach", "Banana", "Apple", "Greek Yogurt", "Mineral Water"
     ],
-    
+
     "health_insight": {
       "title": "Mild Nutritional Deficiency",
       "description": "Your current meal composition is considered partially balanced, but additional protein, vegetables, and hydration are recommended to better fulfill daily nutritional needs."
     },
-    
+
     "suggested_activities": ["Light Walking", "Yoga", "Stretching"]
   }
 }
@@ -848,6 +886,7 @@ Response 503 (Groq Service Error):
 ```
 
 **Notes:**
+
 - `source: "groq"` → Fresh analysis from Groq API
 - `source: "cache"` → Retrieved from database (already analyzed before)
 - Cache by `submission_id`: Same submission always returns same result
@@ -861,9 +900,10 @@ Response 503 (Groq Service Error):
 > ⚠️ **DEPRECATED:** Versi lama di mana AI result dikirim otomatis saat submission. Sekarang AI dipanggil on-demand via endpoint terpisah di atas.
 
 ### Submit Survey (dengan AI Result) - OLD VERSION
+
 ```http
 POST /survey/submit
-Authorization: Bearer {survey_access_token}
+Authorization: Bearer {access_token}
 Content-Type: application/json
 
 Request: (sama seperti sebelumnya)
@@ -923,6 +963,7 @@ Response 201:
 ## Error Responses
 
 ### Standard Error Format
+
 ```json
 {
   "status": "error",
@@ -931,7 +972,10 @@ Response 201:
     "message": "Invalid input data",
     "details": [
       { "field": "email", "message": "Email is required" },
-      { "field": "password", "message": "Password must be at least 8 characters" }
+      {
+        "field": "password",
+        "message": "Password must be at least 8 characters"
+      }
     ]
   }
 }
@@ -939,11 +983,11 @@ Response 201:
 
 ### Error Codes
 
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `UNAUTHORIZED` | 401 | Invalid or missing token |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `VALIDATION_ERROR` | 422 | Invalid input data |
-| `CONFLICT` | 409 | Resource already exists |
-| `INTERNAL_ERROR` | 500 | Server error |
+| Code               | HTTP Status | Description              |
+| ------------------ | ----------- | ------------------------ |
+| `UNAUTHORIZED`     | 401         | Invalid or missing token |
+| `FORBIDDEN`        | 403         | Insufficient permissions |
+| `NOT_FOUND`        | 404         | Resource not found       |
+| `VALIDATION_ERROR` | 422         | Invalid input data       |
+| `CONFLICT`         | 409         | Resource already exists  |
+| `INTERNAL_ERROR`   | 500         | Server error             |

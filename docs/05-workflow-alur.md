@@ -11,7 +11,7 @@ Login ──▶ Create Survey ──▶ Upload Food DB ──▶ Set Portion Ima
 ### Respondent Flow (4 Step Saja - Final Version!)
 
 ```
-Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──▶ Done
+Login ──▶ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──▶ Done
          Pilih      Add        Portion   Review
          Waktu      Food       (Langsung  & Submit
                     & Drink    Gambar!)
@@ -30,6 +30,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 ```
 
 **Actions:**
+
 - Pilih waktu makan dari daftar (Sarapan, Snack, Makan Siang, dll)
 - Edit waktu makan jika perlu
 - Lanjut ke step berikutnya
@@ -56,6 +57,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 ```
 
 **Actions:**
+
 - Search makanan/minuman
 - Tambahkan ke list
 - Setelah selesai, klik **Continue** untuk ke portion selection
@@ -106,6 +108,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 ```
 
 **Actions:**
+
 - Pilih gambar porsi yang sesuai
 - Atur quantity (jika diperlukan)
 - Atur fraksi (jika diperlukan)
@@ -128,6 +131,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 ```
 
 **Actions:**
+
 - Review semua makanan yang diinput
 - Edit porsi jika perlu
 - Tambah makanan lain jika perlu
@@ -162,6 +166,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 ```
 
 **Alur AI Recommendation:**
+
 1. User klik tombol "🤖 AI Recommendation"
 2. Button berubah jadi loading state
 3. Frontend kirim `POST /ai/nutrition-analysis` dengan `submission_id`
@@ -171,6 +176,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 5. Frontend render hasil AI di bawah section Actions
 
 **Hasil AI yang ditampilkan:**
+
 - Overall Status (good/less/excess) dengan warna indikator
 - Nutritional Analysis (Calories, Protein, Balance)
 - AI Recommendation (saran makanan tambahan)
@@ -264,7 +270,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 **Flow Lengkap Respondent (5 Steps):**
 
 ```
-Link ──▶ Pilih Waktu ──▶ Add Foods/Drinks ──▶ Continue ──▶
+Login ──▶ Link ──▶ Pilih Waktu ──▶ Add Foods/Drinks ──▶ Continue ──▶
 Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit ──▶
 Nutrition Result ──▶ [Optional] AI Recommendation
 ```
@@ -331,7 +337,7 @@ Nutrition Result ──▶ [Optional] AI Recommendation
 ### SKIP (NANTI AJA setelah MVP jalan):
 
 - [ ] Session auto-save (DB) - pake localStorage dulu
-- [ ] Respondent register/login (anonymous dulu)
+- [ ] Respondent register/login
 - [ ] Advanced food search (synonyms, fuzzy)
 - [ ] Multi-language (i18n file JSON dulu)
 - [ ] RBAC roles & permissions

@@ -1,6 +1,5 @@
 package survey
 
-
 // MealConfig - struktur meal untuk surveys.meals_config
 type MealConfig struct {
 	Name     string `json:"name" binding:"required,min=2,max=100"`
@@ -107,9 +106,8 @@ type AccessSurveyResponse struct {
 
 // ParticipantResponse - detail participant untuk response
 type ParticipantResponse struct {
-	ID          string `json:"id"`
-	Alias       string `json:"alias"`
-	IsAnonymous bool   `json:"is_anonymous"`
+	ID    string `json:"id"`
+	Alias string `json:"alias"`
 }
 
 // PublicSurveyResponse - response untuk public access

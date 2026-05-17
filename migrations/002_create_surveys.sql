@@ -35,13 +35,12 @@ CREATE TABLE IF NOT EXISTS surveys (
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Tabel survey_participants untuk anonymous/respondent
+-- Tabel survey_participants untuk respondent terdaftar
 CREATE TABLE IF NOT EXISTS survey_participants (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     survey_id CHAR(36) NOT NULL,
-    user_id CHAR(36),
+    user_id CHAR(36) NOT NULL,
     alias VARCHAR(50),
-    is_anonymous BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,

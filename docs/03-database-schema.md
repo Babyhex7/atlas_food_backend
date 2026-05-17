@@ -5,6 +5,7 @@
 ### 1. Auth (Minimal)
 
 #### users
+
 ```sql
 CREATE TABLE users (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -20,6 +21,7 @@ CREATE TABLE users (
 ```
 
 #### refresh_tokens
+
 ```sql
 CREATE TABLE refresh_tokens (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,6 +38,7 @@ CREATE TABLE refresh_tokens (
 ### 2. Survey (Minimal)
 
 #### locales
+
 ```sql
 CREATE TABLE locales (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -45,6 +48,7 @@ CREATE TABLE locales (
 ```
 
 #### surveys
+
 ```sql
 CREATE TABLE surveys (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -63,8 +67,8 @@ CREATE TABLE surveys (
     end_date DATE,
     status ENUM('draft', 'active', 'closed') DEFAULT 'draft',
 
-    -- Simple alias/token untuk anonymous access
-    access_token VARCHAR(255),  -- Token untuk akses survey
+    -- Token untuk akses survey
+    access_token VARCHAR(255),
 
     created_by CHAR(36) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -73,13 +77,13 @@ CREATE TABLE surveys (
 ```
 
 #### survey_participants
+
 ```sql
 CREATE TABLE survey_participants (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
     survey_id CHAR(36) NOT NULL,
-    user_id CHAR(36),  -- NULL kalau anonymous
-    alias VARCHAR(50), -- NULL kalau respondent terdaftar
-    is_anonymous BOOLEAN DEFAULT TRUE,
+    user_id CHAR(36) NOT NULL,
+    alias VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -91,6 +95,7 @@ CREATE TABLE survey_participants (
 ### 3. Food Database (Minimal)
 
 #### categories
+
 ```sql
 CREATE TABLE categories (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -102,6 +107,7 @@ CREATE TABLE categories (
 ```
 
 #### foods
+
 ```sql
 CREATE TABLE foods (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -120,6 +126,7 @@ CREATE TABLE foods (
 ```
 
 #### food_categories (many-to-many)
+
 ```sql
 CREATE TABLE food_categories (
     food_id CHAR(36) NOT NULL,
@@ -131,6 +138,7 @@ CREATE TABLE food_categories (
 ```
 
 #### nutrient_units
+
 ```sql
 CREATE TABLE nutrient_units (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -141,6 +149,7 @@ CREATE TABLE nutrient_units (
 ```
 
 #### nutrient_types
+
 ```sql
 CREATE TABLE nutrient_types (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -155,6 +164,7 @@ CREATE TABLE nutrient_types (
 ```
 
 #### food_nutrients
+
 ```sql
 CREATE TABLE food_nutrients (
     food_id CHAR(36) NOT NULL,
@@ -167,6 +177,7 @@ CREATE TABLE food_nutrients (
 ```
 
 #### associated_foods
+
 ```sql
 CREATE TABLE associated_foods (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -186,6 +197,7 @@ CREATE TABLE associated_foods (
 ### 4. Portion Size (dengan Gambar!)
 
 #### food_portion_size_methods
+
 ```sql
 CREATE TABLE food_portion_size_methods (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -216,6 +228,7 @@ CREATE TABLE food_portion_size_methods (
 ```
 
 #### as_served_sets
+
 ```sql
 CREATE TABLE as_served_sets (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -230,6 +243,7 @@ CREATE TABLE as_served_sets (
 ```
 
 #### as_served_images
+
 ```sql
 CREATE TABLE as_served_images (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -263,6 +277,7 @@ Note: `drinkware_sets` & `drinkware_scales` **DI-SKIP** untuk MVP — drinks pak
 ### 5. Submission (Minimal)
 
 #### survey_submissions
+
 ```sql
 CREATE TABLE survey_submissions (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -292,6 +307,7 @@ CREATE TABLE survey_submissions (
 ### 6. AI Nutrition Analysis (NEW!)
 
 #### ai_result_logs
+
 ```sql
 CREATE TABLE ai_result_logs (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
@@ -324,6 +340,7 @@ CREATE TABLE ai_result_logs (
 ```
 
 **Catatan:**
+
 - Tabel ini bisa menggunakan **database terpisah** atau database yang sama
 - Cache logic: 1 submission_id = 1 hasil AI (tidak ada panggilan redundan ke Groq)
 - Jika pakai DB terpisah, hapus baris `FOREIGN KEY` dan handle relasi di application layer
@@ -353,6 +370,7 @@ CREATE TABLE ai_result_logs (
 | `nutrient_units` | **SATUAN** pengukuran | gram (g), miligram (mg), kcal     |
 
 **Relasi:**
+
 ```
 nutrient_types: "Protein" ──unit_id──▶ nutrient_units: "gram (g)"
 ```

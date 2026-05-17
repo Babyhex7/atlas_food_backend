@@ -39,6 +39,12 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		// Simpan user info di context untuk handler
+		if claims.Role != "admin" && claims.Role != "respondent" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Role tidak valid"})
+			c.Abort()
+			return
+		}
+
 		c.Set("userID", claims.UserID)
 		c.Set("email", claims.Email)
 		c.Set("role", claims.Role)
@@ -53,6 +59,19 @@ func AdminOnly() gin.HandlerFunc {
 		role, exists := c.Get("role")
 		if !exists || role != "admin" {
 			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak, hanya admin"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// RespondentOnly - middleware untuk membatasi akses hanya untuk respondent
+func RespondentOnly() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists || role != "respondent" {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak, hanya respondent"})
 			c.Abort()
 			return
 		}

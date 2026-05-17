@@ -30,6 +30,12 @@ func (h *Handler) SubmitSurvey(c *gin.Context) {
 		return
 	}
 
+	if email, exists := c.Get("email"); exists {
+		if req.RespondentEmail == "" {
+			req.RespondentEmail = email.(string)
+		}
+	}
+
 	response, err := h.service.SubmitSurvey(req)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
@@ -109,5 +115,8 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	}
 
 	// Public/Respondent routes
-	router.POST("/survey/submit", h.SubmitSurvey)
+	respondent := router.Group("/survey", authMiddleware, middleware.RespondentOnly())
+	{
+		respondent.POST("/submit", h.SubmitSurvey)
+	}
 }

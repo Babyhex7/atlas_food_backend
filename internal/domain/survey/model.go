@@ -40,13 +40,12 @@ func (Survey) TableName() string {
 
 // SurveyParticipant - model untuk tabel survey_participants
 type SurveyParticipant struct {
-	ID          string    `gorm:"type:char(36);primaryKey;default:(UUID())" json:"id"`
-	SurveyID    string    `gorm:"type:char(36);not null;index" json:"survey_id"`
-	Survey      Survey    `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
-	UserID      *string   `gorm:"type:char(36);index" json:"user_id,omitempty"`
-	Alias       string    `gorm:"type:varchar(50)" json:"alias,omitempty"`
-	IsAnonymous bool      `gorm:"default:true" json:"is_anonymous"`
-	CreatedAt   time.Time `json:"created_at"`
+	ID        string    `gorm:"type:char(36);primaryKey;default:(UUID())" json:"id"`
+	SurveyID  string    `gorm:"type:char(36);not null;index" json:"survey_id"`
+	Survey    Survey    `gorm:"foreignKey:SurveyID" json:"survey,omitempty"`
+	UserID    string    `gorm:"type:char(36);not null;index" json:"user_id"`
+	Alias     string    `gorm:"type:varchar(50)" json:"alias,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
 func (SurveyParticipant) TableName() string {

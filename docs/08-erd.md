@@ -48,11 +48,11 @@ users ||--o{ surveys : creates
 users ||--o| survey_participants : participates
 ```
 
-| Relasi | Tipe | Deskripsi |
-|--------|------|-----------|
-| users → refresh_tokens | 1:N | 1 user bisa punya multiple refresh tokens |
-| users → surveys | 1:N | 1 user (admin) bisa create multiple surveys |
-| users → survey_participants | 1:0/1 | 1 user bisa jadi participant (nullable untuk anonymous) |
+| Relasi                      | Tipe  | Deskripsi                                   |
+| --------------------------- | ----- | ------------------------------------------- |
+| users → refresh_tokens      | 1:N   | 1 user bisa punya multiple refresh tokens   |
+| users → surveys             | 1:N   | 1 user (admin) bisa create multiple surveys |
+| users → survey_participants | 1:0/1 | 1 user bisa jadi participant                |
 
 ---
 
@@ -64,11 +64,11 @@ surveys ||--o{ survey_submissions : receives
 surveys }o--|| locales : uses
 ```
 
-| Relasi | Tipe | Deskripsi |
-|--------|------|-----------|
-| surveys → survey_participants | 1:N | 1 survey bisa punya multiple participants |
-| surveys → survey_submissions | 1:N | 1 survey bisa punya multiple submissions |
-| surveys → locales | N:1 | Survey menggunakan 1 locale (default: id) |
+| Relasi                        | Tipe | Deskripsi                                 |
+| ----------------------------- | ---- | ----------------------------------------- |
+| surveys → survey_participants | 1:N  | 1 survey bisa punya multiple participants |
+| surveys → survey_submissions  | 1:N  | 1 survey bisa punya multiple submissions  |
+| surveys → locales             | N:1  | Survey menggunakan 1 locale (default: id) |
 
 ---
 
@@ -87,16 +87,16 @@ nutrient_units ||--o{ nutrient_types : measures
 nutrient_types ||--o{ food_nutrients : measured_in
 ```
 
-| Relasi | Tipe | Deskripsi |
-|--------|------|-----------|
-| categories → foods | 1:N | 1 kategori punya banyak makanan |
-| foods ↔ categories | M:N | via food_categories (many-to-many) |
-| foods → food_nutrients | 1:N | 1 makanan punya multiple nilai gizi |
-| foods → food_portion_size_methods | 1:N | 1 makanan punya multiple portion methods |
-| foods → as_served_sets | 1:0/1 | 1 makanan bisa link ke as_served_set (opsional) |
-| foods → associated_foods | 1:N | 1 makanan bisa punya multiple associated foods |
-| nutrient_units → nutrient_types | 1:N | 1 unit bisa dipakai multiple nutrient types |
-| nutrient_types → food_nutrients | 1:N | 1 nutrient type bisa ada di multiple foods |
+| Relasi                            | Tipe  | Deskripsi                                       |
+| --------------------------------- | ----- | ----------------------------------------------- |
+| categories → foods                | 1:N   | 1 kategori punya banyak makanan                 |
+| foods ↔ categories                | M:N   | via food_categories (many-to-many)              |
+| foods → food_nutrients            | 1:N   | 1 makanan punya multiple nilai gizi             |
+| foods → food_portion_size_methods | 1:N   | 1 makanan punya multiple portion methods        |
+| foods → as_served_sets            | 1:0/1 | 1 makanan bisa link ke as_served_set (opsional) |
+| foods → associated_foods          | 1:N   | 1 makanan bisa punya multiple associated foods  |
+| nutrient_units → nutrient_types   | 1:N   | 1 unit bisa dipakai multiple nutrient types     |
+| nutrient_types → food_nutrients   | 1:N   | 1 nutrient type bisa ada di multiple foods      |
 
 ---
 
@@ -108,11 +108,11 @@ as_served_sets }o--|| foods : optional_for
 food_portion_size_methods }o--|| foods : for
 ```
 
-| Relasi | Tipe | Deskripsi |
-|--------|------|-----------|
-| as_served_sets → as_served_images | 1:N | 1 set punya multiple images |
-| as_served_sets → foods | N:0/1 | Set bisa spesifik untuk 1 food atau general |
-| food_portion_size_methods → foods | N:1 | Method untuk 1 makanan |
+| Relasi                            | Tipe  | Deskripsi                                   |
+| --------------------------------- | ----- | ------------------------------------------- |
+| as_served_sets → as_served_images | 1:N   | 1 set punya multiple images                 |
+| as_served_sets → foods            | N:0/1 | Set bisa spesifik untuk 1 food atau general |
+| food_portion_size_methods → foods | N:1   | Method untuk 1 makanan                      |
 
 ---
 
@@ -124,11 +124,11 @@ survey_submissions }o--o| survey_participants : from
 survey_submissions ||--o| ai_result_logs : has_analysis
 ```
 
-| Relasi | Tipe | Deskripsi |
-|--------|------|-----------|
-| survey_submissions → surveys | N:1 | Submission untuk 1 survey |
-| survey_submissions → survey_participants | N:0/1 | Submission dari 1 participant (nullable) |
-| survey_submissions → ai_result_logs | 1:0/1 | Submission bisa punya 1 AI analysis result (optional) |
+| Relasi                                   | Tipe  | Deskripsi                                             |
+| ---------------------------------------- | ----- | ----------------------------------------------------- |
+| survey_submissions → surveys             | N:1   | Submission untuk 1 survey                             |
+| survey_submissions → survey_participants | N:0/1 | Submission dari 1 participant (nullable)              |
+| survey_submissions → ai_result_logs      | 1:0/1 | Submission bisa punya 1 AI analysis result (optional) |
 
 ---
 
@@ -167,7 +167,7 @@ survey_submissions ||--o| ai_result_logs : has_analysis
 │   │ slug          │              │ FK survey_id    │                      │
 │   │ name          │              │ FK user_id      │                      │
 │   │ meals_config  │              │ alias           │                      │
-│   │ prompts       │              │ is_anonymous    │                      │
+│   │ prompts       │              │                 │                      │
 │   │ access_token  │              └─────────────────┘                      │
 │   │ FK locale_id  │◀─────────┐                                            │
 │   └───────────────┘          │                                            │
@@ -182,19 +182,6 @@ survey_submissions ||--o| ai_result_logs : has_analysis
 │   │ FK part_id    │────────┘                                            │
 │   │ meals_data    │                                                     │
 │   └───────────────┘                                                     │
-│           │                                                              │
-│           │ has_analysis                                                 │
-│           ▼                                                              │
-│   ┌───────────────┐                                                      │
-│   │ai_result_logs │                                                      │
-│   ├───────────────┤                                                      │
-│   │ PK id (uuid)  │                                                      │
-│   │ FK submiss_id │                                                      │
-│   │ input_payload │                                                      │
-│   │ raw_response  │                                                      │
-│   │ overall_status│                                                      │
-│   │ model_used    │                                                      │
-│   └───────────────┘                                                      │
 │                                                                             │
 │   ┌───────────────┐                                                      │
 │   │    locales    │                                                      │
@@ -280,11 +267,11 @@ survey_submissions ||--o| ai_result_logs : has_analysis
 
 ## Legend
 
-| Symbol | Meaning |
-|--------|---------|
-| `PK` | Primary Key |
-| `FK` | Foreign Key |
-| `||--o{` | One-to-Many relationship |
-| `}o--o{` | Many-to-Many relationship |
-| `}o--\|\|` | Many-to-One relationship |
+| Symbol      | Meaning                         |
+| ----------- | ------------------------------- | ----- | ------------------------ |
+| `PK`        | Primary Key                     |
+| `FK`        | Foreign Key                     |
+| `           |                                 | --o{` | One-to-Many relationship |
+| `}o--o{`    | Many-to-Many relationship       |
+| `}o--\|\|`  | Many-to-One relationship        |
 | `\|\|--o\|` | One-to-Zero-or-One relationship |

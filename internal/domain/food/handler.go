@@ -173,9 +173,12 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 		}
 	}
 
-	// Public routes
-	router.GET("/foods/search", h.SearchFoods)
-	router.GET("/foods/:id", h.GetFood)
-	router.GET("/categories", h.ListCategories)
-	router.GET("/categories/:id/foods", h.GetFoodsByCategory)
+	// Respondent routes
+	respondent := router.Group("", authMiddleware, middleware.RespondentOnly())
+	{
+		respondent.GET("/foods/search", h.SearchFoods)
+		respondent.GET("/foods/:id", h.GetFood)
+		respondent.GET("/categories", h.ListCategories)
+		respondent.GET("/categories/:id/foods", h.GetFoodsByCategory)
+	}
 }

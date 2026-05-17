@@ -172,14 +172,15 @@ func (h *Handler) AccessSurvey(c *gin.Context) {
 		return
 	}
 
-	// Cek apakah user sudah login (optional)
-	var userID *string
-	if id, exists := c.Get("userID"); exists {
-		uid := id.(string)
-		userID = &uid
+	userIDRaw, exists := c.Get("userID")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User tidak terautentikasi")
+		return
 	}
 
-	response, err := h.service.AccessSurvey(req, userID)
+	userID := userIDRaw.(string)
+
+	response, err := h.service.AccessSurvey(req, &userID)
 	if err != nil {
 		if appErr, ok := err.(*utils.AppError); ok {
 			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
@@ -238,7 +239,7 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	}
 
 	// Respondent routes
-	resp := router.Group("/survey")
+	resp := router.Group("/survey", authMiddleware, middleware.RespondentOnly())
 	{
 		resp.POST("/access", h.AccessSurvey)
 		resp.GET("/:id/info", h.GetSurveyInfo)

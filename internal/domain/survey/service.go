@@ -314,6 +314,10 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
 	}
 
+	if userID == nil || *userID == "" {
+		return nil, utils.NewAppError(401, "UNAUTHORIZED", "Login sebagai respondent diperlukan")
+	}
+
 	// Cek status survey
 	if survey.Status != "active" {
 		return nil, utils.NewAppError(403, "SURVEY_NOT_ACTIVE", "Survey tidak aktif")
@@ -343,11 +347,10 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 	if participant == nil {
 		// Buat participant baru
 		participant = &SurveyParticipant{
-			ID:          uuid.New().String(),
-			SurveyID:    survey.ID,
-			UserID:      userID,
-			Alias:       alias,
-			IsAnonymous: userID == nil,
+			ID:       uuid.New().String(),
+			SurveyID: survey.ID,
+			UserID:   *userID,
+			Alias:    alias,
 		}
 
 		if err := s.repo.CreateParticipant(participant); err != nil {
@@ -361,9 +364,8 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 	return &AccessSurveyResponse{
 		Survey: *publicSurvey,
 		Participant: ParticipantResponse{
-			ID:          participant.ID,
-			Alias:       participant.Alias,
-			IsAnonymous: participant.IsAnonymous,
+			ID:    participant.ID,
+			Alias: participant.Alias,
 		},
 		AccessToken: "dummy-session-token", // In real case, you might generate a survey-specific JWT
 	}, nil
