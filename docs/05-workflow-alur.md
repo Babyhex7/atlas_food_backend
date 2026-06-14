@@ -60,6 +60,7 @@ Login ──▶ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──�
 
 - Search makanan/minuman
 - Tambahkan ke list
+- **Additional Details (Toping/Tambahan):** Pencarian untuk makanan tambahan/toping dilakukan secara bebas (free search) melalui database makanan, **tanpa** ada pertanyaan yes/no atau deskripsi panjang. Langsung cari dan tambahkan!
 - Setelah selesai, klik **Continue** untuk ke portion selection
 
 ---
@@ -114,6 +115,15 @@ Login ──▶ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──�
 - Atur fraksi (jika diperlukan)
 - Konfirmasi porsi
 - Lanjut ke makanan berikutnya atau ke review
+
+#### 🔥 TIPE C: Missing Portion Data (Padanan / Substitute)
+
+Jika makanan yang dipilih (misal: Pisang) ternyata **tidak memiliki data estimasi porsi (gambar)** di database:
+
+1. User akan diarahkan untuk memilih **"Padanan" (Substitute)** terlebih dahulu.
+2. Contoh: User memilih padanan "Timun dengan Sendok" atau objek/makanan lain yang ukurannya mirip sebagai referensi.
+3. User kemudian melakukan estimasi porsi menggunakan gambar dari padanan tersebut.
+4. Hasil porsi (gram/ukuran) dari padanan tersebut akan digunakan sebagai estimasi untuk makanan asli (Pisang), memberikan gambaran ukuran porsi yang dikonsumsi meskipun data aslinya tidak ada.
 
 ---
 

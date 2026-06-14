@@ -1,0 +1,565 @@
+<mxGraphModel dx="1422" dy="762" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1654" pageHeight="1169" math="0" shadow="0">
+  <root>
+    <mxCell id="0" />
+    <mxCell id="1" parent="0" />
+
+    <!-- ============================================================ -->
+    <!-- SWIMLANE LABELS -->
+    <!-- ============================================================ -->
+    <mxCell id="label_auth" value="🔐 AUTH DOMAIN" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="30" y="20" width="200" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="label_survey" value="📋 SURVEY DOMAIN" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="580" y="20" width="200" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="label_food" value="🍔 FOOD DOMAIN" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="30" y="540" width="200" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="label_portion" value="🖼️ PORTION DOMAIN" style="text;html=1;strokeColor=none;fillColor=#f8cecc;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="760" y="540" width="200" height="40" as="geometry" />
+    </mxCell>
+    <mxCell id="label_submission" value="📊 SUBMISSION DOMAIN" style="text;html=1;strokeColor=none;fillColor=#e1d5e7;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=1;fontSize=13;fontStyle=1;arcSize=10;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="20" width="220" height="40" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: users -->
+    <!-- ============================================================ -->
+    <mxCell id="users_header" value="👤 users" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="30" y="80" width="260" height="290" as="geometry" />
+    </mxCell>
+    <mxCell id="users_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="30" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_email" value="email  VARCHAR(255) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="54" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_pw" value="password_hash  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="78" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_name" value="name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="102" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_gender" value="gender  ENUM(male,female,other)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="126" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_phone" value="phone_number  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="150" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_avatar" value="avatar  VARCHAR(500)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="174" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_role" value="role  ENUM(admin,respondent)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="198" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_active" value="is_active  BOOLEAN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="222" width="260" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="users_created" value="created_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="users_header">
+      <mxGeometry x="0" y="246" width="260" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: refresh_tokens -->
+    <!-- ============================================================ -->
+    <mxCell id="rt_header" value="🔄 refresh_tokens" style="swimlane;startSize=30;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="340" y="80" width="230" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="rt_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#dae8fc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="rt_header">
+      <mxGeometry x="0" y="30" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="rt_uid" value="🔗 FK  user_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="rt_header">
+      <mxGeometry x="0" y="54" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="rt_token" value="token_hash  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="rt_header">
+      <mxGeometry x="0" y="78" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="rt_exp" value="expires_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="rt_header">
+      <mxGeometry x="0" y="102" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="rt_created" value="created_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="rt_header">
+      <mxGeometry x="0" y="126" width="230" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: locales -->
+    <!-- ============================================================ -->
+    <mxCell id="locales_header" value="🌐 locales" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="580" y="80" width="200" height="126" as="geometry" />
+    </mxCell>
+    <mxCell id="locales_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="locales_header">
+      <mxGeometry x="0" y="30" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="locales_code" value="code  VARCHAR(10) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="locales_header">
+      <mxGeometry x="0" y="54" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="locales_name" value="name  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="locales_header">
+      <mxGeometry x="0" y="78" width="200" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: surveys -->
+    <!-- ============================================================ -->
+    <mxCell id="surveys_header" value="📋 surveys" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="800" y="80" width="250" height="270" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="30" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_slug" value="slug  VARCHAR(100) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="54" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_name" value="name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="78" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_desc" value="description  TEXT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="102" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_meals" value="meals_config  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="126" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_prompts" value="prompts  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="150" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_locale" value="🔗 FK  locale_id  INT" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="174" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_token" value="access_token  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="198" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_status" value="status  ENUM(draft,active,closed)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="222" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="surveys_createdby" value="🔗 FK  created_by  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="surveys_header">
+      <mxGeometry x="0" y="246" width="250" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: survey_participants -->
+    <!-- ============================================================ -->
+    <mxCell id="sp_header" value="👥 survey_participants" style="swimlane;startSize=30;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="580" y="250" width="200" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="sp_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#d5e8d4;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="sp_header">
+      <mxGeometry x="0" y="30" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="sp_sid" value="🔗 FK  survey_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="sp_header">
+      <mxGeometry x="0" y="54" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="sp_uid" value="🔗 FK  user_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="sp_header">
+      <mxGeometry x="0" y="78" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="sp_alias" value="alias  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="sp_header">
+      <mxGeometry x="0" y="102" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="sp_created" value="created_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="sp_header">
+      <mxGeometry x="0" y="126" width="200" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: survey_submissions -->
+    <!-- ============================================================ -->
+    <mxCell id="ss_header" value="📝 survey_submissions" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="80" width="240" height="240" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#e1d5e7;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="30" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_sid" value="🔗 FK  survey_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="54" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_pid" value="🔗 FK  participant_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="78" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_rname" value="respondent_name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="102" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_remail" value="respondent_email  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="126" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_meals" value="meals_data  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="150" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_missing" value="missing_foods  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="174" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_submitted" value="submitted_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="198" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ss_created" value="created_at  TIMESTAMP" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ss_header">
+      <mxGeometry x="0" y="222" width="240" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: ai_result_logs -->
+    <!-- ============================================================ -->
+    <mxCell id="ai_header" value="🤖 ai_result_logs" style="swimlane;startSize=30;fillColor=#e1d5e7;strokeColor=#9673a6;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="1190" y="360" width="240" height="220" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#e1d5e7;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="30" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_subid" value="🔗 FK  submission_id  CHAR(36) UQ" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="54" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_input" value="input_payload  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="78" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_raw" value="raw_response  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="102" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_status" value="overall_status  ENUM(good,less,excess)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="126" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_model" value="model_used  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="150" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_token" value="token_used  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="174" width="240" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ai_latency" value="latency_ms  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ai_header">
+      <mxGeometry x="0" y="198" width="240" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: categories -->
+    <!-- ============================================================ -->
+    <mxCell id="cat_header" value="🏷️ categories" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="30" y="600" width="220" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="cat_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="cat_header">
+      <mxGeometry x="0" y="30" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cat_code" value="code  VARCHAR(50) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="cat_header">
+      <mxGeometry x="0" y="54" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cat_name" value="name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="cat_header">
+      <mxGeometry x="0" y="78" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cat_icon" value="icon  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="cat_header">
+      <mxGeometry x="0" y="102" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="cat_order" value="display_order  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="cat_header">
+      <mxGeometry x="0" y="126" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: foods -->
+    <!-- ============================================================ -->
+    <mxCell id="foods_header" value="🍔 foods" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="300" y="600" width="230" height="190" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="30" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_code" value="code  VARCHAR(50) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="54" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_name" value="name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="78" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_lname" value="local_name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="102" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_desc" value="description  TEXT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="126" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_catid" value="🔗 FK  category_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="150" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="foods_active" value="is_active  BOOLEAN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="foods_header">
+      <mxGeometry x="0" y="174" width="230" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: food_categories -->
+    <!-- ============================================================ -->
+    <mxCell id="fc_header" value="🔗 food_categories" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="30" y="790" width="200" height="102" as="geometry" />
+    </mxCell>
+    <mxCell id="fc_foodid" value="🔑🔗 PK+FK  food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="fc_header">
+      <mxGeometry x="0" y="30" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fc_catid" value="🔑🔗 PK+FK  category_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="fc_header">
+      <mxGeometry x="0" y="54" width="200" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fc_label" value="[M:N  foods ↔ categories]" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=center;verticalAlign=middle;spacingLeft=8;fontStyle=2;" vertex="1" parent="fc_header">
+      <mxGeometry x="0" y="78" width="200" height="22" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: nutrient_units -->
+    <!-- ============================================================ -->
+    <mxCell id="nu_header" value="📏 nutrient_units" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="590" y="600" width="220" height="126" as="geometry" />
+    </mxCell>
+    <mxCell id="nu_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="nu_header">
+      <mxGeometry x="0" y="30" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nu_code" value="code  VARCHAR(10) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nu_header">
+      <mxGeometry x="0" y="54" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nu_name" value="name  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nu_header">
+      <mxGeometry x="0" y="78" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nu_symbol" value="symbol  VARCHAR(10)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nu_header">
+      <mxGeometry x="0" y="102" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: nutrient_types -->
+    <!-- ============================================================ -->
+    <mxCell id="nt_header" value="🧪 nutrient_types" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="590" y="760" width="220" height="174" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="30" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_code" value="code  VARCHAR(30) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="54" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_name" value="name  VARCHAR(100)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="78" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_uid" value="🔗 FK  unit_id  INT" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="102" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_order" value="display_order  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="126" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="nt_active" value="is_active  BOOLEAN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="nt_header">
+      <mxGeometry x="0" y="150" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: food_nutrients -->
+    <!-- ============================================================ -->
+    <mxCell id="fn_header" value="🔢 food_nutrients" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="860" y="600" width="220" height="102" as="geometry" />
+    </mxCell>
+    <mxCell id="fn_foodid" value="🔑🔗 PK+FK  food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="fn_header">
+      <mxGeometry x="0" y="30" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fn_ntid" value="🔑🔗 PK+FK  nutrient_type_id  INT" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="fn_header">
+      <mxGeometry x="0" y="54" width="220" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fn_val" value="value_per_100g  DECIMAL(10,4)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fn_header">
+      <mxGeometry x="0" y="78" width="220" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: associated_foods -->
+    <!-- ============================================================ -->
+    <mxCell id="af_header" value="🔀 associated_foods" style="swimlane;startSize=30;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="300" y="840" width="230" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="af_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#fff2cc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="af_header">
+      <mxGeometry x="0" y="30" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="af_foodid" value="🔗 FK  food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="af_header">
+      <mxGeometry x="0" y="54" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="af_associd" value="🔗 FK  associated_food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="af_header">
+      <mxGeometry x="0" y="78" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="af_priority" value="priority  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="af_header">
+      <mxGeometry x="0" y="102" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="af_default" value="is_default  BOOLEAN" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="af_header">
+      <mxGeometry x="0" y="126" width="230" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: food_portion_size_methods -->
+    <!-- ============================================================ -->
+    <mxCell id="fpsm_header" value="📐 food_portion_size_methods" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="760" y="600" width="250" height="230" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_id" value="🔑 PK  id  INT AUTO_INCREMENT" style="text;html=1;strokeColor=none;fillColor=#f8cecc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="30" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_foodid" value="🔗 FK  food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="54" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_type" value="method_type  ENUM(as_served,guide_image,weight)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="78" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_label" value="label  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="102" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_img" value="image_url  VARCHAR(500)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="126" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_thumb" value="thumbnail_url  VARCHAR(500)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="150" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_config" value="config  JSON" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="174" width="250" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="fpsm_order" value="display_order  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="fpsm_header">
+      <mxGeometry x="0" y="198" width="250" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: as_served_sets -->
+    <!-- ============================================================ -->
+    <mxCell id="ass_header" value="🖼️ as_served_sets" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="1060" y="600" width="230" height="150" as="geometry" />
+    </mxCell>
+    <mxCell id="ass_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#f8cecc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="ass_header">
+      <mxGeometry x="0" y="30" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ass_code" value="code  VARCHAR(50) UNIQUE" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ass_header">
+      <mxGeometry x="0" y="54" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ass_name" value="name  VARCHAR(255)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ass_header">
+      <mxGeometry x="0" y="78" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ass_foodid" value="🔗 FK  food_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ass_header">
+      <mxGeometry x="0" y="102" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="ass_cat" value="category  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="ass_header">
+      <mxGeometry x="0" y="126" width="230" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- TABLE: as_served_images -->
+    <!-- ============================================================ -->
+    <mxCell id="asi_header" value="🖼️ as_served_images" style="swimlane;startSize=30;fillColor=#f8cecc;strokeColor=#b85450;fontStyle=1;fontSize=12;" vertex="1" parent="1">
+      <mxGeometry x="1060" y="790" width="230" height="190" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_id" value="🔑 PK  id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#f8cecc;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="30" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_setid" value="🔗 FK  set_id  CHAR(36)" style="text;html=1;strokeColor=none;fillColor=#ffe6cc;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="54" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_label" value="label  VARCHAR(50)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="78" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_img" value="image_url  VARCHAR(500)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="102" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_thumb" value="thumbnail_url  VARCHAR(500)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="126" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_weight" value="weight_gram  DECIMAL(10,2)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="150" width="230" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="asi_order" value="display_order  INT" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="asi_header">
+      <mxGeometry x="0" y="174" width="230" height="24" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- RELATIONSHIPS (EDGES) -->
+    <!-- ============================================================ -->
+
+    <!-- users → refresh_tokens (1:N) -->
+    <mxCell id="edge_users_rt" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;strokeColor=#6c8ebf;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="users_header" target="rt_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- users → surveys (1:N via created_by) -->
+    <mxCell id="edge_users_surveys" value="1 : N&#xa;(created_by)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="users_header" target="surveys_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- users → survey_participants (1:N) -->
+    <mxCell id="edge_users_sp" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="users_header" target="sp_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- locales → surveys (1:N) -->
+    <mxCell id="edge_locales_surveys" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="locales_header" target="surveys_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- surveys → survey_participants (1:N) -->
+    <mxCell id="edge_surveys_sp" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#82b366;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="surveys_header" target="sp_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- surveys → survey_submissions (1:N) -->
+    <mxCell id="edge_surveys_ss" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="surveys_header" target="ss_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- survey_participants → survey_submissions (1:N) -->
+    <mxCell id="edge_sp_ss" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="sp_header" target="ss_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- survey_submissions → ai_result_logs (1:0/1) -->
+    <mxCell id="edge_ss_ai" value="1 : 0/1&#xa;(cache)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#9673a6;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmandOne;endFill=0;" edge="1" parent="1" source="ss_header" target="ai_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- categories → foods (1:N primary) -->
+    <mxCell id="edge_cat_foods" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="cat_header" target="foods_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- categories ↔ foods via food_categories (M:N) -->
+    <mxCell id="edge_cat_fc" value="M : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;dashed=1;startArrow=ERmany;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="cat_header" target="fc_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+    <mxCell id="edge_foods_fc" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;dashed=1;startArrow=ERmany;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="foods_header" target="fc_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- foods → food_nutrients (1:N) -->
+    <mxCell id="edge_foods_fn" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="foods_header" target="fn_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- nutrient_units → nutrient_types (1:N) -->
+    <mxCell id="edge_nu_nt" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="nu_header" target="nt_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- nutrient_types → food_nutrients (1:N) -->
+    <mxCell id="edge_nt_fn" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="nt_header" target="fn_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- foods → associated_foods (1:N self-ref) -->
+    <mxCell id="edge_foods_af" value="1 : N&#xa;(self-ref)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#d6b656;strokeWidth=2;dashed=1;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="foods_header" target="af_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- foods → food_portion_size_methods (1:N) -->
+    <mxCell id="edge_foods_fpsm" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="foods_header" target="fpsm_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- foods → as_served_sets (1:0/1 optional) -->
+    <mxCell id="edge_foods_ass" value="1 : 0/1&#xa;(optional)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=2;dashed=1;startArrow=ERone;startFill=0;endArrow=ERzeroToOne;endFill=0;" edge="1" parent="1" source="foods_header" target="ass_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- as_served_sets → as_served_images (1:N) -->
+    <mxCell id="edge_ass_asi" value="1 : N" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeColor=#b85450;strokeWidth=2;startArrow=ERone;startFill=0;endArrow=ERmany;endFill=0;" edge="1" parent="1" source="ass_header" target="asi_header">
+      <mxGeometry relative="1" as="geometry" />
+    </mxCell>
+
+    <!-- ============================================================ -->
+    <!-- LEGEND -->
+    <!-- ============================================================ -->
+    <mxCell id="legend_bg" value="" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;arcSize=5;" vertex="1" parent="1">
+      <mxGeometry x="30" y="1000" width="500" height="120" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_title" value="📖 LEGEND" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;fontStyle=1;fontSize=13;" vertex="1" parent="1">
+      <mxGeometry x="40" y="1010" width="480" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_pk" value="🔑 PK = Primary Key  |  🔗 FK = Foreign Key  |  UQ = Unique  |  — — = Optional/Dashed" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="1038" width="480" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_color1" value="🟦 Auth   🟩 Survey   🟨 Food   🟥 Portion   🟪 Submission" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="1062" width="480" height="24" as="geometry" />
+    </mxCell>
+    <mxCell id="legend_color2" value="🟧 FK Row (orange background) = kolom yang merupakan Foreign Key" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;spacingLeft=8;" vertex="1" parent="1">
+      <mxGeometry x="40" y="1086" width="480" height="24" as="geometry" />
+    </mxCell>
+
+  </root>
+</mxGraphModel>

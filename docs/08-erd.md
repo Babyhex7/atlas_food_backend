@@ -146,7 +146,10 @@ survey_submissions ||--o| ai_result_logs : has_analysis
 │   │ email         │  │         │ │ FK user_id      │                      │
 │   │ password_hash │  │         │ │ token_hash      │                      │
 │   │ name          │  │         │ │ expires_at      │                      │
-│   │ role          │  │         │ └─────────────────┘                      │
+│   │ gender        │  │         │ └─────────────────┘                      │
+│   │ phone_number  │  │                                                  │
+│   │ avatar        │  │                                                  │
+│   │ role          │  │                                                  │
 │   │ is_active     │  │                                                  │
 │   └───────────────┘  │                                                  │
 │           │          │                                                  │
