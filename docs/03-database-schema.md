@@ -181,6 +181,10 @@ CREATE TABLE food_nutrients (
 
 #### associated_foods
 
+> [!WARNING]
+> **DEPRECATED FOR FOOD RECALL FLOW**
+> Tabel ini awalnya digunakan untuk memberi rekomendasi makanan tambahan. Namun sesuai alur terbaru, tambahan/toping kini berbasis *free search* dari user. Tabel ini dipertahankan hanya untuk fitur lain (seperti *Find Your Food*).
+
 ```sql
 CREATE TABLE associated_foods (
     id INT AUTO_INCREMENT PRIMARY KEY,

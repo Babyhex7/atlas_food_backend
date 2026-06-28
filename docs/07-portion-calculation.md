@@ -121,11 +121,20 @@ const portionGram = 2.75 * 200; // = 550g
 
 ---
 
-### 3. Weight Method (Manual Input)
+### 3. Custom Weight Adjustment (Input Manual Penambahan/Pengurangan)
+
+Sesuai dengan UX terbaru, "Custom Weight" berfungsi sebagai pelengkap/tambahan (additive/subtractive) dari estimasi porsi gambar.
 
 ```javascript
-// User ketik langsung: 150 gram
-const portionGram = userInput; // 150g
+// User pilih gambar dengan baseWeight 300g (1 porsi)
+// User merasa kurang sedikit, jadi user tambah 50g manual
+const baseWeight = 300;
+const quantity = 1;
+const customWeightAdjustment = 50; // bisa minus (-50) jika porsi dirasa kurang dari gambar
+
+// RUMUS FINAL:
+const portionGram = (baseWeight * quantity) + customWeightAdjustment; 
+// (300 * 1) + 50 = 350g
 ```
 
 ---

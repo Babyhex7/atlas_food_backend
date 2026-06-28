@@ -23,11 +23,12 @@ type MealData struct {
 
 // FoodData - detail makanan yang dikonsumsi
 type FoodData struct {
-	FoodID      string         `json:"food_id"`
-	FoodName    string         `json:"food_name" binding:"required"`
-	PortionGram float64        `json:"portion_gram" binding:"required"`
-	Portion     PortionDetails `json:"portion"`
-	Nutrients   NutrientValues `json:"nutrients"`
+	FoodID          string         `json:"food_id"`
+	FoodName        string         `json:"food_name" binding:"required"`
+	PortionGram     float64        `json:"portion_gram" binding:"required"`
+	Portion         PortionDetails `json:"portion"`
+	Nutrients       NutrientValues `json:"nutrients"`
+	AdditionalFoods []FoodData     `json:"additional_foods,omitempty"` // Untuk toping / tambahan dari free search
 }
 
 // PortionDetails - detail cara ukur porsi
@@ -39,6 +40,7 @@ type PortionDetails struct {
 	Quantity      float64 `json:"quantity"`
 	Fraction      float64 `json:"fraction"`
 	TotalQuantity float64 `json:"total_quantity"`
+	CustomWeight  float64 `json:"custom_weight,omitempty"` // Jika user input berat custom
 }
 
 // NutrientValues - nilai gizi makanan

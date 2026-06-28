@@ -60,7 +60,7 @@ Login ──▶ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──�
 
 - Search makanan/minuman
 - Tambahkan ke list
-- **Additional Details (Toping/Tambahan):** Pencarian untuk makanan tambahan/toping dilakukan secara bebas (free search) melalui database makanan, **tanpa** ada pertanyaan yes/no atau deskripsi panjang. Langsung cari dan tambahkan!
+- **Additional Details (Toping/Tambahan):** Pencarian untuk makanan tambahan/toping dilakukan secara bebas (free search) melalui database makanan. **TIDAK ada batasan dari admin (bukan dari associated_foods)**. User bebas mencari dan memilih toping/komponen tambahan sendiri.
 - Setelah selesai, klik **Continue** untuk ke portion selection
 
 ---
@@ -111,8 +111,9 @@ Login ──▶ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──�
 **Actions:**
 
 - Pilih gambar porsi yang sesuai
-- Atur quantity (jika diperlukan)
+- Atur quantity (jika diperlukan, misal: 3 kali lipat / 3 buah)
 - Atur fraksi (jika diperlukan)
+- Atau input **Custom Weight** (jika user memilih input berat sendiri dalam gram)
 - Konfirmasi porsi
 - Lanjut ke makanan berikutnya atau ke review
 

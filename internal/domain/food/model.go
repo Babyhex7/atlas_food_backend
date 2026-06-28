@@ -25,6 +25,7 @@ type Food struct {
 	Name        string    `gorm:"type:varchar(255);not null" json:"name"`
 	LocalName   string    `gorm:"type:varchar(255)" json:"local_name"`
 	Description string    `gorm:"type:text" json:"description"`
+	PhotoType   string    `gorm:"type:enum('series','range');default:'series'" json:"photo_type"`
 	CategoryID  *string   `gorm:"type:char(36)" json:"category_id"`
 	Category    *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
 	IsActive    bool      `gorm:"default:true" json:"is_active"`

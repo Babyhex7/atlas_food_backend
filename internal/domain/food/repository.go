@@ -1,6 +1,8 @@
 package food
 
 import (
+	"strings"
+
 	"gorm.io/gorm"
 )
 
@@ -10,6 +12,7 @@ type Repository interface {
 	GetFoodByID(id string) (*Food, error)
 	GetFoodByCode(code string) (*Food, error)
 	ListFoods(categoryID string, page, limit int) ([]Food, int64, error)
+	ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error)
 	UpdateFood(food *Food) error
 	DeleteFood(id string) error
 	SearchFoods(query string, categoryID string, limit int) ([]Food, error)
@@ -22,6 +25,7 @@ type Repository interface {
 	// Category operations
 	ListCategories() ([]Category, error)
 	GetCategoryByID(id string) (*Category, error)
+	GetCategoryByCode(code string) (*Category, error)
 
 	// Portion Method operations
 	GetPortionMethodsByFoodID(foodID string) ([]PortionSizeMethod, error)
@@ -65,11 +69,22 @@ func (r *foodRepository) GetFoodByCode(code string) (*Food, error) {
 }
 
 func (r *foodRepository) ListFoods(categoryID string, page, limit int) ([]Food, int64, error) {
+	return r.listFoods(categoryID, page, limit, false)
+}
+
+func (r *foodRepository) ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error) {
+	return r.listFoods(categoryID, page, limit, true)
+}
+
+func (r *foodRepository) listFoods(categoryID string, page, limit int, activeOnly bool) ([]Food, int64, error) {
 	var foods []Food
 	var total int64
 	query := r.db.Model(&Food{}).Preload("Category")
 	if categoryID != "" {
 		query = query.Where("category_id = ?", categoryID)
+	}
+	if activeOnly {
+		query = query.Where("is_active = ?", true)
 	}
 	query.Count(&total)
 	offset := (page - 1) * limit
@@ -87,13 +102,23 @@ func (r *foodRepository) DeleteFood(id string) error {
 
 func (r *foodRepository) SearchFoods(query string, categoryID string, limit int) ([]Food, error) {
 	var foods []Food
-	q := r.db.Preload("Category")
+	q := r.db.Preload("Category").Where("is_active = ?", true)
 	if categoryID != "" {
 		q = q.Where("category_id = ?", categoryID)
 	}
-	// Fulltext search if supported, otherwise ILIKE
-	err := q.Where("name LIKE ? OR local_name LIKE ?", "%"+query+"%", "%"+query+"%").
-		Limit(limit).Find(&foods).Error
+
+	trimmed := strings.TrimSpace(query)
+	if trimmed != "" {
+		likeQuery := "%" + trimmed + "%"
+		// FULLTEXT wildcard hanya di akhir kata (nasi*), plus fallback LIKE & pencarian kode
+		matchQuery := trimmed + "*"
+		q = q.Where(
+			"(MATCH(name, local_name) AGAINST(? IN BOOLEAN MODE) OR name LIKE ? OR local_name LIKE ? OR code LIKE ?)",
+			matchQuery, likeQuery, likeQuery, likeQuery,
+		)
+	}
+
+	err := q.Limit(limit).Find(&foods).Error
 	return foods, err
 }
 
@@ -129,6 +154,12 @@ func (r *foodRepository) ListCategories() ([]Category, error) {
 func (r *foodRepository) GetCategoryByID(id string) (*Category, error) {
 	var category Category
 	err := r.db.Where("id = ?", id).First(&category).Error
+	return &category, err
+}
+
+func (r *foodRepository) GetCategoryByCode(code string) (*Category, error) {
+	var category Category
+	err := r.db.Where("code = ?", code).First(&category).Error
 	return &category, err
 }
 

@@ -3,6 +3,7 @@ package food
 import (
 	"atlas_food/internal/pkg/utils"
 	"encoding/json"
+	"strconv"
 
 	"github.com/google/uuid"
 )
@@ -22,6 +23,7 @@ type Service interface {
 	// Public/Respondent
 	SearchFoods(query string, categoryID string, limit int) ([]SearchFoodResponse, error)
 	ListCategories() ([]Category, error)
+	ListFoodsByCategoryCode(categoryCode string, page, limit int) ([]Food, int64, error)
 }
 
 type foodService struct {
@@ -40,6 +42,11 @@ func (s *foodService) CreateFood(req CreateFoodRequest) (*FoodResponse, error) {
 		Name:        req.Name,
 		LocalName:   req.LocalName,
 		Description: req.Description,
+		PhotoType:   req.PhotoType,
+	}
+
+	if food.PhotoType == "" {
+		food.PhotoType = "series"
 	}
 
 	if req.CategoryID != "" {
@@ -85,23 +92,37 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	}
 
 	methods, _ := s.repo.GetPortionMethodsByFoodID(id)
-	methodResponses := make([]PortionMethodResponse, len(methods))
+	portionPhotos := make([]PortionPhoto, len(methods))
 	for i, m := range methods {
-		methodResponses[i] = PortionMethodResponse{
-			ID:          m.ID,
-			MethodType:  m.MethodType,
-			Label:       m.Label,
-			Description: m.Description,
-			ImageURL:    m.ImageURL,
-			Config:      json.RawMessage(m.Config),
+		var configData struct {
+			WeightGram   float64 `json:"weight_gram"`
+			ThumbnailURL string  `json:"thumbnail_url"`
+		}
+		_ = json.Unmarshal([]byte(m.Config), &configData)
+
+		thumbnailURL := configData.ThumbnailURL
+		if thumbnailURL == "" {
+			thumbnailURL = m.ThumbnailURL
+		}
+
+		portionPhotos[i] = PortionPhoto{
+			ID:           strconv.Itoa(m.ID),
+			Label:        m.Label,
+			ImageURL:     m.ImageURL,
+			ThumbnailURL: thumbnailURL,
+			WeightGram:   configData.WeightGram,
+			Description:  m.Description,
 		}
 	}
 
-	categoryName := ""
-	categoryIcon := ""
+	var categoryInfo *CategoryInfo
 	if food.Category != nil {
-		categoryName = food.Category.Name
-		categoryIcon = food.Category.Icon
+		categoryInfo = &CategoryInfo{
+			ID:   food.Category.ID,
+			Code: food.Category.Code,
+			Name: food.Category.Name,
+			Icon: food.Category.Icon,
+		}
 	}
 
 	return &FoodResponse{
@@ -110,10 +131,10 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 		Name:           food.Name,
 		LocalName:      food.LocalName,
 		Description:    food.Description,
-		Category:       categoryName,
-		Icon:           categoryIcon,
+		PhotoType:      food.PhotoType,
+		Category:       categoryInfo,
 		Nutrients:      nutrientMap,
-		PortionMethods: methodResponses,
+		PortionPhotos:  portionPhotos,
 	}, nil
 }
 
@@ -137,6 +158,9 @@ func (s *foodService) UpdateFood(id string, req UpdateFoodRequest) (*FoodRespons
 	}
 	if req.Description != "" {
 		food.Description = req.Description
+	}
+	if req.PhotoType != "" {
+		food.PhotoType = req.PhotoType
 	}
 	if req.CategoryID != "" {
 		food.CategoryID = &req.CategoryID
@@ -227,19 +251,22 @@ func (s *foodService) SearchFoods(query string, categoryID string, limit int) ([
 
 	resp := make([]SearchFoodResponse, len(foods))
 	for i, f := range foods {
-		catName := ""
-		catIcon := ""
+		var categoryInfo *CategoryInfo
 		if f.Category != nil {
-			catName = f.Category.Name
-			catIcon = f.Category.Icon
+			categoryInfo = &CategoryInfo{
+				ID:   f.Category.ID,
+				Code: f.Category.Code,
+				Name: f.Category.Name,
+				Icon: f.Category.Icon,
+			}
 		}
 		resp[i] = SearchFoodResponse{
 			ID:        f.ID,
 			Code:      f.Code,
 			Name:      f.Name,
 			LocalName: f.LocalName,
-			Category:  catName,
-			Icon:      catIcon,
+			PhotoType: f.PhotoType,
+			Category:  categoryInfo,
 		}
 	}
 	return resp, nil
@@ -248,4 +275,13 @@ func (s *foodService) SearchFoods(query string, categoryID string, limit int) ([
 // ListCategories - mengambil daftar semua kategori makanan (Public)
 func (s *foodService) ListCategories() ([]Category, error) {
 	return s.repo.ListCategories()
+}
+
+// ListFoodsByCategoryCode - mengambil daftar makanan berdasarkan category code (Public)
+func (s *foodService) ListFoodsByCategoryCode(categoryCode string, page, limit int) ([]Food, int64, error) {
+	category, err := s.repo.GetCategoryByCode(categoryCode)
+	if err != nil {
+		return nil, 0, utils.NewAppError(404, "NOT_FOUND", "Kategori tidak ditemukan")
+	}
+	return s.repo.ListActiveFoods(category.ID, page, limit)
 }

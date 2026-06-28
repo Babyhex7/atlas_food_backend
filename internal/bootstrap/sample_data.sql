@@ -1,72 +1,3 @@
-package bootstrap
-
-import (
-	"time"
-
-	"atlas_food/internal/config"
-	"atlas_food/internal/domain/auth"
-	"atlas_food/internal/domain/food"
-	"atlas_food/internal/domain/survey"
-	"atlas_food/internal/pkg/utils"
-
-	"gorm.io/gorm"
-)
-
-// SeedInitialData - memasukkan data awal (admin, locales, dll.)
-func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
-	// Seed admin user jika belum ada
-	var cnt int64
-	if err := db.Model(&auth.User{}).Where("email = ?", cfg.AdminSeedEmail).Count(&cnt).Error; err != nil {
-		return err
-	}
-	if cnt == 0 {
-		hash, err := utils.HashPassword(cfg.AdminSeedPassword)
-		if err != nil {
-			return err
-		}
-		admin := &auth.User{
-			Email:        cfg.AdminSeedEmail,
-			PasswordHash: hash,
-			Name:         cfg.AdminSeedName,
-			Role:         "admin",
-			IsActive:     true,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
-		}
-		if err := db.Create(admin).Error; err != nil {
-			return err
-		}
-	}
-
-	// Seed default locales jika tabel kosong
-	var localeCnt int64
-	if err := db.Model(&survey.Locale{}).Count(&localeCnt).Error; err != nil {
-		return err
-	}
-	if localeCnt == 0 {
-		locales := []survey.Locale{
-			{Code: "id", Name: "Bahasa Indonesia"},
-			{Code: "en", Name: "English"},
-		}
-		if err := db.Create(&locales).Error; err != nil {
-			return err
-		}
-	}
-
-	// Seed sample data foods jika kosong
-	var foodCnt int64
-	if err := db.Model(&food.Food{}).Count(&foodCnt).Error; err != nil {
-		return err
-	}
-	if foodCnt == 0 {
-		importSampleData(db)
-	}
-
-	return nil
-}
-
-func importSampleData(db *gorm.DB) {
-	importSQL := `
 INSERT INTO nutrient_units (id, code, name, symbol) VALUES
 (1, 'kcal', 'Kilokalori', 'kcal'),
 (2, 'g', 'Gram', 'g'),
@@ -115,7 +46,7 @@ INSERT INTO food_nutrients (food_id, nutrient_type_id, value_per_100g) VALUES
 ('uuid-susu', 8, 120.00);
 
 INSERT INTO as_served_sets (id, code, name, description, category, food_id) VALUES
-('uuid-set-3', 'banana-slices', 'Sliced Banana Portions', 'Visual guide for banana portions', 'fruits', 'uuid-pisang');
+('uuid-set-3', 'banana-slices', 'Sliced Banana Portions', 'Visual guide for banana portions', 'AB', 'uuid-pisang');
 
 INSERT INTO as_served_images (id, set_id, label, image_url, thumbnail_url, weight_gram, description, display_order) VALUES
 (UUID(), 'uuid-set-3', '1', '/banana/banana-1.jpg', '/banana/banana-1-thumb.jpg', 20.0, 'Few slices (~20g)', 1),
@@ -137,10 +68,3 @@ INSERT INTO food_portion_size_methods (food_id, method_type, label, description,
 ('uuid-nasi', 'as_served', 'G', 'Porsi sangat besar', '/uploads/nasi/nasi-G.jpg', '/uploads/nasi/nasi-G-thumb.jpg', '{"weight_gram": 270}', 7),
 ('uuid-nasi', 'as_served', 'H', 'Porsi ekstra besar', '/uploads/nasi/nasi-H.jpg', '/uploads/nasi/nasi-H-thumb.jpg', '{"weight_gram": 350}', 8),
 ('uuid-pisang', 'as_served', 'Sliced banana on plate', 'Choose portion and adjust quantity', '/banana/preview.jpg', NULL, '{"selectionType":"as_served_quantity","setCode":"banana-slices","thumbnailPosition":"bottom","maxQuantity":5,"allowFractions":true,"fractionOptions":[0,0.25,0.5,0.75],"defaultQuantity":1,"defaultFraction":0,"showCalculation":true}', 1);
-`
-	// Split by double newline to get individual statements or just execute as one block if driver allows.
-	// GORM's Exec usually only does one statement at a time unless multiStatements=true. 
-	// We'll execute them manually by splitting on ";"
-	importSQL = "SET FOREIGN_KEY_CHECKS=0;" + importSQL + "SET FOREIGN_KEY_CHECKS=1;"
-	db.Exec(importSQL) // Note: mysql driver needs parseTime=true&multiStatements=true in DSN to run multiple queries in one Exec.
-}

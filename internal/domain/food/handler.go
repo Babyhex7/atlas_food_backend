@@ -135,15 +135,19 @@ func (h *Handler) ListCategories(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
-// GetFoodsByCategory - GET /api/v1/categories/:id/foods
-// Mengambil daftar makanan berdasarkan kategori
+// GetFoodsByCategory - GET /api/v1/public/categories/:code/foods
+// Mengambil daftar makanan berdasarkan kategori code
 func (h *Handler) GetFoodsByCategory(c *gin.Context) {
-	categoryID := c.Param("id")
+	categoryCode := c.Param("code")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
-	foods, total, err := h.service.ListFoods(categoryID, page, limit)
+	foods, total, err := h.service.ListFoodsByCategoryCode(categoryCode, page, limit)
 	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
+			return
+		}
 		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
 	}
@@ -176,9 +180,17 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	// Respondent routes
 	respondent := router.Group("", authMiddleware, middleware.RespondentOnly())
 	{
-		respondent.GET("/foods/search", h.SearchFoods)
-		respondent.GET("/foods/:id", h.GetFood)
-		respondent.GET("/categories", h.ListCategories)
-		respondent.GET("/categories/:id/foods", h.GetFoodsByCategory)
+		// Tambahkan route khusus responden jika ada di masa depan
+		// Saat ini pencarian makanan dan kategori dibuat PUBLIC untuk fitur "Find Your Food"
+		_ = respondent
+	}
+
+	// Public routes (Untuk fitur Find Your Food tanpa login)
+	public := router.Group("/public")
+	{
+		public.GET("/foods/search", h.SearchFoods)
+		public.GET("/foods/:id", h.GetFood)
+		public.GET("/categories", h.ListCategories)
+		public.GET("/categories/:code/foods", h.GetFoodsByCategory)
 	}
 }

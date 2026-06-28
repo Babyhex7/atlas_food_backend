@@ -13,7 +13,7 @@ import (
 // Mengembalikan pointer ke gorm.DB untuk digunakan di seluruh aplikasi
 func InitDB(cfg *Config) *gorm.DB {
 	// Format DSN (Data Source Name) untuk MySQL
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
 		cfg.DBUser,
 		cfg.DBPassword,
 		cfg.DBHost,

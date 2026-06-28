@@ -43,6 +43,13 @@ func main() {
 		log.Fatalf("Gagal migrasi database: %v", err)
 	}
 
+	log.Println("Memastikan FULLTEXT index untuk tabel foods ada...")
+	// Index dibutuhkan agar MATCH(name, local_name) AGAINST(...) berfungsi
+	errFT := db.Exec("CREATE FULLTEXT INDEX ft_name_local ON foods(name, local_name)").Error
+	if errFT != nil {
+		log.Printf("Info FULLTEXT index (diabaikan jika sudah ada): %v", errFT)
+	}
+
 	// Seed data awal untuk development
 	if err := bootstrap.SeedInitialData(db, cfg); err != nil {
 		log.Fatalf("Gagal seed data awal: %v", err)

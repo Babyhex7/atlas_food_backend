@@ -14,6 +14,7 @@ type CreateFoodRequest struct {
 	Name        string                `json:"name" binding:"required"`
 	LocalName   string                `json:"local_name"`
 	Description string                `json:"description"`
+	PhotoType   string                `json:"photo_type" binding:"oneof=series range"`
 	CategoryID  string                `json:"category_id"`
 	Nutrients   []FoodNutrientRequest `json:"nutrients"`
 }
@@ -23,22 +24,41 @@ type UpdateFoodRequest struct {
 	Name        string                `json:"name"`
 	LocalName   string                `json:"local_name"`
 	Description string                `json:"description"`
+	PhotoType   string                `json:"photo_type" binding:"omitempty,oneof=series range"`
 	CategoryID  string                `json:"category_id"`
 	Nutrients   []FoodNutrientRequest `json:"nutrients"`
 	IsActive    *bool                 `json:"is_active"`
 }
 
+// CategoryInfo - DTO untuk category dalam food responses
+type CategoryInfo struct {
+	ID   string `json:"id"`
+	Code string `json:"code"`
+	Name string `json:"name"`
+	Icon string `json:"icon"`
+}
+
 // FoodResponse - DTO untuk response detail makanan
 type FoodResponse struct {
-	ID          string            `json:"id"`
-	Code        string            `json:"code"`
-	Name        string            `json:"name"`
-	LocalName   string            `json:"local_name"`
-	Description string            `json:"description"`
-	Category    string            `json:"category"`
-	Icon        string            `json:"icon,omitempty"`
-	Nutrients   map[string]NutrientDetail `json:"nutrients"`
-	PortionMethods []PortionMethodResponse `json:"portion_methods,omitempty"`
+	ID             string                 `json:"id"`
+	Code           string                 `json:"code"`
+	Name           string                 `json:"name"`
+	LocalName      string                 `json:"local_name"`
+	Description    string                 `json:"description"`
+	PhotoType      string                 `json:"photo_type"`
+	Category       *CategoryInfo          `json:"category,omitempty"`
+	Nutrients      map[string]NutrientDetail `json:"nutrients"`
+	PortionPhotos  []PortionPhoto         `json:"portion_photos,omitempty"`
+}
+
+// PortionPhoto - detail foto porsi untuk response public
+type PortionPhoto struct {
+	ID           string  `json:"id"`
+	Label        string  `json:"label"`
+	ImageURL     string  `json:"image_url"`
+	ThumbnailURL string  `json:"thumbnail_url"`
+	WeightGram   float64 `json:"weight_gram"`
+	Description  string  `json:"description"`
 }
 
 // NutrientDetail - detail nutrisi untuk response
@@ -59,12 +79,12 @@ type PortionMethodResponse struct {
 
 // SearchFoodResponse - DTO untuk hasil pencarian makanan
 type SearchFoodResponse struct {
-	ID        string `json:"id"`
-	Code      string `json:"code"`
-	Name      string `json:"name"`
-	LocalName string `json:"local_name"`
-	Category  string `json:"category"`
-	Icon      string `json:"icon"`
+	ID        string        `json:"id"`
+	Code      string        `json:"code"`
+	Name      string        `json:"name"`
+	LocalName string        `json:"local_name"`
+	PhotoType string        `json:"photo_type"`
+	Category  *CategoryInfo `json:"category,omitempty"`
 }
 
 // CreatePortionMethodRequest - DTO untuk tambah portion method
