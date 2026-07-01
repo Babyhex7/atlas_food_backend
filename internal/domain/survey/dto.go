@@ -58,6 +58,7 @@ type SurveyResponse struct {
 	EndDate     *string       `json:"end_date,omitempty"`
 	Status      string        `json:"status"`
 	CreatedBy   string        `json:"created_by"`
+	AccessToken string        `json:"access_token,omitempty"`
 	AccessURL   string        `json:"access_url,omitempty"`
 	CreatedAt   string        `json:"created_at"`
 	UpdatedAt   string        `json:"updated_at"`

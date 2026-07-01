@@ -5,6 +5,7 @@ import (
 	"atlas_food/internal/pkg/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,7 +39,13 @@ func (h *Handler) SubmitSurvey(c *gin.Context) {
 
 	response, err := h.service.SubmitSurvey(req)
 	if err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		status := http.StatusInternalServerError
+		code := "INTERNAL_ERROR"
+		if strings.Contains(err.Error(), "wajib") || strings.Contains(err.Error(), "minimal") || strings.Contains(err.Error(), "valid") {
+			status = http.StatusBadRequest
+			code = "VALIDATION_ERROR"
+		}
+		utils.ErrorResponse(c, status, code, err.Error())
 		return
 	}
 

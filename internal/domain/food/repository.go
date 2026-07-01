@@ -15,7 +15,7 @@ type Repository interface {
 	ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error)
 	UpdateFood(food *Food) error
 	DeleteFood(id string) error
-	SearchFoods(query string, categoryID string, limit int) ([]Food, error)
+	SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error)
 
 	// Nutrient operations
 	GetNutrientsByFoodID(foodID string) ([]FoodNutrient, error)
@@ -100,11 +100,25 @@ func (r *foodRepository) DeleteFood(id string) error {
 	return r.db.Where("id = ?", id).Delete(&Food{}).Error
 }
 
-func (r *foodRepository) SearchFoods(query string, categoryID string, limit int) ([]Food, error) {
+func (r *foodRepository) SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error) {
 	var foods []Food
-	q := r.db.Preload("Category").Where("is_active = ?", true)
+
+	// Join kategori untuk filter type
+	q := r.db.Preload("Category").
+		Joins("LEFT JOIN categories c ON c.id = foods.category_id").
+		Where("foods.is_active = ?", true)
+
+	// Filter berdasarkan categoryID jika disediakan (lebih spesifik)
 	if categoryID != "" {
-		q = q.Where("category_id = ?", categoryID)
+		q = q.Where("foods.category_id = ?", categoryID)
+	} else if foodType != "" {
+		// Filter berdasarkan food type: drink = category code 'drinks', food = bukan 'drinks'
+		switch strings.ToLower(foodType) {
+		case "drink":
+			q = q.Where("c.code = ?", "drinks")
+		case "food":
+			q = q.Where("(c.code IS NULL OR c.code != ?)", "drinks")
+		}
 	}
 
 	trimmed := strings.TrimSpace(query)
@@ -113,7 +127,7 @@ func (r *foodRepository) SearchFoods(query string, categoryID string, limit int)
 		// FULLTEXT wildcard hanya di akhir kata (nasi*), plus fallback LIKE & pencarian kode
 		matchQuery := trimmed + "*"
 		q = q.Where(
-			"(MATCH(name, local_name) AGAINST(? IN BOOLEAN MODE) OR name LIKE ? OR local_name LIKE ? OR code LIKE ?)",
+			"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
 			matchQuery, likeQuery, likeQuery, likeQuery,
 		)
 	}

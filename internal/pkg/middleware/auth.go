@@ -15,7 +15,7 @@ func JWTAuth() gin.HandlerFunc {
 		// Ambil header Authorization
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak ditemukan"})
+			utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Token tidak ditemukan")
 			c.Abort()
 			return
 		}
@@ -23,7 +23,7 @@ func JWTAuth() gin.HandlerFunc {
 		// Extract Bearer token
 		parts := strings.SplitN(authHeader, " ", 2)
 		if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Format token salah"})
+			utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Format token salah")
 			c.Abort()
 			return
 		}
@@ -33,14 +33,14 @@ func JWTAuth() gin.HandlerFunc {
 		// Validasi token
 		claims, err := utils.ValidateJWT(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid"})
+			utils.ErrorResponse(c, http.StatusUnauthorized, "TOKEN_INVALID", "Token tidak valid atau sudah kadaluarsa")
 			c.Abort()
 			return
 		}
 
 		// Simpan user info di context untuk handler
 		if claims.Role != "admin" && claims.Role != "respondent" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Role tidak valid"})
+			utils.ErrorResponse(c, http.StatusUnauthorized, "ROLE_INVALID", "Role tidak valid")
 			c.Abort()
 			return
 		}
@@ -58,7 +58,7 @@ func AdminOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
 		if !exists || role != "admin" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak, hanya admin"})
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Akses ditolak, hanya admin")
 			c.Abort()
 			return
 		}
@@ -67,11 +67,18 @@ func AdminOnly() gin.HandlerFunc {
 }
 
 // RespondentOnly - middleware untuk membatasi akses hanya untuk respondent
+// Admin juga diizinkan agar bisa test/preview survey flow
 func RespondentOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")
-		if !exists || role != "respondent" {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak, hanya respondent"})
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Akses ditolak"})
+			c.Abort()
+			return
+		}
+		// Admin boleh akses endpoint respondent (untuk test flow)
+		if role != "respondent" && role != "admin" {
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN", "Akses ditolak")
 			c.Abort()
 			return
 		}
@@ -83,22 +90,19 @@ func RespondentOnly() gin.HandlerFunc {
 // accessToken diambil dari param URL /surveys/:accessToken
 func SurveyAccessToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// Ambil accessToken dari param URL
 		accessToken := c.Param("accessToken")
 		if accessToken == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "accessToken tidak ditemukan"})
+			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "accessToken tidak ditemukan")
 			c.Abort()
 			return
 		}
 
-		// Validasi accessToken (cukup check format dasar, validasi DB akan dilakukan di handler)
 		if len(accessToken) < 20 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "accessToken tidak valid"})
+			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "accessToken tidak valid")
 			c.Abort()
 			return
 		}
 
-		// Simpan ke context untuk digunakan handler
 		c.Set("accessToken", accessToken)
 		c.Next()
 	}

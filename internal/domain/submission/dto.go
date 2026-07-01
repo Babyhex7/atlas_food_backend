@@ -28,6 +28,7 @@ type FoodData struct {
 	PortionGram     float64        `json:"portion_gram" binding:"required"`
 	Portion         PortionDetails `json:"portion"`
 	Nutrients       NutrientValues `json:"nutrients"`
+	Additionals     []AdditionalItem `json:"additionals,omitempty"`    // Bahan tambahan / topping (Step 4)
 	AdditionalFoods []FoodData     `json:"additional_foods,omitempty"` // Untuk toping / tambahan dari free search
 }
 
@@ -57,6 +58,15 @@ type DailyTotal struct {
 	Protein float64 `json:"protein"`
 	Carbs   float64 `json:"carbs"`
 	Fat     float64 `json:"fat"`
+}
+
+// AdditionalItem - bahan tambahan/topping per makanan (Step 4: Additional Details)
+// Contoh: {"name": "Onion", "amount": "3g", "amount_value": 3, "unit": "g"}
+type AdditionalItem struct {
+	Name        string  `json:"name" binding:"required"`
+	Amount      string  `json:"amount"`       // Display string, e.g. "3g", "10ml"
+	AmountValue float64 `json:"amount_value"` // Nilai numerik untuk kalkulasi
+	Unit        string  `json:"unit"`         // Satuan: g, ml, mg, buah, sdm
 }
 
 // MissingFoodData - data makanan yang tidak ada di DB

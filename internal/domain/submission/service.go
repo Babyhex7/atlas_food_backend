@@ -31,6 +31,29 @@ func NewService(repo Repository) Service {
 
 // SubmitSurvey - simpan hasil recall dari respondent
 func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest) (*SubmissionResponse, error) {
+	if req.SurveyID == "" {
+		return nil, errors.New("survey_id wajib diisi")
+	}
+	if len(req.MealsData) == 0 {
+		return nil, errors.New("minimal 1 waktu makan harus diisi")
+	}
+
+	hasFood := false
+	for _, meal := range req.MealsData {
+		if len(meal.Foods) == 0 {
+			continue
+		}
+		hasFood = true
+		for _, food := range meal.Foods {
+			if food.PortionGram <= 0 {
+				return nil, errors.New("semua makanan harus memiliki porsi valid")
+			}
+		}
+	}
+	if !hasFood {
+		return nil, errors.New("minimal 1 makanan harus diisi sebelum submit")
+	}
+
 	// Marshal data ke JSON string untuk disimpan di DB
 	mealsJSON, err := json.Marshal(req.MealsData)
 	if err != nil {

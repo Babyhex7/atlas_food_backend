@@ -21,7 +21,7 @@ type Service interface {
 	ListPortionMethods(foodID string) ([]PortionMethodResponse, error)
 
 	// Public/Respondent
-	SearchFoods(query string, categoryID string, limit int) ([]SearchFoodResponse, error)
+	SearchFoods(query string, categoryID string, foodType string, limit int) ([]SearchFoodResponse, error)
 	ListCategories() ([]Category, error)
 	ListFoodsByCategoryCode(categoryCode string, page, limit int) ([]Food, int64, error)
 }
@@ -243,8 +243,9 @@ func (s *foodService) ListPortionMethods(foodID string) ([]PortionMethodResponse
 }
 
 // SearchFoods - mencari makanan berdasarkan nama untuk responden (Public)
-func (s *foodService) SearchFoods(query string, categoryID string, limit int) ([]SearchFoodResponse, error) {
-	foods, err := s.repo.SearchFoods(query, categoryID, limit)
+// Parameter foodType: "food" | "drink" | "" (semua)
+func (s *foodService) SearchFoods(query string, categoryID string, foodType string, limit int) ([]SearchFoodResponse, error) {
+	foods, err := s.repo.SearchFoods(query, categoryID, foodType, limit)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"atlas_food/internal/pkg/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -115,10 +116,16 @@ func (h *Handler) AddPortionMethod(c *gin.Context) {
 
 func (h *Handler) SearchFoods(c *gin.Context) {
 	query := c.Query("q")
+	if len(strings.TrimSpace(query)) < 3 {
+		utils.ValidationErrorResponse(c, "Query pencarian minimal 3 karakter")
+		return
+	}
 	categoryID := c.Query("category")
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	// foodType: "food" | "drink" | "" (kosong = semua)
+	foodType := c.Query("type")
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 
-	response, err := h.service.SearchFoods(query, categoryID, limit)
+	response, err := h.service.SearchFoods(query, categoryID, foodType, limit)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return

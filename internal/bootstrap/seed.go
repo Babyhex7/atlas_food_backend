@@ -61,6 +61,41 @@ func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
 	if foodCnt == 0 {
 		importSampleData(db)
 	}
+	// Seed default survey
+	var surveyCnt int64
+	if err := db.Model(&survey.Survey{}).Where("slug = ?", "test-survey").Count(&surveyCnt).Error; err != nil {
+		return err
+	}
+	if surveyCnt == 0 {
+		var admin auth.User
+		db.Where("email = ?", cfg.AdminSeedEmail).First(&admin)
+
+		testSurvey := &survey.Survey{
+			Slug:        "test-survey",
+			Name:        "Survey Konsumsi Harian (Test)",
+			Description: "Survey untuk mencoba alur MVP.",
+			MealsConfig: `{"meals":[{"name":"Sarapan","time":"07:00"},{"name":"Makan Siang","time":"12:00"},{"name":"Makan Malam","time":"19:00"}]}`,
+			Prompts:     `{"before_meals":"Selamat datang di survey gizi","after_meals":"Terima kasih"}`,
+			LocaleID:    1,
+			Status:      "active",
+			AccessToken: "test-survey-access-token-2025",
+			CreatedBy:   admin.ID,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+		if err := db.Create(testSurvey).Error; err != nil {
+			return err
+		}
+
+		// Create a participant
+		participant := &survey.SurveyParticipant{
+			SurveyID:  testSurvey.ID,
+			UserID:    admin.ID,
+			Alias:     "RESPONDENT-001",
+			CreatedAt: time.Now(),
+		}
+		db.Create(participant)
+	}
 
 	return nil
 }
