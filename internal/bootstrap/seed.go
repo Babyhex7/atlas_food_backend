@@ -150,9 +150,18 @@ INSERT INTO food_nutrients (food_id, nutrient_type_id, value_per_100g) VALUES
 ('uuid-susu', 8, 120.00);
 
 INSERT INTO as_served_sets (id, code, name, description, category, food_id) VALUES
+('uuid-set-nasi', 'nasi-series', 'Nasi Porsi Series', 'Visual guide 8 ukuran porsi nasi', 'staples', 'uuid-nasi'),
 ('uuid-set-3', 'banana-slices', 'Sliced Banana Portions', 'Visual guide for banana portions', 'fruits', 'uuid-pisang');
 
 INSERT INTO as_served_images (id, set_id, label, image_url, thumbnail_url, weight_gram, description, display_order) VALUES
+(UUID(), 'uuid-set-nasi', 'A', '/uploads/nasi/nasi-A.jpg', '/uploads/nasi/nasi-A-thumb.jpg', 50.0, 'Porsi sangat kecil (¼ centong)', 1),
+(UUID(), 'uuid-set-nasi', 'B', '/uploads/nasi/nasi-B.jpg', '/uploads/nasi/nasi-B-thumb.jpg', 100.0, 'Porsi kecil (½ centong)', 2),
+(UUID(), 'uuid-set-nasi', 'C', '/uploads/nasi/nasi-C.jpg', '/uploads/nasi/nasi-C-thumb.jpg', 150.0, 'Porsi standar (1 centong)', 3),
+(UUID(), 'uuid-set-nasi', 'D', '/uploads/nasi/nasi-D.jpg', '/uploads/nasi/nasi-D-thumb.jpg', 200.0, 'Porsi sedang (1.5 centong)', 4),
+(UUID(), 'uuid-set-nasi', 'E', '/uploads/nasi/nasi-E.jpg', '/uploads/nasi/nasi-E-thumb.jpg', 250.0, 'Porsi besar (2 centong)', 5),
+(UUID(), 'uuid-set-nasi', 'F', '/uploads/nasi/nasi-F.jpg', '/uploads/nasi/nasi-F-thumb.jpg', 300.0, 'Porsi ekstra besar (2.5 centong)', 6),
+(UUID(), 'uuid-set-nasi', 'G', '/uploads/nasi/nasi-G.jpg', '/uploads/nasi/nasi-G-thumb.jpg', 350.0, 'Porsi ganda (3 centong)', 7),
+(UUID(), 'uuid-set-nasi', 'H', '/uploads/nasi/nasi-H.jpg', '/uploads/nasi/nasi-H-thumb.jpg', 400.0, 'Porsi ekstra ganda (4 centong)', 8),
 (UUID(), 'uuid-set-3', '1', '/banana/banana-1.jpg', '/banana/banana-1-thumb.jpg', 20.0, 'Few slices (~20g)', 1),
 (UUID(), 'uuid-set-3', '2', '/banana/banana-2.jpg', '/banana/banana-2-thumb.jpg', 40.0, 'Small portion (~40g)', 2),
 (UUID(), 'uuid-set-3', '3', '/banana/banana-3.jpg', '/banana/banana-3-thumb.jpg', 60.0, 'Medium-small (~60g)', 3),
@@ -163,14 +172,7 @@ INSERT INTO as_served_images (id, set_id, label, image_url, thumbnail_url, weigh
 (UUID(), 'uuid-set-3', '8', '/banana/banana-8.jpg', '/banana/banana-8-thumb.jpg', 190.0, 'Full plate (~190g)', 8);
 
 INSERT INTO food_portion_size_methods (food_id, method_type, label, description, image_url, thumbnail_url, config, display_order) VALUES
-('uuid-nasi', 'as_served', 'A', 'Porsi sangat kecil', '/uploads/nasi/nasi-A.jpg', '/uploads/nasi/nasi-A-thumb.jpg', '{"weight_gram": 50}', 1),
-('uuid-nasi', 'as_served', 'B', 'Porsi kecil', '/uploads/nasi/nasi-B.jpg', '/uploads/nasi/nasi-B-thumb.jpg', '{"weight_gram": 90}', 2),
-('uuid-nasi', 'as_served', 'C', 'Porsi sedang-kecil', '/uploads/nasi/nasi-C.jpg', '/uploads/nasi/nasi-C-thumb.jpg', '{"weight_gram": 130}', 3),
-('uuid-nasi', 'as_served', 'D', 'Porsi sedang', '/uploads/nasi/nasi-D.jpg', '/uploads/nasi/nasi-D-thumb.jpg', '{"weight_gram": 150}', 4),
-('uuid-nasi', 'as_served', 'E', 'Porsi sedang-besar', '/uploads/nasi/nasi-E.jpg', '/uploads/nasi/nasi-E-thumb.jpg', '{"weight_gram": 210}', 5),
-('uuid-nasi', 'as_served', 'F', 'Porsi besar', '/uploads/nasi/nasi-F.jpg', '/uploads/nasi/nasi-F-thumb.jpg', '{"weight_gram": 250}', 6),
-('uuid-nasi', 'as_served', 'G', 'Porsi sangat besar', '/uploads/nasi/nasi-G.jpg', '/uploads/nasi/nasi-G-thumb.jpg', '{"weight_gram": 270}', 7),
-('uuid-nasi', 'as_served', 'H', 'Porsi ekstra besar', '/uploads/nasi/nasi-H.jpg', '/uploads/nasi/nasi-H-thumb.jpg', '{"weight_gram": 350}', 8),
+('uuid-nasi', 'as_served', 'Foto Porsi Nasi', 'Pilih gambar porsi nasi yang paling mendekati', '/uploads/nasi/nasi-preview.jpg', '/uploads/nasi/nasi-preview-thumb.jpg', '{"selectionType":"simple_grid","setCode":"nasi-series"}', 1),
 ('uuid-pisang', 'as_served', 'Sliced banana on plate', 'Choose portion and adjust quantity', '/banana/preview.jpg', NULL, '{"selectionType":"as_served_quantity","setCode":"banana-slices","thumbnailPosition":"bottom","maxQuantity":5,"allowFractions":true,"fractionOptions":[0,0.25,0.5,0.75],"defaultQuantity":1,"defaultFraction":0,"showCalculation":true}', 1);
 `
 	// Split by double newline to get individual statements or just execute as one block if driver allows.

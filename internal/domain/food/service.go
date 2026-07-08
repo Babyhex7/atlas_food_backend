@@ -92,27 +92,56 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	}
 
 	methods, _ := s.repo.GetPortionMethodsByFoodID(id)
-	portionPhotos := make([]PortionPhoto, len(methods))
-	for i, m := range methods {
+	portionPhotos := []PortionPhoto{}
+
+	for _, m := range methods {
 		var configData struct {
-			WeightGram   float64 `json:"weight_gram"`
-			ThumbnailURL string  `json:"thumbnail_url"`
+			WeightGram    float64 `json:"weight_gram"`
+			ThumbnailURL  string  `json:"thumbnail_url"`
+			SetCode       string  `json:"setCode"`
+			SelectionType string  `json:"selectionType"`
 		}
 		_ = json.Unmarshal([]byte(m.Config), &configData)
 
+		// If as_served method with setCode, resolve AsServedSet → AsServedImages
+		if m.MethodType == "as_served" && configData.SetCode != "" {
+			set, setErr := s.repo.GetAsServedSetByCode(configData.SetCode)
+			if setErr == nil {
+				images, imgErr := s.repo.GetAsServedImagesBySetID(set.ID)
+				if imgErr == nil && len(images) > 0 {
+					for _, img := range images {
+						thumbURL := img.ThumbnailURL
+						if thumbURL == "" {
+							thumbURL = img.ImageURL
+						}
+						portionPhotos = append(portionPhotos, PortionPhoto{
+							ID:           img.ID,
+							Label:        img.Label,
+							ImageURL:     img.ImageURL,
+							ThumbnailURL: thumbURL,
+							WeightGram:   img.WeightGram,
+							Description:  img.Description,
+						})
+					}
+					continue
+				}
+			}
+		}
+
+		// Fallback: legacy method (direct image_url, no setCode)
 		thumbnailURL := configData.ThumbnailURL
 		if thumbnailURL == "" {
 			thumbnailURL = m.ThumbnailURL
 		}
 
-		portionPhotos[i] = PortionPhoto{
+		portionPhotos = append(portionPhotos, PortionPhoto{
 			ID:           strconv.Itoa(m.ID),
 			Label:        m.Label,
 			ImageURL:     m.ImageURL,
 			ThumbnailURL: thumbnailURL,
 			WeightGram:   configData.WeightGram,
 			Description:  m.Description,
-		}
+		})
 	}
 
 	var categoryInfo *CategoryInfo
