@@ -3,6 +3,7 @@ package main
 import (
 	"atlas_food/internal/bootstrap"
 	"atlas_food/internal/config"
+	"atlas_food/internal/domain/ai"
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/submission"
@@ -38,6 +39,7 @@ func main() {
 		&food.AsServedSet{},
 		&food.AsServedImage{},
 		&submission.SurveySubmission{},
+		&ai.AIResultLog{},
 	)
 	if err != nil {
 		log.Fatalf("Gagal migrasi database: %v", err)
@@ -56,7 +58,7 @@ func main() {
 	}
 
 	// Setup router Gin dengan middleware
-	r := router.Setup(db)
+	r := router.Setup(db, cfg)
 
 	// Jalankan server pada port yang dikonfigurasi
 	addr := ":" + cfg.ServerPort

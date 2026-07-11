@@ -1,11 +1,14 @@
 package router
 
 import (
+	"atlas_food/internal/config"
+	"atlas_food/internal/domain/ai"
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/domain/upload"
+	"atlas_food/internal/pkg/groq"
 	"atlas_food/internal/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
@@ -14,7 +17,7 @@ import (
 
 // Setup - mengkonfigurasi dan mengembalikan Gin router dengan semua route
 // db: koneksi database GORM untuk diinject ke handler
-func Setup(db *gorm.DB) *gin.Engine {
+func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Set mode Gin (debug/release)
 	gin.SetMode(gin.DebugMode)
 
@@ -59,9 +62,17 @@ func Setup(db *gorm.DB) *gin.Engine {
 
 		// Submission domain
 		subRepo := submission.NewRepository(db)
-		subService := submission.NewService(subRepo)
+		foodRepoForSubmission := food.NewRepository(db)
+		subService := submission.NewService(subRepo, foodRepoForSubmission)
 		subHandler := submission.NewHandler(subService)
 		subHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// AI domain
+		aiRepo := ai.NewRepository(db)
+		groqClient := groq.NewClient(cfg.GroqAPIKey, cfg.GroqModel, cfg.GroqBaseURL, cfg.GroqTimeoutSecs, cfg.GroqMaxTokens)
+		aiService := ai.NewService(aiRepo, groqClient)
+		aiHandler := ai.NewHandler(aiService)
+		aiHandler.SetupRoutes(v1, middleware.JWTAuth())
 
 		// Upload domain
 		uploadHandler := upload.NewHandler("./uploads")

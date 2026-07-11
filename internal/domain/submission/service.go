@@ -1,6 +1,7 @@
 package submission
 
 import (
+	fooddomain "atlas_food/internal/domain/food"
 	"atlas_food/internal/pkg/utils"
 	"encoding/csv"
 	"encoding/json"
@@ -21,12 +22,13 @@ type Service interface {
 }
 
 type submissionService struct {
-	repo Repository
+	repo     Repository
+	foodRepo fooddomain.Repository
 }
 
 // NewService - buat instance service submission
-func NewService(repo Repository) Service {
-	return &submissionService{repo: repo}
+func NewService(repo Repository, foodRepo fooddomain.Repository) Service {
+	return &submissionService{repo: repo, foodRepo: foodRepo}
 }
 
 // SubmitSurvey - simpan hasil recall dari respondent
@@ -79,12 +81,14 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest) (*SubmissionRe
 	}
 
 	// Calculate/Verify totals
-	s.calculateTotals(&req)
-	
+	if err := s.calculateTotals(&req); err != nil {
+		return nil, err
+	}
+
 	// Update meals JSON with calculated totals
 	updatedMealsJSON, _ := json.Marshal(req.MealsData)
 	submission.MealsData = string(updatedMealsJSON)
-	
+
 	// Set aggregate totals
 	submission.TotalEnergy = req.DailyTotal.Energy
 	submission.TotalProtein = req.DailyTotal.Protein
@@ -153,23 +157,33 @@ func (s *submissionService) GetSubmissionDetail(id string) (*SubmissionDetailRes
 			Carbs:   sub.TotalCarbs,
 			Fat:     sub.TotalFat,
 		},
-		SubmittedAt:     sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+		SubmittedAt: sub.SubmittedAt.Format("2006-01-02 15:04:05"),
 	}, nil
 }
 
 // calculateTotals - menghitung total nutrisi per meal dan per hari (server-side validation)
-func (s *submissionService) calculateTotals(req *SubmitSurveyRequest) {
+func (s *submissionService) calculateTotals(req *SubmitSurveyRequest) error {
 	var dailyEnergy, dailyProtein, dailyCarbs, dailyFat float64
 
 	for i := range req.MealsData {
 		var mealEnergy, mealProtein, mealCarbs, mealFat float64
-		for _, f := range req.MealsData[i].Foods {
-			mealEnergy += f.Nutrients.Energy
-			mealProtein += f.Nutrients.Protein
-			mealCarbs += f.Nutrients.Carbs
-			mealFat += f.Nutrients.Fat
+		for j := range req.MealsData[i].Foods {
+			energy, protein, carbs, fat, err := s.calculateFoodNutrients(req.MealsData[i].Foods[j])
+			if err != nil {
+				return err
+			}
+			req.MealsData[i].Foods[j].Nutrients = NutrientValues{
+				Energy:  energy,
+				Protein: protein,
+				Carbs:   carbs,
+				Fat:     fat,
+			}
+			mealEnergy += energy
+			mealProtein += protein
+			mealCarbs += carbs
+			mealFat += fat
 		}
-		
+
 		// Update meal totals
 		req.MealsData[i].MealTotal = DailyTotal{
 			Energy:  mealEnergy,
@@ -191,6 +205,43 @@ func (s *submissionService) calculateTotals(req *SubmitSurveyRequest) {
 		Carbs:   dailyCarbs,
 		Fat:     dailyFat,
 	}
+	return nil
+}
+
+func (s *submissionService) calculateFoodNutrients(food FoodData) (float64, float64, float64, float64, error) {
+	if food.FoodID == "" || strings.HasPrefix(food.FoodID, "missing-") {
+		return food.Nutrients.Energy, food.Nutrients.Protein, food.Nutrients.Carbs, food.Nutrients.Fat, nil
+	}
+
+	if s.foodRepo == nil {
+		return 0, 0, 0, 0, errors.New("food repository tidak tersedia")
+	}
+
+	if _, err := s.foodRepo.GetFoodByID(food.FoodID); err != nil {
+		return 0, 0, 0, 0, errors.New("makanan tidak ditemukan di database")
+	}
+
+	nutrients, err := s.foodRepo.GetNutrientsByFoodID(food.FoodID)
+	if err != nil {
+		return 0, 0, 0, 0, errors.New("gagal mengambil nutrisi makanan")
+	}
+
+	var energyPer100, proteinPer100, carbsPer100, fatPer100 float64
+	for _, nutrient := range nutrients {
+		switch strings.ToLower(nutrient.NutrientType.Code) {
+		case "energy", "calories", "calorie", "energy_kcal":
+			energyPer100 = nutrient.ValuePer100g
+		case "protein":
+			proteinPer100 = nutrient.ValuePer100g
+		case "carbs", "carbohydrate", "carbohydrates":
+			carbsPer100 = nutrient.ValuePer100g
+		case "fat", "total_fat":
+			fatPer100 = nutrient.ValuePer100g
+		}
+	}
+
+	factor := food.PortionGram / 100
+	return energyPer100 * factor, proteinPer100 * factor, carbsPer100 * factor, fatPer100 * factor, nil
 }
 
 // ExportSubmissionsCSV - generate CSV untuk export data survey

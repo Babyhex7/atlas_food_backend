@@ -417,7 +417,7 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 			ID:    participant.ID,
 			Alias: participant.Alias,
 		},
-		AccessToken: "dummy-session-token", // In real case, you might generate a survey-specific JWT
+		AccessToken: survey.AccessToken,
 	}, nil
 }
 
