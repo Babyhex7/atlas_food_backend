@@ -18,6 +18,13 @@ type Config struct {
 	DBPassword string
 	DBName     string
 
+	// Groq AI
+	GroqAPIKey      string
+	GroqModel       string
+	GroqBaseURL     string
+	GroqTimeoutSecs int
+	GroqMaxTokens   int
+
 	// JWT
 	JWTSecret              string
 	JWTExpiration          time.Duration
@@ -66,6 +73,13 @@ func Load() *Config {
 		// Frontend config
 		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
 
+		// Groq AI config
+		GroqAPIKey:      getEnv("GROQ_API_KEY", ""),
+		GroqModel:       getEnv("GROQ_MODEL", "llama3-8b-8192"),
+		GroqBaseURL:     getEnv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
+		GroqTimeoutSecs: parseInt(getEnv("GROQ_TIMEOUT_SECONDS", "15")),
+		GroqMaxTokens:   parseInt(getEnv("GROQ_MAX_TOKENS", "512")),
+
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),
 		MaxUploadSize: parseInt64(getEnv("MAX_UPLOAD_SIZE", "10485760")),
@@ -102,6 +116,15 @@ func parseInt64(s string) int64 {
 	n, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 10485760 // default 10MB
+	}
+	return n
+}
+
+// parseInt - parse string ke int
+func parseInt(s string) int {
+	n, err := strconv.Atoi(s)
+	if err != nil {
+		return 0
 	}
 	return n
 }

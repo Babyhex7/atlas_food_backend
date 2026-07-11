@@ -102,6 +102,7 @@ type AccessSurveyRequest struct {
 type AccessSurveyResponse struct {
 	Survey      PublicSurveyResponse `json:"survey"`
 	Participant ParticipantResponse  `json:"participant"`
+	AccessToken string               `json:"access_token"`
 }
 
 // ParticipantResponse - detail participant untuk response

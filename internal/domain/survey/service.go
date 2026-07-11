@@ -425,6 +425,7 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 			ID:    participant.ID,
 			Alias: participant.Alias,
 		},
+		AccessToken: survey.AccessToken,
 	}, nil
 }
 
