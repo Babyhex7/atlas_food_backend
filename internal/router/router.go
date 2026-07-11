@@ -77,6 +77,12 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// Upload domain
 		uploadHandler := upload.NewHandler("./uploads")
 		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// Collaboration domain
+		hub := collab.NewHub()
+		collabService := collab.NewService(hub)
+		collabHandler := collab.NewHandler(collabService)
+		collabHandler.SetupRoutes(v1, middleware.JWTAuth())
 	}
 
 	// Serve static files (uploads)
