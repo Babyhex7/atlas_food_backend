@@ -187,17 +187,16 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	// Respondent routes
 	respondent := router.Group("", authMiddleware, middleware.RespondentOnly())
 	{
-		// Tambahkan route khusus responden jika ada di masa depan
-		// Saat ini pencarian makanan dan kategori dibuat PUBLIC untuk fitur "Find Your Food"
+		// Route khusus responden (reserved)
 		_ = respondent
 	}
 
-	// Public routes (Untuk fitur Find Your Food tanpa login)
-	public := router.Group("/public")
+	// Find Your Food — wajib JWT (respondent & admin)
+	catalog := router.Group("/public", authMiddleware)
 	{
-		public.GET("/foods/search", h.SearchFoods)
-		public.GET("/foods/:id", h.GetFood)
-		public.GET("/categories", h.ListCategories)
-		public.GET("/categories/:code/foods", h.GetFoodsByCategory)
+		catalog.GET("/foods/search", h.SearchFoods)
+		catalog.GET("/foods/:id", h.GetFood)
+		catalog.GET("/categories", h.ListCategories)
+		catalog.GET("/categories/:code/foods", h.GetFoodsByCategory)
 	}
 }

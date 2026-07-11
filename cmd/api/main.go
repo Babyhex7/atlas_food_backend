@@ -56,7 +56,7 @@ func main() {
 	}
 
 	// Setup router Gin dengan middleware
-	r := router.Setup(db)
+	r := router.Setup(db, cfg)
 
 	// Jalankan server pada port yang dikonfigurasi
 	addr := ":" + cfg.ServerPort

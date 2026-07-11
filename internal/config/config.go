@@ -27,6 +27,9 @@ type Config struct {
 	ServerPort string
 	ServerMode string
 
+	// Frontend (dipakai untuk generate link survey yang dibagikan ke responden)
+	FrontendURL string
+
 	// Upload
 	UploadPath    string
 	MaxUploadSize int64
@@ -59,6 +62,9 @@ func Load() *Config {
 		// Server config
 		ServerPort: getEnv("SERVER_PORT", "8080"),
 		ServerMode: getEnv("SERVER_MODE", "debug"),
+
+		// Frontend config
+		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
 
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),

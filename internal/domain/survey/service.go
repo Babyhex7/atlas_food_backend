@@ -32,12 +32,20 @@ type Service interface {
 
 // surveyService - implementasi Service
 type surveyService struct {
-	repo Repository
+	repo        Repository
+	frontendURL string
 }
 
 // NewService - factory function
-func NewService(repo Repository) Service {
-	return &surveyService{repo: repo}
+// frontendURL dipakai untuk generate link survey yang dibagikan ke responden
+// (mis. "http://localhost:3000"), harus match route FE: /surveys/:accessToken/join
+func NewService(repo Repository, frontendURL string) Service {
+	return &surveyService{repo: repo, frontendURL: frontendURL}
+}
+
+// buildAccessURL - bangun URL survey yang siap dibagikan ke responden
+func (s *surveyService) buildAccessURL(accessToken string) string {
+	return fmt.Sprintf("%s/surveys/%s/join", strings.TrimRight(s.frontendURL, "/"), accessToken)
 }
 
 // CreateSurvey - buat survey baru
@@ -311,7 +319,7 @@ func (s *surveyService) GenerateAccessToken(surveyID string) (*AccessTokenRespon
 	return &AccessTokenResponse{
 		SurveyID:    survey.ID,
 		AccessToken: survey.AccessToken,
-		AccessURL:   fmt.Sprintf("/s/%s", survey.AccessToken),
+		AccessURL:   s.buildAccessURL(survey.AccessToken),
 	}, nil
 }
 
@@ -417,7 +425,6 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 			ID:    participant.ID,
 			Alias: participant.Alias,
 		},
-		AccessToken: "dummy-session-token", // In real case, you might generate a survey-specific JWT
 	}, nil
 }
 
@@ -463,7 +470,7 @@ func (s *surveyService) mapToResponse(survey *Survey) *SurveyResponse {
 		Status:      survey.Status,
 		CreatedBy:   survey.CreatedBy,
 		AccessToken: survey.AccessToken,
-		AccessURL:   fmt.Sprintf("/s/%s", survey.AccessToken),
+		AccessURL:   s.buildAccessURL(survey.AccessToken),
 		CreatedAt:   survey.CreatedAt.Format("2006-01-02 15:04:05"),
 		UpdatedAt:   survey.UpdatedAt.Format("2006-01-02 15:04:05"),
 	}

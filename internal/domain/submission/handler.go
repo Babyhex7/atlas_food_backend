@@ -37,8 +37,15 @@ func (h *Handler) SubmitSurvey(c *gin.Context) {
 		}
 	}
 
-	response, err := h.service.SubmitSurvey(req)
+	userID, _ := c.Get("userID")
+	userIDStr, _ := userID.(string)
+
+	response, err := h.service.SubmitSurvey(req, userIDStr)
 	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
+			return
+		}
 		status := http.StatusInternalServerError
 		code := "INTERNAL_ERROR"
 		if strings.Contains(err.Error(), "wajib") || strings.Contains(err.Error(), "minimal") || strings.Contains(err.Error(), "valid") {

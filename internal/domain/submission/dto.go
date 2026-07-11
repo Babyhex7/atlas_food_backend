@@ -23,13 +23,13 @@ type MealData struct {
 
 // FoodData - detail makanan yang dikonsumsi
 type FoodData struct {
-	FoodID          string         `json:"food_id"`
-	FoodName        string         `json:"food_name" binding:"required"`
-	PortionGram     float64        `json:"portion_gram" binding:"required"`
-	Portion         PortionDetails `json:"portion"`
-	Nutrients       NutrientValues `json:"nutrients"`
-	Additionals     []AdditionalItem `json:"additionals,omitempty"`    // Bahan tambahan / topping (Step 4)
-	AdditionalFoods []FoodData     `json:"additional_foods,omitempty"` // Untuk toping / tambahan dari free search
+	FoodID          string           `json:"food_id" binding:"required"`
+	FoodName        string           `json:"food_name" binding:"required"`
+	PortionGram     float64          `json:"portion_gram" binding:"required"`
+	Portion         PortionDetails   `json:"portion"`
+	Nutrients       NutrientValues   `json:"nutrients"`
+	Additionals     []AdditionalItem `json:"additionals,omitempty"`      // Bahan tambahan / topping (Step 4)
+	AdditionalFoods []FoodData       `json:"additional_foods,omitempty"` // Untuk toping / tambahan dari free search
 }
 
 // PortionDetails - detail cara ukur porsi

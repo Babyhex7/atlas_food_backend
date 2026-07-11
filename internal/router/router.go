@@ -1,6 +1,7 @@
 package router
 
 import (
+	"atlas_food/internal/config"
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/submission"
@@ -14,7 +15,8 @@ import (
 
 // Setup - mengkonfigurasi dan mengembalikan Gin router dengan semua route
 // db: koneksi database GORM untuk diinject ke handler
-func Setup(db *gorm.DB) *gin.Engine {
+// cfg: konfigurasi aplikasi (dipakai antara lain untuk generate link survey)
+func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// Set mode Gin (debug/release)
 	gin.SetMode(gin.DebugMode)
 
@@ -47,7 +49,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 
 		// Survey domain
 		surveyRepo := survey.NewRepository(db)
-		surveyService := survey.NewService(surveyRepo)
+		surveyService := survey.NewService(surveyRepo, cfg.FrontendURL)
 		surveyHandler := survey.NewHandler(surveyService)
 		surveyHandler.SetupRoutes(v1, middleware.JWTAuth())
 
@@ -59,7 +61,7 @@ func Setup(db *gorm.DB) *gin.Engine {
 
 		// Submission domain
 		subRepo := submission.NewRepository(db)
-		subService := submission.NewService(subRepo)
+		subService := submission.NewService(subRepo, surveyRepo)
 		subHandler := submission.NewHandler(subService)
 		subHandler.SetupRoutes(v1, middleware.JWTAuth())
 

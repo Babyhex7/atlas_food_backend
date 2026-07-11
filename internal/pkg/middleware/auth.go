@@ -85,25 +85,3 @@ func RespondentOnly() gin.HandlerFunc {
 		c.Next()
 	}
 }
-
-// SurveyAccessToken - middleware untuk validasi survey accessToken dari URL param
-// accessToken diambil dari param URL /surveys/:accessToken
-func SurveyAccessToken() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		accessToken := c.Param("accessToken")
-		if accessToken == "" {
-			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "accessToken tidak ditemukan")
-			c.Abort()
-			return
-		}
-
-		if len(accessToken) < 20 {
-			utils.ErrorResponse(c, http.StatusBadRequest, "BAD_REQUEST", "accessToken tidak valid")
-			c.Abort()
-			return
-		}
-
-		c.Set("accessToken", accessToken)
-		c.Next()
-	}
-}

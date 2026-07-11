@@ -1,6 +1,7 @@
 package submission
 
 import (
+	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/pkg/utils"
 	"encoding/csv"
 	"encoding/json"
@@ -14,28 +15,62 @@ import (
 
 // Service - interface untuk business logic submission
 type Service interface {
-	SubmitSurvey(req SubmitSurveyRequest) (*SubmissionResponse, error)
+	SubmitSurvey(req SubmitSurveyRequest, userID string) (*SubmissionResponse, error)
 	ListSubmissions(surveyID string, page, limit int) ([]ListSubmissionResponse, int64, error)
 	GetSubmissionDetail(id string) (*SubmissionDetailResponse, error)
 	ExportSubmissionsCSV(surveyID string) ([]byte, string, error)
 }
 
 type submissionService struct {
-	repo Repository
+	repo       Repository
+	surveyRepo survey.Repository
 }
 
 // NewService - buat instance service submission
-func NewService(repo Repository) Service {
-	return &submissionService{repo: repo}
+func NewService(repo Repository, surveyRepo survey.Repository) Service {
+	return &submissionService{repo: repo, surveyRepo: surveyRepo}
 }
 
 // SubmitSurvey - simpan hasil recall dari respondent
-func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest) (*SubmissionResponse, error) {
+// userID diambil dari JWT (bukan dari body request) agar participant tidak bisa dipalsukan (anti-IDOR).
+func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string) (*SubmissionResponse, error) {
 	if req.SurveyID == "" {
 		return nil, errors.New("survey_id wajib diisi")
 	}
 	if len(req.MealsData) == 0 {
 		return nil, errors.New("minimal 1 waktu makan harus diisi")
+	}
+	if userID == "" {
+		return nil, utils.NewAppError(401, "UNAUTHORIZED", "Login diperlukan")
+	}
+
+	// Verifikasi survey benar-benar ada dan masih aktif (mencegah submit ke survey
+	// yang belum pernah di-access, sudah closed, atau di luar rentang tanggal).
+	surv, err := s.surveyRepo.GetSurveyByID(req.SurveyID)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+	if surv.Status != "active" {
+		return nil, utils.NewAppError(403, "SURVEY_NOT_ACTIVE", "Survey tidak aktif")
+	}
+	now := time.Now()
+	if surv.StartDate != nil && now.Before(*surv.StartDate) {
+		return nil, utils.NewAppError(403, "SURVEY_NOT_STARTED", "Survey belum dimulai")
+	}
+	if surv.EndDate != nil && now.After(*surv.EndDate) {
+		return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
+	}
+
+	// Participant selalu diresolusi dari (surveyID, userID) di server, bukan dari
+	// participant_id yang dikirim client, supaya tidak bisa submit atas nama
+	// participant lain.
+	participant, err := s.surveyRepo.GetParticipantBySurveyAndUser(req.SurveyID, userID)
+	if err != nil {
+		return nil, utils.NewAppError(403, "NOT_JOINED", "Anda belum bergabung ke survey ini")
+	}
+	req.ParticipantID = participant.ID
+	if req.RespondentName == "" {
+		req.RespondentName = participant.Alias
 	}
 
 	hasFood := false
@@ -80,11 +115,11 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest) (*SubmissionRe
 
 	// Calculate/Verify totals
 	s.calculateTotals(&req)
-	
+
 	// Update meals JSON with calculated totals
 	updatedMealsJSON, _ := json.Marshal(req.MealsData)
 	submission.MealsData = string(updatedMealsJSON)
-	
+
 	// Set aggregate totals
 	submission.TotalEnergy = req.DailyTotal.Energy
 	submission.TotalProtein = req.DailyTotal.Protein
@@ -153,7 +188,7 @@ func (s *submissionService) GetSubmissionDetail(id string) (*SubmissionDetailRes
 			Carbs:   sub.TotalCarbs,
 			Fat:     sub.TotalFat,
 		},
-		SubmittedAt:     sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+		SubmittedAt: sub.SubmittedAt.Format("2006-01-02 15:04:05"),
 	}, nil
 }
 
@@ -169,7 +204,7 @@ func (s *submissionService) calculateTotals(req *SubmitSurveyRequest) {
 			mealCarbs += f.Nutrients.Carbs
 			mealFat += f.Nutrients.Fat
 		}
-		
+
 		// Update meal totals
 		req.MealsData[i].MealTotal = DailyTotal{
 			Energy:  mealEnergy,
