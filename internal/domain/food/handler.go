@@ -192,12 +192,6 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 		_ = respondent
 	}
 
-	// Public routes (Untuk fitur Find Your Food tanpa login)
-	public := router.Group("/public")
-	{
-		public.GET("/foods/search", h.SearchFoods)
-		public.GET("/foods/:id", h.GetFood)
-		public.GET("/categories", h.ListCategories)
-		public.GET("/categories/:code/foods", h.GetFoodsByCategory)
-	}
+	// NOTE: Public routes now handled by PublicHandler in router.go
+	// No need to register them here to avoid duplicate routes
 }

@@ -5,6 +5,7 @@ import (
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/ai"
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/collab"
 	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
@@ -57,8 +58,13 @@ func main() {
 		log.Fatalf("Gagal seed data awal: %v", err)
 	}
 
+	// Initialize WebSocket Hub for real-time collaboration
+	log.Println("Initializing WebSocket Hub...")
+	hub := collab.NewHub()
+	go hub.Run() // Start hub in goroutine
+
 	// Setup router Gin dengan middleware
-	r := router.Setup(db, cfg)
+	r := router.Setup(db, cfg, hub)
 
 	// Jalankan server pada port yang dikonfigurasi
 	addr := ":" + cfg.ServerPort
