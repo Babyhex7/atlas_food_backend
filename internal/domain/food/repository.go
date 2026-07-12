@@ -17,6 +17,13 @@ type Repository interface {
 	DeleteFood(id string) error
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error)
 
+	// Public Food operations (Find Your Food)
+	SearchFoodsPublic(query string, limit int) ([]Food, error)
+	GetFoodWithPortionPhotos(foodID string) (*Food, []AsServedImage, error)
+	GetFoodsByCategory(categoryCode string, limit int) ([]Food, error)
+	GetFoodNutrients(foodID string) ([]FoodNutrient, error)
+	GetAllCategories() ([]Category, error)
+
 	// Nutrient operations
 	GetNutrientsByFoodID(foodID string) ([]FoodNutrient, error)
 	UpsertFoodNutrients(nutrients []FoodNutrient) error
@@ -219,4 +226,108 @@ func (r *foodRepository) GetAsServedImagesBySetID(setID string) ([]AsServedImage
 
 func (r *foodRepository) CreateAsServedImages(images []AsServedImage) error {
 	return r.db.Create(&images).Error
+}
+
+// GetFoodWithPortionPhotos - Get food detail with portion photos (Public)
+// Optimized: No N+1 query, uses JOIN and Preload
+func (r *foodRepository) GetFoodWithPortionPhotos(foodID string) (*Food, []AsServedImage, error) {
+	// Use channels for concurrent operations
+	type result struct {
+		food          *Food
+		portionPhotos []AsServedImage
+		err           error
+	}
+	
+	resultChan := make(chan result, 2)
+	
+	// Goroutine 1: Fetch food with category (preloaded)
+	go func() {
+		var f Food
+		err := r.db.Preload("Category").
+			Where("id = ? AND is_active = ?", foodID, true).
+			First(&f).Error
+		resultChan <- result{food: &f, err: err}
+	}()
+	
+	// Goroutine 2: Fetch portion photos with JOIN (avoid N+1)
+	go func() {
+		var photos []AsServedImage
+		err := r.db.Table("as_served_images asi").
+			Select("asi.*").
+			Joins("JOIN as_served_sets ass ON ass.id = asi.set_id").
+			Where("ass.food_id = ?", foodID).
+			Order("asi.display_order ASC").
+			Find(&photos).Error
+		resultChan <- result{portionPhotos: photos, err: err}
+	}()
+	
+	// Collect results from both goroutines
+	var foodResult, photosResult result
+	for i := 0; i < 2; i++ {
+		res := <-resultChan
+		if res.food != nil {
+			foodResult = res
+		} else {
+			photosResult = res
+		}
+	}
+	
+	// Check for errors
+	if foodResult.err != nil {
+		return nil, nil, foodResult.err
+	}
+	if photosResult.err != nil {
+		return foodResult.food, []AsServedImage{}, nil // Return empty photos if error
+	}
+	
+	return foodResult.food, photosResult.portionPhotos, nil
+}
+
+// SearchFoodsPublic - Search foods with FULLTEXT (Public, no auth required)
+// Optimized: Single query with Preload, no N+1
+func (r *foodRepository) SearchFoodsPublic(query string, limit int) ([]Food, error) {
+	var foods []Food
+	
+	q := r.db.Preload("Category"). // Preload to avoid N+1
+		Where("is_active = ?", true)
+	
+	if query != "" {
+		// Use FULLTEXT search if available
+		q = q.Where("MATCH(name, local_name) AGAINST(? IN BOOLEAN MODE)", query+"*")
+	}
+	
+	err := q.Limit(limit).Find(&foods).Error
+	return foods, err
+}
+
+// GetFoodsByCategory - Get all foods in a category (Public)
+// Optimized: Single JOIN query, no N+1
+func (r *foodRepository) GetFoodsByCategory(categoryCode string, limit int) ([]Food, error) {
+	var foods []Food
+	
+	err := r.db.Preload("Category").
+		Joins("JOIN categories ON categories.id = foods.category_id").
+		Where("categories.code = ? AND foods.is_active = ?", categoryCode, true).
+		Limit(limit).
+		Find(&foods).Error
+	
+	return foods, err
+}
+
+// GetAllCategories - Get all categories (Public)
+func (r *foodRepository) GetAllCategories() ([]Category, error) {
+	var categories []Category
+	err := r.db.Order("display_order ASC").Find(&categories).Error
+	return categories, err
+}
+
+// GetFoodNutrients - Get nutrients for a food
+// Optimized: Uses Preload to avoid N+1
+func (r *foodRepository) GetFoodNutrients(foodID string) ([]FoodNutrient, error) {
+	var nutrients []FoodNutrient
+	err := r.db.
+		Preload("NutrientType.Unit"). // Nested preload
+		Where("food_id = ?", foodID).
+		Find(&nutrients).Error
+	return nutrients, err
 }

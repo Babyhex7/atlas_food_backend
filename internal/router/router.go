@@ -4,6 +4,7 @@ import (
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/ai"
 	"atlas_food/internal/domain/auth"
+	"atlas_food/internal/domain/collab"
 	"atlas_food/internal/domain/food"
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
@@ -18,7 +19,8 @@ import (
 // Setup - mengkonfigurasi dan mengembalikan Gin router dengan semua route
 // db: koneksi database GORM untuk diinject ke handler
 // cfg: konfigurasi aplikasi (dipakai antara lain untuk generate link survey)
-func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
+// hub: WebSocket hub untuk real-time collaboration
+func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 	// Set mode Gin (debug/release)
 	gin.SetMode(gin.DebugMode)
 
@@ -39,6 +41,25 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 	// API v1 group
 	v1 := r.Group("/api/v1")
 	{
+		// ======== PUBLIC ROUTES (NO AUTH) ========
+		
+		// Public Food Routes (Find Your Food feature)
+		foodRepo := food.NewRepository(db)
+		publicFoodHandler := food.NewPublicHandler(foodRepo)
+		
+		publicGroup := v1.Group("/public")
+		{
+			// Food search & browse
+			publicGroup.GET("/foods/search", publicFoodHandler.SearchFoods)
+			publicGroup.GET("/foods/:id", publicFoodHandler.GetFoodDetail)
+			
+			// Categories
+			publicGroup.GET("/categories", publicFoodHandler.GetCategories)
+			publicGroup.GET("/categories/:code/foods", publicFoodHandler.GetFoodsByCategory)
+		}
+		
+		// ======== AUTHENTICATED ROUTES ========
+		
 		// Auth routes
 		authHandler := auth.NewHandler(db)
 		authGroup := v1.Group("/auth")
@@ -55,8 +76,7 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		surveyHandler := survey.NewHandler(surveyService)
 		surveyHandler.SetupRoutes(v1, middleware.JWTAuth())
 
-		// Food domain
-		foodRepo := food.NewRepository(db)
+		// Food domain (authenticated)
 		foodService := food.NewService(foodRepo)
 		foodHandler := food.NewHandler(foodService)
 		foodHandler.SetupRoutes(v1, middleware.JWTAuth())
@@ -77,12 +97,16 @@ func Setup(db *gorm.DB, cfg *config.Config) *gin.Engine {
 		// Upload domain
 		uploadHandler := upload.NewHandler("./uploads")
 		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
-
-		// Collaboration domain
-		hub := collab.NewHub()
-		collabService := collab.NewService(hub)
-		collabHandler := collab.NewHandler(collabService)
-		collabHandler.SetupRoutes(v1, middleware.JWTAuth())
+		
+		// ======== WEBSOCKET COLLABORATION ROUTES ========
+		collabHandler := collab.NewHandler(hub)
+		collabGroup := v1.Group("/collab")
+		collabGroup.Use(middleware.JWTAuth()) // WebSocket requires authentication
+		{
+			collabGroup.GET("/rooms/:room_id/ws", collabHandler.HandleWebSocket)
+			collabGroup.GET("/rooms/:room_id", collabHandler.GetRoomInfo)
+			collabGroup.GET("/stats", collabHandler.GetHubStats)
+		}
 	}
 
 	// Serve static files (uploads)

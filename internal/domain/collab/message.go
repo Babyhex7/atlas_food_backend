@@ -2,59 +2,22 @@ package collab
 
 import "time"
 
-// MessageType merupakan tipe event websocket.
-type MessageType string
-
-const (
-
-	// ===========================
-	// Connection
-	// ===========================
-
-	MessageJoinRoom MessageType = "join_room"
-
-	MessageLeaveRoom MessageType = "leave_room"
-
-	MessageJoinSuccess MessageType = "join_success"
-
-	MessageDisconnect MessageType = "disconnect"
-
-	// ===========================
-	// Health Check
-	// ===========================
-
-	MessagePing MessageType = "ping"
-
-	MessagePong MessageType = "pong"
-
-	// ===========================
-	// Broadcast
-	// ===========================
-
-	MessageBroadcast MessageType = "broadcast"
-
-	// ===========================
-	// Error
-	// ===========================
-
-	MessageError MessageType = "error"
-)
-
-// Message merupakan format komunikasi websocket.
+// Message represents a WebSocket message
 type Message struct {
-
-	// Jenis event
-	Type MessageType `json:"type"`
-
-	// Room tujuan
-	RoomID string `json:"room_id,omitempty"`
-
-	// User pengirim
-	UserID string `json:"user_id,omitempty"`
-
-	// Isi data
-	Payload any `json:"payload,omitempty"`
-
-	// Waktu event
-	Timestamp time.Time `json:"timestamp"`
+	Type      string                 `json:"type"`
+	RoomID    string                 `json:"room_id,omitempty"`
+	UserID    string                 `json:"user_id,omitempty"`
+	Username  string                 `json:"username,omitempty"`
+	Payload   map[string]interface{} `json:"payload,omitempty"`
+	Timestamp time.Time              `json:"timestamp"`
 }
+
+// Message types:
+// - user_joined: User joined the room
+// - user_left: User left the room
+// - user_searching: User is searching for food
+// - food_selected: User selected a food
+// - portion_selected: User selected a portion
+// - chat_message: Chat message
+// - history: Room history
+// - error: Error message

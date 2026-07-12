@@ -191,12 +191,6 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 		_ = respondent
 	}
 
-	// Find Your Food — wajib JWT (respondent & admin)
-	catalog := router.Group("/public", authMiddleware)
-	{
-		catalog.GET("/foods/search", h.SearchFoods)
-		catalog.GET("/foods/:id", h.GetFood)
-		catalog.GET("/categories", h.ListCategories)
-		catalog.GET("/categories/:code/foods", h.GetFoodsByCategory)
-	}
+	// NOTE: Public routes now handled by PublicHandler in router.go
+	// No need to register them here to avoid duplicate routes
 }
