@@ -6,26 +6,15 @@ import (
 	"time"
 )
 
-// Hub manages all WebSocket rooms and clients
-// Optimized with goroutines and channels for concurrent operations
+// Hub manages all WebSocket rooms and clients (in-memory; Redis deferred).
 type Hub struct {
-	// Registered rooms
-	rooms map[string]*Room
-
-	// Register requests from rooms
-	register chan *Client
-
-	// Unregister requests from rooms
+	rooms      map[string]*Room
+	register   chan *Client
 	unregister chan *Client
-
-	// Broadcast messages
-	broadcast chan *Message
-
-	// Mutex for thread-safe room operations
-	mu sync.RWMutex
-
-	// Stop channel
-	stopCh chan struct{}
+	broadcast  chan *Message
+	locks      *LockManager
+	mu         sync.RWMutex
+	stopCh     chan struct{}
 }
 
 // NewHub creates a new Hub instance
@@ -35,18 +24,21 @@ func NewHub() *Hub {
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
 		broadcast:  make(chan *Message, 1024),
+		locks:      NewLockManager(),
 		stopCh:     make(chan struct{}),
 	}
 }
 
+// Locks returns the in-memory lock manager.
+func (h *Hub) Locks() *LockManager {
+	return h.locks
+}
+
 // Run starts the hub's main event loop
-// Handles all WebSocket operations concurrently
 func (h *Hub) Run() {
-	// Cleanup goroutine - removes inactive rooms every 30 seconds
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
-
 		for {
 			select {
 			case <-ticker.C:
@@ -57,18 +49,14 @@ func (h *Hub) Run() {
 		}
 	}()
 
-	// Main event loop
 	for {
 		select {
 		case client := <-h.register:
 			h.registerClient(client)
-
 		case client := <-h.unregister:
 			h.unregisterClient(client)
-
 		case message := <-h.broadcast:
 			h.broadcastMessage(message)
-
 		case <-h.stopCh:
 			log.Println("Hub stopping...")
 			return
@@ -85,150 +73,158 @@ func (h *Hub) GetOrCreateRoom(roomID string) *Room {
 	if !exists {
 		room = NewRoom(roomID, h)
 		h.rooms[roomID] = room
-		
-		// Start room in goroutine
 		go room.Run()
-		
 		log.Printf("📡 Created new room: %s", roomID)
 	}
-
 	return room
 }
 
-// registerClient registers a client to a room
 func (h *Hub) registerClient(client *Client) {
 	room := h.GetOrCreateRoom(client.RoomID)
+	room.mu.Lock()
 	room.clients[client] = true
-	
-	log.Printf("✅ Client %s joined room %s (total: %d)", client.UserID, client.RoomID, len(room.clients))
-	
-	// Broadcast join notification to other users in room
-	joinMsg := &Message{
-		Type:    "user_joined",
-		RoomID:  client.RoomID,
-		UserID:  client.UserID,
-		Payload: map[string]interface{}{
-			"user_id":   client.UserID,
-			"username":  client.Username,
-			"timestamp": time.Now().Unix(),
-		},
-		Timestamp: time.Now(),
+	room.mu.Unlock()
+
+	log.Printf("✅ Client %s joined room %s (total: %d)", client.UserID, client.RoomID, room.GetClientCount())
+
+	// Sync state to joining client
+	client.sendQuiet(h.buildPresenceList(room))
+	client.sendQuiet(h.buildStateSync(room))
+
+	joinPayload := map[string]interface{}{
+		"user_id":      client.UserID,
+		"username":     client.Username,
+		"role":         client.Role,
+		"display_name": client.Username,
+		"color":        colorForUser(client.UserID),
+		"timestamp":    time.Now().Unix(),
 	}
-	
-	// Send to all clients in room except the joining client
-	for c := range room.clients {
-		if c != client {
-			select {
-			case c.send <- joinMsg:
-			default:
-				// Client's send channel is full, skip
-			}
-		}
-	}
+
+	// Broadcast join (legacy + new type)
+	h.broadcastToRoom(room, newMessage(MsgUserJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
+	h.broadcastToRoom(room, newMessage(MsgPresenceJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
+	h.broadcastToRoom(room, newMessage(MsgActivityLog, client.RoomID, client.UserID, client.Username, map[string]interface{}{
+		"action":  "joined",
+		"details": client.Username + " bergabung",
+	}), client)
 }
 
-// unregisterClient removes a client from a room
 func (h *Hub) unregisterClient(client *Client) {
 	h.mu.RLock()
 	room, exists := h.rooms[client.RoomID]
 	h.mu.RUnlock()
-	
 	if !exists {
 		return
 	}
 
-	if _, ok := room.clients[client]; ok {
+	room.mu.Lock()
+	_, ok := room.clients[client]
+	if ok {
 		delete(room.clients, client)
 		close(client.send)
-		
-		log.Printf("❌ Client %s left room %s (remaining: %d)", client.UserID, client.RoomID, len(room.clients))
-		
-		// Broadcast leave notification
-		leaveMsg := &Message{
-			Type:    "user_left",
-			RoomID:  client.RoomID,
-			UserID:  client.UserID,
-			Payload: map[string]interface{}{
-				"user_id":   client.UserID,
-				"username":  client.Username,
-				"timestamp": time.Now().Unix(),
-			},
-			Timestamp: time.Now(),
-		}
-		
-		// Send to remaining clients
-		for c := range room.clients {
-			select {
-			case c.send <- leaveMsg:
-			default:
-				// Client's send channel is full, skip
-			}
-		}
-		
-		// If room is empty, mark for cleanup
-		if len(room.clients) == 0 {
-			log.Printf("🗑️  Room %s is now empty", client.RoomID)
-		}
+	}
+	remaining := len(room.clients)
+	room.mu.Unlock()
+
+	if !ok {
+		return
+	}
+
+	log.Printf("❌ Client %s left room %s (remaining: %d)", client.UserID, client.RoomID, remaining)
+
+	leavePayload := map[string]interface{}{
+		"user_id":   client.UserID,
+		"username":  client.Username,
+		"timestamp": time.Now().Unix(),
+	}
+	h.broadcastToRoom(room, newMessage(MsgUserLeft, client.RoomID, client.UserID, client.Username, leavePayload), nil)
+	h.broadcastToRoom(room, newMessage(MsgPresenceLeft, client.RoomID, client.UserID, client.Username, leavePayload), nil)
+	h.broadcastToRoom(room, newMessage(MsgActivityLog, client.RoomID, client.UserID, client.Username, map[string]interface{}{
+		"action":  "left",
+		"details": client.Username + " keluar",
+	}), nil)
+
+	if remaining == 0 {
+		log.Printf("🗑️  Room %s is now empty", client.RoomID)
 	}
 }
 
-// broadcastMessage sends a message to all clients in a room
-// Optimized: Non-blocking sends to avoid slow clients blocking others
 func (h *Hub) broadcastMessage(message *Message) {
 	h.mu.RLock()
 	room, exists := h.rooms[message.RoomID]
 	h.mu.RUnlock()
-	
 	if !exists {
 		return
 	}
 
-	// Broadcast to all clients in room concurrently
-	var wg sync.WaitGroup
+	room.addToHistory(message)
+	h.broadcastToRoom(room, message, nil)
+}
+
+// BroadcastExcept sends to all clients in room except skip (nil = all including sender filtered by UserID skip logic below).
+func (h *Hub) broadcastToRoom(room *Room, message *Message, skip *Client) {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
 	for client := range room.clients {
-		// Skip sender if message has sender info
-		if message.UserID != "" && client.UserID == message.UserID {
+		if skip != nil && client == skip {
 			continue
 		}
-
-		wg.Add(1)
-		go func(c *Client) {
-			defer wg.Done()
-			
-			select {
-			case c.send <- message:
-				// Message sent successfully
-			case <-time.After(100 * time.Millisecond):
-				// Client is too slow, skip
-				log.Printf("⚠️  Skipped slow client %s in room %s", c.UserID, message.RoomID)
+		// Skip sender for activity broadcasts that carry UserID (unless message is directed to self via empty UserID filter)
+		if skip == nil && message.UserID != "" && client.UserID == message.UserID {
+			// Still allow presence_list / history / pong / error / state_sync to reach sender when UserID matches
+			switch message.Type {
+			case MsgPresenceList, MsgHistory, MsgPong, MsgError, MsgStateSync:
+				// deliver
+			default:
+				continue
 			}
-		}(client)
-	}
-	
-	// Wait for all sends to complete (with timeout)
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-	
-	select {
-	case <-done:
-		// All sends completed
-	case <-time.After(500 * time.Millisecond):
-		// Timeout after 500ms
-		log.Printf("⚠️  Broadcast timeout for room %s", message.RoomID)
+		}
+
+		select {
+		case client.send <- message:
+		default:
+			log.Printf("⚠️  Skipped slow client %s in room %s", client.UserID, message.RoomID)
+		}
 	}
 }
 
-// cleanupInactiveRooms removes empty rooms
+func (h *Hub) buildPresenceList(room *Room) *Message {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	users := make([]map[string]interface{}, 0, len(room.clients))
+	for c := range room.clients {
+		users = append(users, map[string]interface{}{
+			"user_id":      c.UserID,
+			"username":     c.Username,
+			"display_name": c.Username,
+			"role":         c.Role,
+			"color":        colorForUser(c.UserID),
+		})
+	}
+	return newMessage(MsgPresenceList, room.ID, "", "", map[string]interface{}{
+		"users": users,
+	})
+}
+
+func (h *Hub) buildStateSync(room *Room) *Message {
+	return newMessage(MsgStateSync, room.ID, "", "", map[string]interface{}{
+		"locks":    h.locks.Snapshot(),
+		"history":  room.GetHistory(30),
+		"room_id":  room.ID,
+	})
+}
+
 func (h *Hub) cleanupInactiveRooms() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	for roomID, room := range h.rooms {
-		if len(room.clients) == 0 {
-			// Stop room
+		room.mu.RLock()
+		empty := len(room.clients) == 0
+		room.mu.RUnlock()
+		if empty {
 			close(room.stopCh)
 			delete(h.rooms, roomID)
 			log.Printf("🗑️  Cleaned up empty room: %s", roomID)
@@ -239,11 +235,8 @@ func (h *Hub) cleanupInactiveRooms() {
 // Stop stops the hub
 func (h *Hub) Stop() {
 	close(h.stopCh)
-	
-	// Stop all rooms
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	
 	for _, room := range h.rooms {
 		close(room.stopCh)
 	}
@@ -259,18 +252,24 @@ func (h *Hub) GetRoomInfo(roomID string) map[string]interface{} {
 		return nil
 	}
 
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
 	users := make([]map[string]string, 0, len(room.clients))
 	for client := range room.clients {
 		users = append(users, map[string]string{
 			"user_id":  client.UserID,
 			"username": client.Username,
+			"role":     client.Role,
+			"color":    colorForUser(client.UserID),
 		})
 	}
 
 	return map[string]interface{}{
-		"room_id":     roomID,
+		"room_id":      roomID,
 		"client_count": len(room.clients),
-		"users":       users,
+		"users":        users,
+		"locks":        h.locks.Snapshot(),
 	}
 }
 
@@ -281,11 +280,41 @@ func (h *Hub) GetStats() map[string]interface{} {
 
 	totalClients := 0
 	for _, room := range h.rooms {
+		room.mu.RLock()
 		totalClients += len(room.clients)
+		room.mu.RUnlock()
 	}
 
 	return map[string]interface{}{
 		"total_rooms":   len(h.rooms),
 		"total_clients": totalClients,
+		"active_locks":  len(h.locks.Snapshot()),
 	}
+}
+
+// Publish broadcasts a message to a room (used by client handlers).
+func (h *Hub) Publish(msg *Message) {
+	select {
+	case h.broadcast <- msg:
+	default:
+		log.Printf("⚠️  Broadcast channel full, dropping message type=%s", msg.Type)
+	}
+}
+
+func colorForUser(userID string) string {
+	palette := []string{
+		"#E11D48", "#EA580C", "#CA8A04", "#16A34A",
+		"#0891B2", "#2563EB", "#7C3AED", "#DB2777",
+	}
+	if userID == "" {
+		return palette[0]
+	}
+	hash := 0
+	for i := 0; i < len(userID); i++ {
+		hash = (hash*31 + int(userID[i])) % len(palette)
+	}
+	if hash < 0 {
+		hash = -hash
+	}
+	return palette[hash%len(palette)]
 }

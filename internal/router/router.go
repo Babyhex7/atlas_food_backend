@@ -105,6 +105,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		{
 			collabGroup.GET("/rooms/:room_id/ws", collabHandler.HandleWebSocket)
 			collabGroup.GET("/rooms/:room_id", collabHandler.GetRoomInfo)
+			collabGroup.POST("/rooms/:room_id/invite", collabHandler.InviteToRoom)
 			collabGroup.GET("/stats", collabHandler.GetHubStats)
 		}
 	}
