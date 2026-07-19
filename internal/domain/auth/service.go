@@ -3,6 +3,10 @@ package auth
 import (
 	"atlas_food/internal/pkg/utils"
 	"errors"
+	"fmt"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +18,9 @@ type Service interface {
 	Login(req LoginRequest) (*AuthResponse, error)
 	RefreshToken(refreshToken string) (*AuthResponse, error)
 	GetProfile(userID string) (*ProfileResponse, error)
+	UpdateProfile(userID string, req UpdateProfileRequest) (*ProfileResponse, error)
+	ChangePassword(userID string, req ChangePasswordRequest) error
+	UpdatePhoto(userID string, file *multipart.FileHeader) (*ProfileResponse, error)
 }
 
 // authService - implementasi Service
@@ -166,14 +173,150 @@ func (s *authService) GetProfile(userID string) (*ProfileResponse, error) {
 		return nil, errors.New("user tidak ditemukan")
 	}
 
-	return &ProfileResponse{
+	return toProfileResponse(user), nil
+}
+
+// UpdateProfile - update data profil user (name, phone, gender, birth_date)
+func (s *authService) UpdateProfile(userID string, req UpdateProfileRequest) (*ProfileResponse, error) {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, errors.New("user tidak ditemukan")
+	}
+
+	if req.Gender != nil && *req.Gender != "" && *req.Gender != "male" && *req.Gender != "female" {
+		return nil, errors.New("gender tidak valid")
+	}
+
+	var birthDate *time.Time
+	if req.BirthDate != nil && *req.BirthDate != "" {
+		parsed, err := time.Parse("2006-01-02", *req.BirthDate)
+		if err != nil {
+			return nil, errors.New("format tanggal lahir tidak valid")
+		}
+		if parsed.After(time.Now()) {
+			return nil, errors.New("tanggal lahir tidak boleh di masa depan")
+		}
+		birthDate = &parsed
+	}
+
+	user.Name = req.Name
+	user.Phone = req.Phone
+	if req.Gender != nil && *req.Gender == "" {
+		user.Gender = nil
+	} else {
+		user.Gender = req.Gender
+	}
+	user.BirthDate = birthDate
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return nil, errors.New("gagal menyimpan profil")
+	}
+
+	return toProfileResponse(user), nil
+}
+
+// ChangePassword - ganti password user, memaksa re-login di device lain
+func (s *authService) ChangePassword(userID string, req ChangePasswordRequest) error {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return errors.New("user tidak ditemukan")
+	}
+
+	if err := utils.CheckPassword(req.CurrentPassword, user.PasswordHash); err != nil {
+		return errors.New("password saat ini salah")
+	}
+
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return errors.New("gagal hash password")
+	}
+	user.PasswordHash = hashedPassword
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return errors.New("gagal menyimpan password baru")
+	}
+
+	// Paksa re-login di semua device lain
+	_ = s.repo.DeleteUserRefreshTokens(userID)
+
+	return nil
+}
+
+// UpdatePhoto - upload/ganti foto profil user
+func (s *authService) UpdatePhoto(userID string, file *multipart.FileHeader) (*ProfileResponse, error) {
+	user, err := s.repo.GetUserByID(userID)
+	if err != nil {
+		return nil, errors.New("user tidak ditemukan")
+	}
+
+	ext := filepath.Ext(file.Filename)
+	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
+		return nil, errors.New("format file tidak didukung (gunakan jpg, png, webp)")
+	}
+	if file.Size > 5*1024*1024 {
+		return nil, errors.New("ukuran file terlalu besar (max 5MB)")
+	}
+
+	uploadDir := filepath.Join("uploads", "profile")
+	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+		os.MkdirAll(uploadDir, 0755)
+	}
+
+	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
+	fullPath := filepath.Join(uploadDir, filename)
+
+	src, err := file.Open()
+	if err != nil {
+		return nil, errors.New("gagal membaca file")
+	}
+	defer src.Close()
+
+	dst, err := os.Create(fullPath)
+	if err != nil {
+		return nil, errors.New("gagal menyimpan file")
+	}
+	defer dst.Close()
+
+	if _, err := dst.ReadFrom(src); err != nil {
+		return nil, errors.New("gagal menyimpan file")
+	}
+
+	// Hapus foto lama kalau ada
+	if user.PhotoURL != nil && *user.PhotoURL != "" {
+		oldPath := filepath.Join(".", *user.PhotoURL)
+		if _, statErr := os.Stat(oldPath); statErr == nil {
+			os.Remove(oldPath)
+		}
+	}
+
+	photoURL := fmt.Sprintf("/uploads/profile/%s", filename)
+	user.PhotoURL = &photoURL
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return nil, errors.New("gagal menyimpan foto profil")
+	}
+
+	return toProfileResponse(user), nil
+}
+
+// toProfileResponse - konversi User model ke ProfileResponse DTO
+func toProfileResponse(user *User) *ProfileResponse {
+	resp := &ProfileResponse{
 		ID:        user.ID,
 		Email:     user.Email,
 		Name:      user.Name,
+		Phone:     user.Phone,
+		Gender:    user.Gender,
+		PhotoURL:  user.PhotoURL,
 		Role:      user.Role,
 		IsActive:  user.IsActive,
 		CreatedAt: user.CreatedAt.Format("2006-01-02"),
-	}, nil
+	}
+	if user.BirthDate != nil {
+		formatted := user.BirthDate.Format("2006-01-02")
+		resp.BirthDate = &formatted
+	}
+	return resp
 }
 
 // generateTokens - helper untuk generate access & refresh token
