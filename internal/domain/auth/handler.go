@@ -93,3 +93,71 @@ func (h *Handler) GetProfile(c *gin.Context) {
 
 	utils.SuccessResponse(c, profile)
 }
+
+// UpdateProfile - handler untuk endpoint PATCH /auth/me (protected)
+func (h *Handler) UpdateProfile(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User tidak terautentikasi")
+		return
+	}
+
+	var req UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Data tidak valid: "+err.Error())
+		return
+	}
+
+	profile, err := h.service.UpdateProfile(userID.(string), req)
+	if err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, profile)
+}
+
+// ChangePassword - handler untuk endpoint PUT /auth/me/password (protected)
+func (h *Handler) ChangePassword(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User tidak terautentikasi")
+		return
+	}
+
+	var req ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Data tidak valid: "+err.Error())
+		return
+	}
+
+	if err := h.service.ChangePassword(userID.(string), req); err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, gin.H{"message": "Password berhasil diubah"})
+}
+
+// UpdatePhoto - handler untuk endpoint POST /auth/me/photo (protected)
+func (h *Handler) UpdatePhoto(c *gin.Context) {
+	userID, exists := c.Get("userID")
+	if !exists {
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User tidak terautentikasi")
+		return
+	}
+
+	file, err := c.FormFile("image")
+	if err != nil {
+		utils.ValidationErrorResponse(c, "File tidak ditemukan")
+		return
+	}
+
+	profile, err := h.service.UpdatePhoto(userID.(string), file)
+	if err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, profile)
+}

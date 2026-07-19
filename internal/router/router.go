@@ -68,6 +68,9 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 			authGroup.POST("/login", authHandler.Login)
 			authGroup.POST("/refresh", authHandler.RefreshToken)
 			authGroup.GET("/me", middleware.JWTAuth(), authHandler.GetProfile)
+			authGroup.PATCH("/me", middleware.JWTAuth(), authHandler.UpdateProfile)
+			authGroup.PUT("/me/password", middleware.JWTAuth(), authHandler.ChangePassword)
+			authGroup.POST("/me/photo", middleware.JWTAuth(), authHandler.UpdatePhoto)
 		}
 
 		// Survey domain
