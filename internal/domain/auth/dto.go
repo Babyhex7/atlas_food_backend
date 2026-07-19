@@ -18,6 +18,20 @@ type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token" binding:"required"`
 }
 
+// UpdateProfileRequest - DTO untuk request update profile
+type UpdateProfileRequest struct {
+	Name      string  `json:"name" binding:"required,min=2,max=100"`
+	Phone     *string `json:"phone"`
+	Gender    *string `json:"gender"`
+	BirthDate *string `json:"birth_date"` // format "2006-01-02"
+}
+
+// ChangePasswordRequest - DTO untuk request ganti password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,min=8"`
+}
+
 // AuthResponse - DTO untuk response auth (login/register)
 type AuthResponse struct {
 	User         UserInfo `json:"user"`
@@ -37,10 +51,14 @@ type UserInfo struct {
 
 // ProfileResponse - DTO untuk response profile
 type ProfileResponse struct {
-	ID        string `json:"id"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	Role      string `json:"role"`
-	IsActive  bool   `json:"is_active"`
-	CreatedAt string `json:"created_at"`
+	ID        string  `json:"id"`
+	Email     string  `json:"email"`
+	Name      string  `json:"name"`
+	Phone     *string `json:"phone,omitempty"`
+	Gender    *string `json:"gender,omitempty"`
+	BirthDate *string `json:"birth_date,omitempty"`
+	PhotoURL  *string `json:"photo_url,omitempty"`
+	Role      string  `json:"role"`
+	IsActive  bool    `json:"is_active"`
+	CreatedAt string  `json:"created_at"`
 }
