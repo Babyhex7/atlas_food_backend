@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -249,7 +250,7 @@ func (s *authService) UpdatePhoto(userID string, file *multipart.FileHeader) (*P
 		return nil, errors.New("user tidak ditemukan")
 	}
 
-	ext := filepath.Ext(file.Filename)
+	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
 		return nil, errors.New("format file tidak didukung (gunakan jpg, png, webp)")
 	}
