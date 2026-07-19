@@ -9,6 +9,7 @@ type Repository interface {
 	CreateUser(user *User) error
 	GetUserByEmail(email string) (*User, error)
 	GetUserByID(id string) (*User, error)
+	UpdateUser(user *User) error
 	CreateRefreshToken(token *RefreshToken) error
 	GetRefreshToken(tokenHash string) (*RefreshToken, error)
 	DeleteRefreshToken(tokenHash string) error
@@ -48,6 +49,11 @@ func (r *authRepository) GetUserByID(id string) (*User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// UpdateUser - simpan perubahan pada user yang sudah ada
+func (r *authRepository) UpdateUser(user *User) error {
+	return r.db.Save(user).Error
 }
 
 // CreateRefreshToken - simpan refresh token ke database
