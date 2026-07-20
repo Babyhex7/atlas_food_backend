@@ -14,20 +14,26 @@ type CreateFoodRequest struct {
 	Name        string                `json:"name" binding:"required"`
 	LocalName   string                `json:"local_name"`
 	Description string                `json:"description"`
-	PhotoType   string                `json:"photo_type" binding:"oneof=series range"`
-	CategoryID  string                `json:"category_id"`
-	Nutrients   []FoodNutrientRequest `json:"nutrients"`
+	// omitempty wajib: tanpa itu `oneof` menolak string kosong, sehingga
+	// create gagal total kalau klien tidak mengirim photo_type.
+	// Service sudah memberi default "series".
+	PhotoType  string                `json:"photo_type" binding:"omitempty,oneof=series range"`
+	CategoryID string                `json:"category_id"`
+	Nutrients  []FoodNutrientRequest `json:"nutrients"`
 }
 
 // UpdateFoodRequest - DTO untuk update food
 type UpdateFoodRequest struct {
-	Name        string                `json:"name"`
-	LocalName   string                `json:"local_name"`
-	Description string                `json:"description"`
-	PhotoType   string                `json:"photo_type" binding:"omitempty,oneof=series range"`
-	CategoryID  string                `json:"category_id"`
-	Nutrients   []FoodNutrientRequest `json:"nutrients"`
-	IsActive    *bool                 `json:"is_active"`
+	Name        string `json:"name"`
+	LocalName   string `json:"local_name"`
+	Description string `json:"description"`
+	PhotoType   string `json:"photo_type" binding:"omitempty,oneof=series range"`
+	// Pointer agar admin bisa membedakan "tidak diubah" (field tidak dikirim)
+	// dari "lepaskan kategori" (dikirim null / string kosong). Dengan tipe
+	// string biasa, memilih "Tanpa kategori" di form diam-diam tidak berefek.
+	CategoryID *string               `json:"category_id"`
+	Nutrients  []FoodNutrientRequest `json:"nutrients"`
+	IsActive   *bool                 `json:"is_active"`
 }
 
 // CategoryInfo - DTO untuk category dalam food responses
@@ -39,16 +45,22 @@ type CategoryInfo struct {
 }
 
 // FoodResponse - DTO untuk response detail makanan
+//
+// CategoryID dan IsActive wajib ikut: form edit admin memuat nilainya dari
+// sini. Tanpa keduanya, dropdown kategori selalu tampil kosong dan checkbox
+// "aktif" selalu tak tercentang, meski datanya ada di database.
 type FoodResponse struct {
-	ID             string                 `json:"id"`
-	Code           string                 `json:"code"`
-	Name           string                 `json:"name"`
-	LocalName      string                 `json:"local_name"`
-	Description    string                 `json:"description"`
-	PhotoType      string                 `json:"photo_type"`
-	Category       *CategoryInfo          `json:"category,omitempty"`
-	Nutrients      map[string]NutrientDetail `json:"nutrients"`
-	PortionPhotos  []PortionPhoto         `json:"portion_photos,omitempty"`
+	ID            string                    `json:"id"`
+	Code          string                    `json:"code"`
+	Name          string                    `json:"name"`
+	LocalName     string                    `json:"local_name"`
+	Description   string                    `json:"description"`
+	PhotoType     string                    `json:"photo_type"`
+	CategoryID    *string                   `json:"category_id"`
+	Category      *CategoryInfo             `json:"category,omitempty"`
+	IsActive      bool                      `json:"is_active"`
+	Nutrients     map[string]NutrientDetail `json:"nutrients"`
+	PortionPhotos []PortionPhoto            `json:"portion_photos,omitempty"`
 }
 
 // PortionPhoto - detail foto porsi untuk response public

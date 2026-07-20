@@ -33,6 +33,10 @@ type Repository interface {
 	ListCategories() ([]Category, error)
 	GetCategoryByID(id string) (*Category, error)
 	GetCategoryByCode(code string) (*Category, error)
+	CreateCategory(category *Category) error
+	UpdateCategory(category *Category) error
+	DeleteCategory(id string) error
+	CountFoodsByCategoryID(id string) (int64, error)
 
 	// Portion Method operations
 	GetPortionMethodsByFoodID(foodID string) ([]PortionSizeMethod, error)
@@ -46,6 +50,15 @@ type Repository interface {
 	GetAsServedSetByCode(code string) (*AsServedSet, error)
 	GetAsServedImagesBySetID(setID string) ([]AsServedImage, error)
 	CreateAsServedImages(images []AsServedImage) error
+	GetAsServedSetByID(id string) (*AsServedSet, error)
+	UpdateAsServedSet(set *AsServedSet) error
+	DeleteAsServedSet(id string) error
+	GetAsServedImageByID(id string) (*AsServedImage, error)
+	UpdateAsServedImage(image *AsServedImage) error
+	DeleteAsServedImage(id string) error
+
+	// Portion method lookup (untuk update/delete per-id)
+	GetPortionMethodByID(id int) (*PortionSizeMethod, error)
 }
 
 type foodRepository struct {

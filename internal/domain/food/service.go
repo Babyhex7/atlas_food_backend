@@ -4,6 +4,7 @@ import (
 	"atlas_food/internal/pkg/utils"
 	"encoding/json"
 	"strconv"
+	"strings"
 
 	"github.com/google/uuid"
 )
@@ -19,6 +20,24 @@ type Service interface {
 	// Admin Portion Method
 	AddPortionMethod(foodID string, req CreatePortionMethodRequest) (*PortionMethodResponse, error)
 	ListPortionMethods(foodID string) ([]PortionMethodResponse, error)
+	UpdatePortionMethod(id int, req UpdatePortionMethodRequest) (*PortionMethodResponse, error)
+	DeletePortionMethod(id int) error
+
+	// Admin Category
+	CreateCategory(req CreateCategoryRequest) (*Category, error)
+	GetCategory(id string) (*Category, error)
+	UpdateCategory(id string, req UpdateCategoryRequest) (*Category, error)
+	DeleteCategory(id string) error
+
+	// Admin As-Served
+	ListAsServedSets() ([]AsServedSet, error)
+	CreateAsServedSet(req CreateAsServedSetRequest) (*AsServedSet, error)
+	GetAsServedSet(id string) (*AsServedSetDetailResponse, error)
+	UpdateAsServedSet(id string, req UpdateAsServedSetRequest) (*AsServedSet, error)
+	DeleteAsServedSet(id string) error
+	AddAsServedImages(setID string, reqs []AsServedImageRequest) ([]AsServedImage, error)
+	UpdateAsServedImage(id string, req UpdateAsServedImageRequest) (*AsServedImage, error)
+	DeleteAsServedImage(id string) error
 
 	// Public/Respondent
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]SearchFoodResponse, error)
@@ -155,15 +174,17 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	}
 
 	return &FoodResponse{
-		ID:             food.ID,
-		Code:           food.Code,
-		Name:           food.Name,
-		LocalName:      food.LocalName,
-		Description:    food.Description,
-		PhotoType:      food.PhotoType,
-		Category:       categoryInfo,
-		Nutrients:      nutrientMap,
-		PortionPhotos:  portionPhotos,
+		ID:            food.ID,
+		Code:          food.Code,
+		Name:          food.Name,
+		LocalName:     food.LocalName,
+		Description:   food.Description,
+		PhotoType:     food.PhotoType,
+		CategoryID:    food.CategoryID,
+		Category:      categoryInfo,
+		IsActive:      food.IsActive,
+		Nutrients:     nutrientMap,
+		PortionPhotos: portionPhotos,
 	}, nil
 }
 
@@ -191,8 +212,14 @@ func (s *foodService) UpdateFood(id string, req UpdateFoodRequest) (*FoodRespons
 	if req.PhotoType != "" {
 		food.PhotoType = req.PhotoType
 	}
-	if req.CategoryID != "" {
-		food.CategoryID = &req.CategoryID
+	// Dikirim = ubah. String kosong berarti lepaskan kategori (simpan NULL),
+	// bukan "biarkan apa adanya".
+	if req.CategoryID != nil {
+		if trimmed := strings.TrimSpace(*req.CategoryID); trimmed == "" {
+			food.CategoryID = nil
+		} else {
+			food.CategoryID = &trimmed
+		}
 	}
 	if req.IsActive != nil {
 		food.IsActive = *req.IsActive
@@ -265,7 +292,7 @@ func (s *foodService) ListPortionMethods(foodID string) ([]PortionMethodResponse
 			Label:       m.Label,
 			Description: m.Description,
 			ImageURL:    m.ImageURL,
-			Config:      json.RawMessage(m.Config),
+			Config:      safeRawJSON(m.Config),
 		}
 	}
 	return resp, nil

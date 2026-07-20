@@ -3,6 +3,7 @@ package router
 import (
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/ai"
+	"atlas_food/internal/domain/annotation"
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/collab"
 	"atlas_food/internal/domain/food"
@@ -46,16 +47,24 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		// Public Food Routes (Find Your Food feature)
 		foodRepo := food.NewRepository(db)
 		publicFoodHandler := food.NewPublicHandler(foodRepo)
-		
+
+		// Annotation domain — CMS polygon (admin) + konsumsi published (public)
+		annotationRepo := annotation.NewRepository(db)
+		annotationService := annotation.NewService(annotationRepo)
+		publicAnnotationHandler := annotation.NewPublicHandler(annotationService)
+
 		publicGroup := v1.Group("/public")
 		{
 			// Food search & browse
 			publicGroup.GET("/foods/search", publicFoodHandler.SearchFoods)
 			publicGroup.GET("/foods/:id", publicFoodHandler.GetFoodDetail)
-			
+
 			// Categories
 			publicGroup.GET("/categories", publicFoodHandler.GetCategories)
 			publicGroup.GET("/categories/:code/foods", publicFoodHandler.GetFoodsByCategory)
+
+			// Anotasi published (draft tidak pernah terekspos di sini)
+			publicAnnotationHandler.SetupRoutes(publicGroup)
 		}
 		
 		// ======== AUTHENTICATED ROUTES ========
@@ -96,6 +105,10 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		aiService := ai.NewService(aiRepo, groqClient)
 		aiHandler := ai.NewHandler(aiService)
 		aiHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		// Annotation domain (admin CMS)
+		annotationHandler := annotation.NewHandler(annotationService)
+		annotationHandler.SetupRoutes(v1, middleware.JWTAuth())
 
 		// Upload domain
 		uploadHandler := upload.NewHandler("./uploads")

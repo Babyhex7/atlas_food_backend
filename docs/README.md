@@ -18,7 +18,10 @@ Selamat datang di dokumentasi Atlas Food! Dokumentasi ini berisi informasi lengk
 | 8   | [08-erd.md](./08-erd.md)                                   | Entity Relationship Diagram lengkap               |
 | 9   | [09-sample-data.md](./09-sample-data.md)                   | Sample data SQL dan JSON                          |
 | 10  | [10-implementation-steps.md](./10-implementation-steps.md) | Langkah-langkah implementasi bertahap             |
-| 11  | [brif_ai.md](./brif_ai.md)                                 | 🤖 Implementasi AI Nutrition Analysis dengan Groq |
+| 11  | [brif_ai.md](./brif_ai.md)                                 | AI Nutrition Analysis dengan Groq                 |
+| 12  | [12-find-your-food.md](./12-find-your-food.md)             | Find Your Food public catalog                     |
+| 13  | [13-realtime-collaboration.md](./13-realtime-collaboration.md) | WebSocket collab                              |
+| 14  | [14-admin-portal-and-food-annotation-cms.md](./14-admin-portal-and-food-annotation-cms.md) | **Admin CRUD + Food Annotation CMS** (brief lengkap) |
 
 ---
 
