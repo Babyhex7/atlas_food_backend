@@ -250,6 +250,9 @@ func processSingleFood(tx *gorm.DB, item AtlasFoodItem, categoryMap map[string]s
 	// Delete existing as_served_images for this set
 	tx.Table("as_served_images").Where("set_id = ?", asServedSetID).Delete(nil)
 
+	// Tentukan apakah food ini bertipe guide
+	isGuide := strings.ToLower(item.TipeFoto) == "guide"
+
 	// Batch insert portion photos for better performance
 	var portionPhotos []map[string]interface{}
 	for j, porsi := range item.Porsi {
@@ -264,12 +267,18 @@ func processSingleFood(tx *gorm.DB, item AtlasFoodItem, categoryMap map[string]s
 			description = fmt.Sprintf("%s (%s)", description, *porsi.URT)
 		}
 
+		// Bangun URL sesuai nama file asli di folder foto:
+		//   Series/Range : /uploads/atlas/[CATCODE]/[KODE]_[LABEL].jpg  (misal: MP-01_A.jpg)
+		//   Guide        : /uploads/atlas/[CATCODE]/[KODE]_guide.jpg     (misal: AS-22_guide.jpg)
+		// URL ini sekaligus menjadi object key di MinIO: photos/[CATCODE]/[filename]
+		imageURL := BuildImageURL(categoryCode, item.Kode, porsi.LabelUkuran, isGuide)
+
 		portionPhotos = append(portionPhotos, map[string]interface{}{
 			"set_id":        asServedSetID,
 			"label":         porsi.LabelUkuran,
 			"weight_gram":   porsi.Nilai,
-			"image_url":     fmt.Sprintf("/uploads/atlas/%s/%s-%s.jpg", categoryCode, strings.ToLower(item.Kode), strings.ToLower(porsi.LabelUkuran)),
-			"thumbnail_url": fmt.Sprintf("/uploads/atlas/%s/%s-%s-thumb.jpg", categoryCode, strings.ToLower(item.Kode), strings.ToLower(porsi.LabelUkuran)),
+			"image_url":     imageURL,
+			"thumbnail_url": imageURL, // thumbnail = same file, frontend dapat resize via query param
 			"description":   description,
 			"display_order": j + 1,
 		})
