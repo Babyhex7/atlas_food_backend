@@ -4,6 +4,7 @@ import (
 	"atlas_food/internal/bootstrap"
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/ai"
+	"atlas_food/internal/domain/annotation"
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/collab"
 	"atlas_food/internal/domain/food"
@@ -41,6 +42,8 @@ func main() {
 		&food.AsServedImage{},
 		&submission.SurveySubmission{},
 		&ai.AIResultLog{},
+		&annotation.FoodImage{},
+		&annotation.FoodArea{},
 	)
 	if err != nil {
 		log.Fatalf("Gagal migrasi database: %v", err)

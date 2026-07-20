@@ -181,7 +181,11 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 			foods.PUT("/:id", h.UpdateFood)
 			foods.DELETE("/:id", h.DeleteFood)
 			foods.POST("/:id/portion-methods", h.AddPortionMethod)
+			foods.GET("/:id/portion-methods", h.ListPortionMethodsAdmin)
 		}
+
+		// Kategori, as-served set/image, dan metode porsi
+		h.setupCatalogRoutes(admin)
 	}
 
 	// Respondent routes
