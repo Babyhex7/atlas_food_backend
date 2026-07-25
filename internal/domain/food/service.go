@@ -339,6 +339,7 @@ func (s *foodService) SearchFoods(query string, categoryID string, foodType stri
 			Name:      f.Name,
 			LocalName: f.LocalName,
 			PhotoType: f.PhotoType,
+			FoodType:  resolveFoodType(f.Category),
 			Category:  categoryInfo,
 		}
 	}

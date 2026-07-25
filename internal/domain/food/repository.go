@@ -19,7 +19,7 @@ type Repository interface {
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error)
 
 	// Public Food operations (Find Your Food)
-	SearchFoodsPublic(query string, limit int) ([]Food, error)
+	SearchFoodsPublic(query string, foodType string, limit int) ([]Food, error)
 	GetFoodWithPortionPhotos(foodID string) (*Food, []AsServedImage, error)
 	GetFoodsByCategory(categoryCode string, limit int) ([]Food, error)
 	GetFoodNutrients(foodID string) ([]FoodNutrient, error)
@@ -358,17 +358,41 @@ func (r *foodRepository) GetFoodWithPortionPhotos(foodID string) (*Food, []AsSer
 
 // SearchFoodsPublic - Search foods with FULLTEXT (Public, no auth required)
 // Optimized: Single query with Preload, no N+1
-func (r *foodRepository) SearchFoodsPublic(query string, limit int) ([]Food, error) {
+//
+// foodType: "food" | "drink" | "" (kosong = semua). Filter mengikuti aturan yang
+// sama dengan SearchFoods (authenticated): drink = kategori 'drinks'.
+func (r *foodRepository) SearchFoodsPublic(query string, foodType string, limit int) ([]Food, error) {
 	var foods []Food
-	
+
+	// LEFT JOIN kategori supaya filter food_type bisa memakai categories.code.
+	// Select dibuat eksplisit: tanpa itu query menjadi "SELECT *" atas hasil join,
+	// dan kolom bernama sama di kedua tabel (id, code, name, created_at) bisa
+	// saling menimpa saat di-scan ke struct Food.
 	q := r.db.Preload("Category"). // Preload to avoid N+1
-		Where("is_active = ?", true)
-	
-	if query != "" {
-		// Use FULLTEXT search if available
-		q = q.Where("MATCH(name, local_name) AGAINST(? IN BOOLEAN MODE)", query+"*")
+					Select("foods.*").
+					Joins("LEFT JOIN categories c ON c.id = foods.category_id").
+					Where("foods.is_active = ?", true)
+
+	switch strings.ToLower(strings.TrimSpace(foodType)) {
+	case "drink":
+		q = q.Where("c.code = ?", "drinks")
+	case "food":
+		q = q.Where("(c.code IS NULL OR c.code != ?)", "drinks")
 	}
-	
+
+	trimmed := strings.TrimSpace(query)
+	if trimmed != "" {
+		// FULLTEXT sendirian gagal untuk pencarian parsial di tengah kata dan untuk
+		// token di bawah innodb_ft_min_token_size. Gabungkan dengan LIKE + kode agar
+		// hasil tetap muncul, mengikuti perilaku SearchFoods (authenticated).
+		likeQuery := "%" + trimmed + "%"
+		matchQuery := trimmed + "*"
+		q = q.Where(
+			"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+			matchQuery, likeQuery, likeQuery, likeQuery,
+		)
+	}
+
 	err := q.Limit(limit).Find(&foods).Error
 	return foods, err
 }

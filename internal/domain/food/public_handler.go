@@ -13,6 +13,16 @@ type PublicHandler struct {
 	repo Repository
 }
 
+// resolveFoodType menurunkan jenis item ("food" | "drink") dari kategorinya.
+// Sumber kebenarannya sama dengan filter di SearchFoods/SearchFoodsPublic:
+// kategori dengan code 'drinks' dianggap minuman, sisanya makanan.
+func resolveFoodType(category *Category) string {
+	if category != nil && strings.EqualFold(category.Code, "drinks") {
+		return "drink"
+	}
+	return "food"
+}
+
 // NewPublicHandler creates a new public food handler
 func NewPublicHandler(repo Repository) *PublicHandler {
 	return &PublicHandler{repo: repo}
@@ -25,20 +35,23 @@ func NewPublicHandler(repo Repository) *PublicHandler {
 // @Accept json
 // @Produce json
 // @Param q query string false "Search query"
+// @Param type query string false "Filter jenis: food | drink (kosong = semua)"
 // @Param limit query int false "Limit results" default(20)
 // @Success 200 {object} map[string]interface{}
 // @Router /public/foods/search [get]
 func (h *PublicHandler) SearchFoods(c *gin.Context) {
 	query := c.DefaultQuery("q", "")
+	// foodType: "food" | "drink" | "" (kosong = semua)
+	foodType := c.Query("type")
 	limit := 20
-	
+
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 100 {
 			limit = l
 		}
 	}
 
-	foods, err := h.repo.SearchFoodsPublic(query, limit)
+	foods, err := h.repo.SearchFoodsPublic(query, foodType, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
@@ -47,8 +60,10 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 		return
 	}
 
-	// Transform to response
-	var results []SearchFoodResponse
+	// Transform to response.
+	// Slice diinisialisasi non-nil supaya "data" selalu berupa array `[]` dan tidak
+	// pernah `null` — klien mengandalkan hasil ini untuk langsung di-map.
+	results := make([]SearchFoodResponse, 0, len(foods))
 	for _, food := range foods {
 		item := SearchFoodResponse{
 			ID:        food.ID,
@@ -56,8 +71,9 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 			Name:      food.Name,
 			LocalName: food.LocalName,
 			PhotoType: food.PhotoType,
+			FoodType:  resolveFoodType(food.Category),
 		}
-		
+
 		if food.Category != nil {
 			item.Category = &CategoryInfo{
 				ID:   food.Category.ID,
@@ -66,7 +82,7 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 				Icon: food.Category.Icon,
 			}
 		}
-		
+
 		results = append(results, item)
 	}
 
@@ -267,8 +283,8 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 		return
 	}
 
-	// Transform to response
-	var results []SearchFoodResponse
+	// Transform to response. Non-nil supaya "data" selalu array, tidak pernah null.
+	results := make([]SearchFoodResponse, 0, len(foods))
 	for _, food := range foods {
 		item := SearchFoodResponse{
 			ID:        food.ID,
@@ -276,8 +292,9 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 			Name:      food.Name,
 			LocalName: food.LocalName,
 			PhotoType: food.PhotoType,
+			FoodType:  resolveFoodType(food.Category),
 		}
-		
+
 		if food.Category != nil {
 			item.Category = &CategoryInfo{
 				ID:   food.Category.ID,
@@ -286,7 +303,7 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 				Icon: food.Category.Icon,
 			}
 		}
-		
+
 		results = append(results, item)
 	}
 
