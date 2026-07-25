@@ -32,13 +32,6 @@
 *.sqlite
 *.sqlite3
 
-# Uploads (kecuali folder struktur)
-/uploads/*
-!/uploads/.gitkeep
-!/uploads/as-served/
-/uploads/as-served/*
-!/uploads/as-served/.gitkeep
-
 # Log
 *.log
 /logs/
