@@ -71,6 +71,8 @@ type PortionPhoto struct {
 	ThumbnailURL string  `json:"thumbnail_url"`
 	WeightGram   float64 `json:"weight_gram"`
 	Description  string  `json:"description"`
+	// FoodImageID - tautan ke food_images (anotasi published) bila ada
+	FoodImageID string `json:"food_image_id,omitempty"`
 }
 
 // NutrientDetail - detail nutrisi untuk response

@@ -81,15 +81,34 @@ func (h *Hub) GetOrCreateRoom(roomID string) *Room {
 
 func (h *Hub) registerClient(client *Client) {
 	room := h.GetOrCreateRoom(client.RoomID)
+
+	// Satu user = satu socket per room. Reconnect / Strict Mode sering buka
+	// koneksi baru tanpa menutup lama — tanpa ini presence & activity "join"
+	// menumpuk meski orangnya cuma satu.
 	room.mu.Lock()
+	replaced := false
+	for existing := range room.clients {
+		if existing.UserID != "" && existing.UserID == client.UserID && existing != client {
+			delete(room.clients, existing)
+			close(existing.send)
+			replaced = true
+		}
+	}
 	room.clients[client] = true
 	room.mu.Unlock()
 
-	log.Printf("✅ Client %s joined room %s (total: %d)", client.UserID, client.RoomID, room.GetClientCount())
+	log.Printf("✅ Client %s joined room %s (total: %d, reconnect=%v)", client.UserID, client.RoomID, room.GetClientCount(), replaced)
 
 	// Sync state to joining client
 	client.sendQuiet(h.buildPresenceList(room))
 	client.sendQuiet(h.buildStateSync(room))
+
+	// Presence list ke room selalu di-refresh (dedupe by user)
+	h.broadcastToRoom(room, h.buildPresenceList(room), client)
+
+	if replaced {
+		return
+	}
 
 	joinPayload := map[string]interface{}{
 		"user_id":      client.UserID,
@@ -100,7 +119,6 @@ func (h *Hub) registerClient(client *Client) {
 		"timestamp":    time.Now().Unix(),
 	}
 
-	// Broadcast join (legacy + new type)
 	h.broadcastToRoom(room, newMessage(MsgUserJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
 	h.broadcastToRoom(room, newMessage(MsgPresenceJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
 	h.broadcastToRoom(room, newMessage(MsgActivityLog, client.RoomID, client.UserID, client.Username, map[string]interface{}{
@@ -193,8 +211,13 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 
+	seen := make(map[string]bool, len(room.clients))
 	users := make([]map[string]interface{}, 0, len(room.clients))
 	for c := range room.clients {
+		if c.UserID == "" || seen[c.UserID] {
+			continue
+		}
+		seen[c.UserID] = true
 		users = append(users, map[string]interface{}{
 			"user_id":      c.UserID,
 			"username":     c.Username,

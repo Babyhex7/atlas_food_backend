@@ -390,10 +390,20 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 		return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
 	}
 
-	// Alias default
-	alias := req.Alias
-	if alias == "" && req.RespondentName != "" {
-		alias = req.RespondentName
+	// Alias opsional — admin create survey, responden join via link tanpa "kode"
+	alias := strings.TrimSpace(req.Alias)
+	if alias == "" {
+		alias = strings.TrimSpace(req.RespondentName)
+	}
+	if alias == "" && userID != nil {
+		id := *userID
+		if len(id) > 8 {
+			id = id[:8]
+		}
+		alias = fmt.Sprintf("RESP-%s", id)
+	}
+	if alias == "" {
+		alias = "Responden"
 	}
 
 	// Cek apakah user sudah pernah join
@@ -403,6 +413,9 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 	}
 
 	if participant == nil {
+		if userID == nil {
+			return nil, utils.NewAppError(401, "UNAUTHORIZED", "Login diperlukan untuk ikut survey")
+		}
 		// Buat participant baru
 		participant = &SurveyParticipant{
 			ID:       uuid.New().String(),

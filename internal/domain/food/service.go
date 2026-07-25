@@ -1,6 +1,7 @@
 package food
 
 import (
+	"atlas_food/internal/domain/annotation"
 	"atlas_food/internal/pkg/utils"
 	"encoding/json"
 	"strconv"
@@ -14,8 +15,17 @@ type Service interface {
 	CreateFood(req CreateFoodRequest) (*FoodResponse, error)
 	GetFoodDetail(id string) (*FoodResponse, error)
 	ListFoods(categoryID string, page, limit int) ([]Food, int64, error)
+	ListFoodsAdmin(f ListFoodsFilter) ([]Food, int64, error)
 	UpdateFood(id string, req UpdateFoodRequest) (*FoodResponse, error)
 	DeleteFood(id string) error
+
+	// Admin Food Photos (anotasi + gram terpadu)
+	ListFoodPhotos(foodID string) (*FoodPhotoListResponse, error)
+	CreateFoodPhoto(foodID, userID string, req CreateFoodPhotoRequest) (*FoodPhotoResponse, error)
+	UpdateFoodPhoto(foodID, photoID string, req UpdateFoodPhotoRequest) (*FoodPhotoResponse, error)
+	DeleteFoodPhoto(foodID, photoID string) error
+	PublishFoodPhoto(foodID, photoID string) (*FoodPhotoResponse, error)
+	UnpublishFoodPhoto(foodID, photoID string) (*FoodPhotoResponse, error)
 
 	// Admin Portion Method
 	AddPortionMethod(foodID string, req CreatePortionMethodRequest) (*PortionMethodResponse, error)
@@ -47,10 +57,11 @@ type Service interface {
 
 type foodService struct {
 	repo Repository
+	ann  *annotation.Service
 }
 
-func NewService(repo Repository) Service {
-	return &foodService{repo: repo}
+func NewService(repo Repository, ann *annotation.Service) Service {
+	return &foodService{repo: repo, ann: ann}
 }
 
 // CreateFood - menambahkan makanan baru ke database (Admin Only)
@@ -191,6 +202,11 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 // ListFoods - mengambil daftar semua makanan dengan paginasi (Admin)
 func (s *foodService) ListFoods(categoryID string, page, limit int) ([]Food, int64, error) {
 	return s.repo.ListFoods(categoryID, page, limit)
+}
+
+// ListFoodsAdmin - daftar admin dengan search + filter
+func (s *foodService) ListFoodsAdmin(f ListFoodsFilter) ([]Food, int64, error) {
+	return s.repo.ListFoodsFiltered(f)
 }
 
 // UpdateFood - memperbarui data makanan yang sudah ada (Admin)

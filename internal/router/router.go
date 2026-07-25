@@ -88,8 +88,8 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		surveyHandler := survey.NewHandler(surveyService)
 		surveyHandler.SetupRoutes(v1, middleware.JWTAuth())
 
-		// Food domain (authenticated)
-		foodService := food.NewService(foodRepo)
+		// Food domain (authenticated) — butuh annotationService untuk foto terpadu
+		foodService := food.NewService(foodRepo, annotationService)
 		foodHandler := food.NewHandler(foodService)
 		foodHandler.SetupRoutes(v1, middleware.JWTAuth())
 

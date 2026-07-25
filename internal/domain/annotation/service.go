@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"atlas_food/internal/pkg/utils"
+
+	"github.com/google/uuid"
 )
 
 // Batas pagination default untuk list
@@ -56,6 +58,7 @@ func (s *Service) Create(req CreateFoodImageRequest, userID string) (*FoodImage,
 	}
 
 	image := &FoodImage{
+		ID:            uuid.New().String(),
 		Title:         strings.TrimSpace(req.Title),
 		ImageURL:      req.ImageURL,
 		ThumbnailURL:  req.ThumbnailURL,
@@ -96,7 +99,7 @@ func (s *Service) GetPublished(id string) (*FoodImage, error) {
 func (s *Service) List(q ListFoodImagesQuery) (*ListFoodImagesResponse, error) {
 	page, limit := normalizePaging(q.Page, q.Limit)
 
-	items, total, err := s.repo.List(q.Status, q.Search, page, limit)
+	items, total, err := s.repo.List(q.Status, q.Search, q.PrimaryFoodID, page, limit)
 	if err != nil {
 		return nil, err
 	}

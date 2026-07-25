@@ -67,9 +67,9 @@ func (r *Repository) FindPublishedByID(id string) (*FoodImage, error) {
 	return &image, nil
 }
 
-// List - daftar FoodImage dengan filter status/pencarian dan pagination.
+// List - daftar FoodImage dengan filter status/pencarian/food dan pagination.
 // areasCount dihitung lewat subquery agar tidak perlu Preload seluruh polygon.
-func (r *Repository) List(status, search string, page, limit int) ([]FoodImageSummary, int64, error) {
+func (r *Repository) List(status, search, primaryFoodID string, page, limit int) ([]FoodImageSummary, int64, error) {
 	// Filter dibangun ulang untuk tiap query. Count() adalah finisher — memakai
 	// ulang *gorm.DB yang sama setelahnya membuat kondisi statement bocor ke
 	// query berikutnya.
@@ -79,6 +79,9 @@ func (r *Repository) List(status, search string, page, limit int) ([]FoodImageSu
 		}
 		if s := strings.TrimSpace(search); s != "" {
 			db = db.Where("title LIKE ?", "%"+s+"%")
+		}
+		if foodID := strings.TrimSpace(primaryFoodID); foodID != "" {
+			db = db.Where("primary_food_id = ?", foodID)
 		}
 		return db
 	}
@@ -92,7 +95,7 @@ func (r *Repository) List(status, search string, page, limit int) ([]FoodImageSu
 	err := applyFilter(r.db.Model(&FoodImage{})).
 		Select(`food_images.id, food_images.title, food_images.image_url,
 			food_images.thumbnail_url, food_images.width, food_images.height,
-			food_images.status, food_images.published_at, food_images.updated_at,
+			food_images.status, food_images.primary_food_id, food_images.published_at, food_images.updated_at,
 			(SELECT COUNT(*) FROM food_areas WHERE food_areas.food_image_id = food_images.id) AS areas_count`).
 		Order("food_images.updated_at DESC").
 		Offset((page - 1) * limit).
@@ -108,7 +111,7 @@ func (r *Repository) List(status, search string, page, limit int) ([]FoodImageSu
 
 // ListPublished - daftar published saja untuk konsumsi publik
 func (r *Repository) ListPublished(page, limit int) ([]FoodImageSummary, int64, error) {
-	return r.List(StatusPublished, "", page, limit)
+	return r.List(StatusPublished, "", "", page, limit)
 }
 
 // ListPublishedByFoodID - gambar published yang terkait sebuah food master,

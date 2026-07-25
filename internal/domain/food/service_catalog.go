@@ -9,6 +9,7 @@ import (
 
 	"atlas_food/internal/pkg/utils"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -139,6 +140,7 @@ func (s *foodService) CreateAsServedSet(req CreateAsServedSetRequest) (*AsServed
 	}
 
 	set := &AsServedSet{
+		ID:          uuid.New().String(),
 		Code:        code,
 		Name:        strings.TrimSpace(req.Name),
 		Description: req.Description,
@@ -248,6 +250,7 @@ func (s *foodService) AddAsServedImages(setID string, reqs []AsServedImageReques
 	images := make([]AsServedImage, 0, len(reqs))
 	for _, req := range reqs {
 		images = append(images, AsServedImage{
+			ID:           uuid.New().String(),
 			SetID:        setID,
 			Label:        strings.TrimSpace(req.Label),
 			ImageURL:     req.ImageURL,

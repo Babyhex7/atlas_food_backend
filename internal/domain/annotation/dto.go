@@ -44,10 +44,11 @@ type ReplaceAreasResponse struct {
 
 // ListFoodImagesQuery - query string GET /admin/food-images
 type ListFoodImagesQuery struct {
-	Status string `form:"status" binding:"omitempty,oneof=draft published archived"`
-	Search string `form:"search"`
-	Page   int    `form:"page"`
-	Limit  int    `form:"limit"`
+	Status        string `form:"status" binding:"omitempty,oneof=draft published archived"`
+	Search        string `form:"search"`
+	PrimaryFoodID string `form:"primary_food_id"`
+	Page          int    `form:"page"`
+	Limit         int    `form:"limit"`
 }
 
 // ListFoodImagesResponse - hasil list dengan pagination
@@ -60,14 +61,15 @@ type ListFoodImagesResponse struct {
 
 // FoodImageSummary - bentuk ringkas untuk tabel list (tanpa polygon)
 type FoodImageSummary struct {
-	ID           string     `json:"id"`
-	Title        string     `json:"title"`
-	ImageURL     string     `json:"image_url"`
-	ThumbnailURL string     `json:"thumbnail_url"`
-	Width        int        `json:"width"`
-	Height       int        `json:"height"`
-	Status       string     `json:"status"`
-	AreasCount   int        `json:"areas_count"`
-	PublishedAt  *time.Time `json:"published_at"`
-	UpdatedAt    time.Time  `json:"updated_at"`
+	ID            string     `json:"id"`
+	Title         string     `json:"title"`
+	ImageURL      string     `json:"image_url"`
+	ThumbnailURL  string     `json:"thumbnail_url"`
+	Width         int        `json:"width"`
+	Height        int        `json:"height"`
+	Status        string     `json:"status"`
+	PrimaryFoodID *string    `json:"primary_food_id,omitempty"`
+	AreasCount    int        `json:"areas_count"`
+	PublishedAt   *time.Time `json:"published_at"`
+	UpdatedAt     time.Time  `json:"updated_at"`
 }

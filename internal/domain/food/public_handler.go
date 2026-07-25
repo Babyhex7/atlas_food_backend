@@ -3,6 +3,7 @@ package food
 import (
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -157,16 +158,23 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 		}
 	}
 
-	// Transform portion photos
+	// Transform portion photos — food_image_id untuk overlay anotasi responden
 	var portionPhotoList []PortionPhoto
 	for _, p := range portionPhotos {
+		desc := p.Description
+		foodImageID := ""
+		if strings.HasPrefix(desc, "food_image:") {
+			foodImageID = strings.TrimPrefix(desc, "food_image:")
+			desc = ""
+		}
 		portionPhotoList = append(portionPhotoList, PortionPhoto{
 			ID:           p.ID,
 			Label:        p.Label,
 			ImageURL:     p.ImageURL,
 			ThumbnailURL: p.ThumbnailURL,
 			WeightGram:   p.WeightGram,
-			Description:  p.Description,
+			Description:  desc,
+			FoodImageID:  foodImageID,
 		})
 	}
 

@@ -12,6 +12,7 @@ type Repository interface {
 	GetFoodByID(id string) (*Food, error)
 	GetFoodByCode(code string) (*Food, error)
 	ListFoods(categoryID string, page, limit int) ([]Food, int64, error)
+	ListFoodsFiltered(f ListFoodsFilter) ([]Food, int64, error)
 	ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error)
 	UpdateFood(food *Food) error
 	DeleteFood(id string) error
@@ -48,12 +49,14 @@ type Repository interface {
 	ListAsServedSets() ([]AsServedSet, error)
 	CreateAsServedSet(set *AsServedSet) error
 	GetAsServedSetByCode(code string) (*AsServedSet, error)
+	GetAsServedSetsByFoodID(foodID string) ([]AsServedSet, error)
 	GetAsServedImagesBySetID(setID string) ([]AsServedImage, error)
 	CreateAsServedImages(images []AsServedImage) error
 	GetAsServedSetByID(id string) (*AsServedSet, error)
 	UpdateAsServedSet(set *AsServedSet) error
 	DeleteAsServedSet(id string) error
 	GetAsServedImageByID(id string) (*AsServedImage, error)
+	GetAsServedImageByDescription(setID, description string) (*AsServedImage, error)
 	UpdateAsServedImage(image *AsServedImage) error
 	DeleteAsServedImage(id string) error
 
@@ -89,27 +92,72 @@ func (r *foodRepository) GetFoodByCode(code string) (*Food, error) {
 }
 
 func (r *foodRepository) ListFoods(categoryID string, page, limit int) ([]Food, int64, error) {
-	return r.listFoods(categoryID, page, limit, false)
+	return r.ListFoodsFiltered(ListFoodsFilter{CategoryID: categoryID, Page: page, Limit: limit})
 }
 
 func (r *foodRepository) ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error) {
-	return r.listFoods(categoryID, page, limit, true)
+	return r.ListFoodsFiltered(ListFoodsFilter{CategoryID: categoryID, Page: page, Limit: limit, ActiveOnly: true})
 }
 
-func (r *foodRepository) listFoods(categoryID string, page, limit int, activeOnly bool) ([]Food, int64, error) {
+// ListFoodsFilter - filter daftar admin
+type ListFoodsFilter struct {
+	CategoryID string
+	Search     string
+	PhotoType  string
+	IsActive   *bool
+	ActiveOnly bool
+	Page       int
+	Limit      int
+}
+
+func (r *foodRepository) ListFoodsFiltered(f ListFoodsFilter) ([]Food, int64, error) {
 	var foods []Food
 	var total int64
 	query := r.db.Model(&Food{}).Preload("Category")
-	if categoryID != "" {
-		query = query.Where("category_id = ?", categoryID)
+
+	if f.CategoryID != "" {
+		query = query.Where("category_id = ?", f.CategoryID)
 	}
-	if activeOnly {
+	if f.ActiveOnly {
 		query = query.Where("is_active = ?", true)
+	} else if f.IsActive != nil {
+		query = query.Where("is_active = ?", *f.IsActive)
 	}
-	query.Count(&total)
+	if f.PhotoType == "series" || f.PhotoType == "range" {
+		query = query.Where("photo_type = ?", f.PhotoType)
+	}
+	if s := strings.TrimSpace(f.Search); s != "" {
+		like := "%" + s + "%"
+		query = query.Where(
+			"(foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+			like, like, like,
+		)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	page := f.Page
+	limit := f.Limit
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 20
+	}
 	offset := (page - 1) * limit
-	err := query.Offset(offset).Limit(limit).Find(&foods).Error
+	err := query.Order("foods.name ASC").Offset(offset).Limit(limit).Find(&foods).Error
 	return foods, total, err
+}
+
+func (r *foodRepository) listFoods(categoryID string, page, limit int, activeOnly bool) ([]Food, int64, error) {
+	return r.ListFoodsFiltered(ListFoodsFilter{
+		CategoryID: categoryID,
+		Page:       page,
+		Limit:      limit,
+		ActiveOnly: activeOnly,
+	})
 }
 
 func (r *foodRepository) UpdateFood(food *Food) error {
@@ -229,6 +277,18 @@ func (r *foodRepository) GetAsServedSetByCode(code string) (*AsServedSet, error)
 	var set AsServedSet
 	err := r.db.Where("code = ?", code).First(&set).Error
 	return &set, err
+}
+
+func (r *foodRepository) GetAsServedSetsByFoodID(foodID string) ([]AsServedSet, error) {
+	var sets []AsServedSet
+	err := r.db.Where("food_id = ?", foodID).Order("created_at ASC").Find(&sets).Error
+	return sets, err
+}
+
+func (r *foodRepository) GetAsServedImageByDescription(setID, description string) (*AsServedImage, error) {
+	var image AsServedImage
+	err := r.db.Where("set_id = ? AND description = ?", setID, description).First(&image).Error
+	return &image, err
 }
 
 func (r *foodRepository) GetAsServedImagesBySetID(setID string) ([]AsServedImage, error) {

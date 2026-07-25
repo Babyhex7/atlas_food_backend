@@ -40,8 +40,26 @@ func (h *Handler) ListFoods(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
 	categoryID := c.Query("category")
+	search := c.Query("search")
+	photoType := c.Query("photo_type")
 
-	foods, total, err := h.service.ListFoods(categoryID, page, limit)
+	filter := ListFoodsFilter{
+		CategoryID: categoryID,
+		Search:     search,
+		PhotoType:  photoType,
+		Page:       page,
+		Limit:      limit,
+	}
+
+	if status := c.Query("is_active"); status == "true" {
+		v := true
+		filter.IsActive = &v
+	} else if status == "false" {
+		v := false
+		filter.IsActive = &v
+	}
+
+	foods, total, err := h.service.ListFoodsAdmin(filter)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
 		return
@@ -182,6 +200,14 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 			foods.DELETE("/:id", h.DeleteFood)
 			foods.POST("/:id/portion-methods", h.AddPortionMethod)
 			foods.GET("/:id/portion-methods", h.ListPortionMethodsAdmin)
+
+			// Foto makanan terpadu: anotasi draft + gram porsi (series/range)
+			foods.GET("/:id/photos", h.ListFoodPhotos)
+			foods.POST("/:id/photos", h.CreateFoodPhoto)
+			foods.PATCH("/:id/photos/:photoId", h.UpdateFoodPhoto)
+			foods.DELETE("/:id/photos/:photoId", h.DeleteFoodPhoto)
+			foods.POST("/:id/photos/:photoId/publish", h.PublishFoodPhoto)
+			foods.POST("/:id/photos/:photoId/unpublish", h.UnpublishFoodPhoto)
 		}
 
 		// Kategori, as-served set/image, dan metode porsi
