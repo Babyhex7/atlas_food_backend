@@ -149,6 +149,7 @@ func (s *surveyService) ListSurveys(createdBy string, page, limit int) (*SurveyL
 			ID:               sv.ID,
 			Slug:             sv.Slug,
 			Name:             sv.Name,
+			Description:      sv.Description,
 			Status:           sv.Status,
 			StartDate:        startDate,
 			EndDate:          endDate,
@@ -198,6 +199,7 @@ func (s *surveyService) ListActiveSurveys(page, limit int) (*SurveyListResponse,
 			ID:               sv.ID,
 			Slug:             sv.Slug,
 			Name:             sv.Name,
+			Description:      sv.Description,
 			Status:           sv.Status,
 			StartDate:        startDate,
 			EndDate:          endDate,
@@ -365,15 +367,27 @@ func (s *surveyService) GetPublicSurveyByToken(token string) (*PublicSurveyRespo
 	}, nil
 }
 
-// AccessSurvey - respondent access survey
+// AccessSurvey - respondent (login wajib) join survey aktif via survey_id atau token
 func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*AccessSurveyResponse, error) {
-	survey, err := s.repo.GetSurveyByAccessToken(req.Token)
-	if err != nil {
-		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
-	}
-
 	if userID == nil || *userID == "" {
 		return nil, utils.NewAppError(401, "UNAUTHORIZED", "Login sebagai respondent diperlukan")
+	}
+
+	surveyID := strings.TrimSpace(req.SurveyID)
+	token := strings.TrimSpace(req.Token)
+	if surveyID == "" && token == "" {
+		return nil, utils.NewAppError(400, "VALIDATION_ERROR", "survey_id atau token wajib diisi")
+	}
+
+	var survey *Survey
+	var err error
+	if surveyID != "" {
+		survey, err = s.repo.GetSurveyByID(surveyID)
+	} else {
+		survey, err = s.repo.GetSurveyByAccessToken(token)
+	}
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
 	}
 
 	// Cek status survey
@@ -390,47 +404,36 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 		return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
 	}
 
-	// Alias opsional — admin create survey, responden join via link tanpa "kode"
+	// Alias dari profil / request — semua responden join survey yang sama
 	alias := strings.TrimSpace(req.Alias)
 	if alias == "" {
 		alias = strings.TrimSpace(req.RespondentName)
 	}
-	if alias == "" && userID != nil {
+	if alias == "" {
 		id := *userID
 		if len(id) > 8 {
 			id = id[:8]
 		}
 		alias = fmt.Sprintf("RESP-%s", id)
 	}
-	if alias == "" {
-		alias = "Responden"
-	}
 
-	// Cek apakah user sudah pernah join
-	var participant *SurveyParticipant
-	if userID != nil {
-		participant, _ = s.repo.GetParticipantBySurveyAndUser(survey.ID, *userID)
-	}
-
+	participant, _ := s.repo.GetParticipantBySurveyAndUser(survey.ID, *userID)
 	if participant == nil {
-		if userID == nil {
-			return nil, utils.NewAppError(401, "UNAUTHORIZED", "Login diperlukan untuk ikut survey")
-		}
-		// Buat participant baru
 		participant = &SurveyParticipant{
 			ID:       uuid.New().String(),
 			SurveyID: survey.ID,
 			UserID:   *userID,
 			Alias:    alias,
 		}
-
 		if err := s.repo.CreateParticipant(participant); err != nil {
 			return nil, errors.New("gagal access survey")
 		}
 	}
 
-	// Map survey to public response
-	publicSurvey, _ := s.GetPublicSurveyByToken(req.Token)
+	publicSurvey, err := s.GetPublicSurveyByToken(survey.AccessToken)
+	if err != nil {
+		return nil, err
+	}
 
 	return &AccessSurveyResponse{
 		Survey: *publicSurvey,

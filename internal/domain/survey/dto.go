@@ -76,6 +76,7 @@ type ListSurveysResponse struct {
 	ID               string  `json:"id"`
 	Slug             string  `json:"slug"`
 	Name             string  `json:"name"`
+	Description      string  `json:"description,omitempty"`
 	Status           string  `json:"status"`
 	StartDate        *string `json:"start_date,omitempty"`
 	EndDate          *string `json:"end_date,omitempty"`
@@ -91,9 +92,12 @@ type SurveyListResponse struct {
 	Limit   int                   `json:"limit"`
 }
 
-// AccessSurveyRequest - DTO untuk respondent access survey
+// AccessSurveyRequest - DTO untuk respondent access survey (login wajib).
+// Responden join lewat daftar survey aktif: kirim survey_id.
+// Field token tetap didukung untuk kompatibilitas lama.
 type AccessSurveyRequest struct {
-	Token          string `json:"token" binding:"required"`
+	SurveyID       string `json:"survey_id,omitempty"`
+	Token          string `json:"token,omitempty"`
 	Alias          string `json:"alias,omitempty"`
 	RespondentName string `json:"respondent_name,omitempty"`
 }

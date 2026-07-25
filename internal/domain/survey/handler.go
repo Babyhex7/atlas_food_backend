@@ -5,6 +5,7 @@ import (
 	"atlas_food/internal/pkg/utils"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -165,6 +166,7 @@ func (h *Handler) RegenerateAccessToken(c *gin.Context) {
 // ============ PUBLIC/RESPONDENT ENDPOINTS ============
 
 // AccessSurvey - POST /api/v1/survey/access
+// Responden yang sudah login join survey aktif (survey_id atau token).
 func (h *Handler) AccessSurvey(c *gin.Context) {
 	var req AccessSurveyRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -174,11 +176,15 @@ func (h *Handler) AccessSurvey(c *gin.Context) {
 
 	userIDRaw, exists := c.Get("userID")
 	if !exists {
-		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "User tidak terautentikasi")
+		utils.ErrorResponse(c, http.StatusUnauthorized, "UNAUTHORIZED", "Login diperlukan untuk ikut survey")
 		return
 	}
 
 	userID := userIDRaw.(string)
+	if strings.TrimSpace(req.SurveyID) == "" && strings.TrimSpace(req.Token) == "" {
+		utils.ValidationErrorResponse(c, "survey_id atau token wajib diisi")
+		return
+	}
 
 	response, err := h.service.AccessSurvey(req, &userID)
 	if err != nil {
