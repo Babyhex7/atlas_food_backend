@@ -26,6 +26,7 @@ type AppError struct {
 	Message    string
 }
 
+// Error - implementasi interface error bawaan Go untuk AppError
 func (e *AppError) Error() string {
 	return e.Message
 }

@@ -23,7 +23,10 @@ type Client struct {
 	RoomID          string
 	UserID          string
 	Username        string
-	Role            string
+	Role            string // JWT app role (admin/respondent)
+	RoomRole        string // per-room: owner|editor|viewer
+	FollowingUserID string // Figma-like follow target
+	Viewport        map[string]interface{}
 	send            chan *Message
 	lastMessageTime time.Time
 	messageCount    int
@@ -31,7 +34,10 @@ type Client struct {
 }
 
 // NewClient creates a new WebSocket client
-func NewClient(conn *websocket.Conn, hub *Hub, roomID, userID, username, role string) *Client {
+func NewClient(conn *websocket.Conn, hub *Hub, roomID, userID, username, role, roomRole string) *Client {
+	if roomRole == "" {
+		roomRole = RoomRoleEditor
+	}
 	return &Client{
 		conn:     conn,
 		hub:      hub,
@@ -39,11 +45,19 @@ func NewClient(conn *websocket.Conn, hub *Hub, roomID, userID, username, role st
 		UserID:   userID,
 		Username: username,
 		Role:     role,
+		RoomRole: roomRole,
+		Viewport: map[string]interface{}{},
 		send:     make(chan *Message, sendBufferSize),
 		stopCh:   make(chan struct{}),
 	}
 }
 
+// canEdit - cek apakah client boleh mengubah data (owner/editor). Viewer selalu false
+func (c *Client) canEdit() bool {
+	return c.RoomRole == RoomRoleOwner || c.RoomRole == RoomRoleEditor
+}
+
+// sendQuiet - kirim pesan ke channel client tanpa blocking; drop + log kalau buffer penuh
 func (c *Client) sendQuiet(msg *Message) {
 	select {
 	case c.send <- msg:
@@ -52,6 +66,7 @@ func (c *Client) sendQuiet(msg *Message) {
 	}
 }
 
+// sendError - kirim pesan error (code + message) balik ke client yang bersangkutan
 func (c *Client) sendError(code, message string) {
 	c.sendQuiet(newMessage(MsgError, c.RoomID, c.UserID, c.Username, map[string]interface{}{
 		"code":    code,
@@ -141,12 +156,14 @@ func (c *Client) WritePump() {
 	}
 }
 
+// handleMessage - router utama pesan masuk: cek izin role lalu teruskan ke handler sesuai tipe pesan
 func (c *Client) handleMessage(msg *Message) {
 	switch msg.Type {
 	case MsgPresenceJoin:
 		// Already registered on connect; re-broadcast presence list
 		room := c.hub.GetOrCreateRoom(c.RoomID)
 		c.sendQuiet(c.hub.buildPresenceList(room))
+		c.sendQuiet(c.hub.buildFollowState(room))
 
 	case MsgPresenceLeave:
 		c.hub.unregister <- c
@@ -154,31 +171,76 @@ func (c *Client) handleMessage(msg *Message) {
 	case MsgCursorMove:
 		c.handleCursorMove(msg)
 
+	case MsgViewportUpdate:
+		c.handleViewportUpdate(msg)
+
+	case MsgFollowUser:
+		c.handleFollowUser(msg)
+
+	case MsgUnfollowUser:
+		c.handleUnfollowUser()
+
 	case MsgFoodSearch:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer hanya bisa mengikuti — tidak bisa mencari bersama")
+			return
+		}
 		c.handleFoodSearch(msg)
 
 	case MsgFoodSelect:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat memilih makanan")
+			return
+		}
 		c.handleFoodSelect(msg)
 
 	case MsgMealAdd:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat menambah makanan")
+			return
+		}
 		c.handleMealAdd(msg)
 
 	case MsgPortionSet, MsgPortionSelect:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengatur porsi")
+			return
+		}
 		c.handlePortionSet(msg)
 
 	case MsgReviewSubmit:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengirim laporan")
+			return
+		}
 		c.handleReviewSubmit(msg)
 
 	case MsgDBEditStart:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengedit")
+			return
+		}
 		c.handleDBEditStart(msg)
 
 	case MsgDBEditField:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengedit")
+			return
+		}
 		c.handleDBEditField(msg)
 
 	case MsgDBEditSave:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengedit")
+			return
+		}
 		c.handleDBEditSave(msg)
 
 	case MsgDBEditCancel:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer tidak dapat mengedit")
+			return
+		}
 		c.handleDBEditCancel(msg)
 
 	case MsgChatMessage:
@@ -196,6 +258,7 @@ func (c *Client) handleMessage(msg *Message) {
 	}
 }
 
+// handleCursorMove - siarkan posisi kursor client ke room (di-batch oleh Room agar hemat bandwidth)
 func (c *Client) handleCursorMove(msg *Message) {
 	payload := msg.Payload
 	if payload == nil {
@@ -203,11 +266,103 @@ func (c *Client) handleCursorMove(msg *Message) {
 	}
 	payload["color"] = colorForUser(c.UserID)
 	payload["page"] = payloadString(payload, "page")
+	payload["room_role"] = c.RoomRole
 	update := newMessage(MsgCursorUpdate, c.RoomID, c.UserID, c.Username, payload)
 	room := c.hub.GetOrCreateRoom(c.RoomID)
 	room.AddMessage(update)
 }
 
+// handleViewportUpdate - simpan viewport terakhir client lalu kirim ke follower yang mengikutinya
+func (c *Client) handleViewportUpdate(msg *Message) {
+	payload := msg.Payload
+	if payload == nil {
+		payload = map[string]interface{}{}
+	}
+	// Simpan viewport leader untuk follower yang baru join follow
+	c.Viewport = map[string]interface{}{
+		"page":       payloadString(payload, "page"),
+		"scroll_x":   payload["scroll_x"],
+		"scroll_y":   payload["scroll_y"],
+		"step":       payloadString(payload, "step"),
+		"path":       payloadString(payload, "path"),
+		"zoom":       payload["zoom"],
+		"timestamp":  time.Now().UnixMilli(),
+	}
+	payload["color"] = colorForUser(c.UserID)
+	payload["display_name"] = c.Username
+
+	sync := newMessage(MsgViewportSync, c.RoomID, c.UserID, c.Username, payload)
+	// Kirim hanya ke follower yang sedang mengikuti user ini
+	c.hub.broadcastToFollowers(c.RoomID, c.UserID, sync)
+}
+
+// handleFollowUser - mulai follow user lain (mode Figma): set leader, beritahu kedua pihak, lalu push viewport leader saat ini
+func (c *Client) handleFollowUser(msg *Message) {
+	targetID := payloadString(msg.Payload, "user_id")
+	if targetID == "" || targetID == c.UserID {
+		c.sendError("INVALID_PAYLOAD", "user_id target follow tidak valid")
+		return
+	}
+
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	target := c.hub.findClientInRoom(room, targetID)
+	if target == nil {
+		c.sendError("NOT_FOUND", "User target tidak ada di room")
+		return
+	}
+
+	c.FollowingUserID = targetID
+
+	started := newMessage(MsgFollowStarted, c.RoomID, c.UserID, c.Username, map[string]interface{}{
+		"follower_id":   c.UserID,
+		"follower_name": c.Username,
+		"leader_id":     targetID,
+		"leader_name":   target.Username,
+		"leader_color":  colorForUser(targetID),
+	})
+	c.sendQuiet(started)
+	// Beritahu leader seseorang mengikuti
+	target.sendQuiet(started)
+	c.hub.broadcastToRoom(room, c.hub.buildFollowState(room), nil)
+
+	// Push viewport leader saat ini agar follower langsung mirror
+	if len(target.Viewport) > 0 {
+		vp := map[string]interface{}{}
+		for k, v := range target.Viewport {
+			vp[k] = v
+		}
+		vp["color"] = colorForUser(targetID)
+		vp["display_name"] = target.Username
+		c.sendQuiet(newMessage(MsgViewportSync, c.RoomID, targetID, target.Username, vp))
+	}
+
+	c.hub.Publish(newMessage(MsgActivityLog, c.RoomID, c.UserID, c.Username, map[string]interface{}{
+		"action":  "follow",
+		"details": c.Username + " mengikuti " + target.Username,
+	}))
+}
+
+// handleUnfollowUser - berhenti mengikuti leader dan beritahu room bahwa follow state berubah
+func (c *Client) handleUnfollowUser() {
+	if c.FollowingUserID == "" {
+		return
+	}
+	prev := c.FollowingUserID
+	c.FollowingUserID = ""
+
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	stopped := newMessage(MsgFollowStopped, c.RoomID, c.UserID, c.Username, map[string]interface{}{
+		"follower_id": c.UserID,
+		"leader_id":   prev,
+	})
+	c.sendQuiet(stopped)
+	if leader := c.hub.findClientInRoom(room, prev); leader != nil {
+		leader.sendQuiet(stopped)
+	}
+	c.hub.broadcastToRoom(room, c.hub.buildFollowState(room), nil)
+}
+
+// handleFoodSearch - siarkan kata kunci pencarian makanan ke seluruh anggota room + catat activity log
 func (c *Client) handleFoodSearch(msg *Message) {
 	query := payloadString(msg.Payload, "query")
 	c.hub.Publish(newMessage(MsgUserSearching, c.RoomID, c.UserID, c.Username, msg.Payload))
@@ -219,6 +374,7 @@ func (c *Client) handleFoodSearch(msg *Message) {
 	}))
 }
 
+// handleFoodSelect - siarkan makanan yang dipilih client ke seluruh anggota room
 func (c *Client) handleFoodSelect(msg *Message) {
 	foodName := payloadString(msg.Payload, "food_name")
 	c.hub.Publish(newMessage(MsgFoodSelected, c.RoomID, c.UserID, c.Username, msg.Payload))
@@ -228,6 +384,7 @@ func (c *Client) handleFoodSelect(msg *Message) {
 	}))
 }
 
+// handleMealAdd - siarkan penambahan makanan ke slot meal tertentu (sarapan/makan siang/dll)
 func (c *Client) handleMealAdd(msg *Message) {
 	foodName := payloadString(msg.Payload, "food_name")
 	mealType := payloadString(msg.Payload, "meal_type")
@@ -238,6 +395,7 @@ func (c *Client) handleMealAdd(msg *Message) {
 	}))
 }
 
+// handlePortionSet - siarkan perubahan porsi makanan ke seluruh anggota room
 func (c *Client) handlePortionSet(msg *Message) {
 	c.hub.Publish(newMessage(MsgPortionUpdated, c.RoomID, c.UserID, c.Username, msg.Payload))
 	c.hub.Publish(newMessage(MsgPortionSelected, c.RoomID, c.UserID, c.Username, msg.Payload))
@@ -247,6 +405,7 @@ func (c *Client) handlePortionSet(msg *Message) {
 	}))
 }
 
+// handleReviewSubmit - siarkan bahwa client mengirim review/submit survey
 func (c *Client) handleReviewSubmit(msg *Message) {
 	c.hub.Publish(newMessage(MsgReviewSubmitted, c.RoomID, c.UserID, c.Username, msg.Payload))
 	c.hub.Publish(newMessage(MsgActivityLog, c.RoomID, c.UserID, c.Username, map[string]interface{}{
@@ -255,6 +414,7 @@ func (c *Client) handleReviewSubmit(msg *Message) {
 	}))
 }
 
+// handleDBEditStart - ambil lock entity sebelum edit; kalau sudah dikunci user lain kirim error LOCKED
 func (c *Client) handleDBEditStart(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
@@ -291,6 +451,7 @@ func (c *Client) handleDBEditStart(msg *Message) {
 	}))
 }
 
+// handleDBEditField - siarkan perubahan per-field secara live; hanya boleh oleh pemegang lock
 func (c *Client) handleDBEditField(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
@@ -302,6 +463,7 @@ func (c *Client) handleDBEditField(msg *Message) {
 	c.hub.Publish(newMessage(MsgDBFieldUpdated, c.RoomID, c.UserID, c.Username, msg.Payload))
 }
 
+// handleDBEditSave - simpan hasil edit: cek lock + versi (optimistic locking), naikkan versi, lalu lepas lock
 func (c *Client) handleDBEditSave(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
@@ -340,6 +502,7 @@ func (c *Client) handleDBEditSave(msg *Message) {
 	}))
 }
 
+// handleDBEditCancel - batalkan edit dan lepaskan lock entity
 func (c *Client) handleDBEditCancel(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
@@ -357,10 +520,12 @@ func (c *Client) handleDBEditCancel(msg *Message) {
 	}))
 }
 
+// handleChatMessage - teruskan pesan chat ke seluruh anggota room
 func (c *Client) handleChatMessage(msg *Message) {
 	c.hub.Publish(newMessage(MsgChatMessage, c.RoomID, c.UserID, c.Username, msg.Payload))
 }
 
+// sendRoomHistory - kirim 50 pesan terakhir room ke client yang baru minta history
 func (c *Client) sendRoomHistory() {
 	room := c.hub.GetOrCreateRoom(c.RoomID)
 	c.sendQuiet(newMessage(MsgHistory, c.RoomID, "", "", map[string]interface{}{
@@ -368,6 +533,7 @@ func (c *Client) sendRoomHistory() {
 	}))
 }
 
+// checkRateLimit - batasi maksimal 50 pesan per detik per client agar hub tidak dibanjiri
 func (c *Client) checkRateLimit() bool {
 	now := time.Now()
 	if now.Sub(c.lastMessageTime) > time.Second {

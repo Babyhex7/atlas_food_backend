@@ -243,6 +243,9 @@ func (s *submissionService) calculateTotals(req *SubmitSurveyRequest) error {
 	return nil
 }
 
+// calculateFoodNutrients - hitung energi/protein/karbo/lemak satu item makanan.
+// Makanan "missing-" (tidak ada di database) memakai nilai gizi yang dikirim frontend apa adanya,
+// selebihnya diambil dari nilai per 100g di database lalu diskalakan sesuai berat porsi
 func (s *submissionService) calculateFoodNutrients(food FoodData) (float64, float64, float64, float64, error) {
 	if food.FoodID == "" || strings.HasPrefix(food.FoodID, "missing-") {
 		return food.Nutrients.Energy, food.Nutrients.Protein, food.Nutrients.Carbs, food.Nutrients.Fat, nil

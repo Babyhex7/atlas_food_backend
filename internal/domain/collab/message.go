@@ -14,22 +14,32 @@ type Message struct {
 
 // Client → Server message types
 const (
-	MsgPresenceJoin  = "presence_join"
-	MsgPresenceLeave = "presence_leave"
-	MsgCursorMove    = "cursor_move"
-	MsgFoodSearch    = "food_search"
-	MsgFoodSelect    = "food_select"
-	MsgMealAdd       = "meal_add"
-	MsgPortionSet    = "portion_set"
-	MsgPortionSelect = "portion_select" // alias
-	MsgReviewSubmit  = "review_submit"
-	MsgDBEditStart   = "db_edit_start"
-	MsgDBEditField   = "db_edit_field"
-	MsgDBEditSave    = "db_edit_save"
-	MsgDBEditCancel  = "db_edit_cancel"
-	MsgChatMessage   = "chat_message"
-	MsgGetHistory    = "get_history"
-	MsgPing          = "ping"
+	MsgPresenceJoin   = "presence_join"
+	MsgPresenceLeave  = "presence_leave"
+	MsgCursorMove     = "cursor_move"
+	MsgViewportUpdate = "viewport_update" // Figma-like: page + scroll + step
+	MsgFollowUser     = "follow_user"
+	MsgUnfollowUser   = "unfollow_user"
+	MsgFoodSearch     = "food_search"
+	MsgFoodSelect     = "food_select"
+	MsgMealAdd        = "meal_add"
+	MsgPortionSet     = "portion_set"
+	MsgPortionSelect  = "portion_select" // alias
+	MsgReviewSubmit   = "review_submit"
+	MsgDBEditStart    = "db_edit_start"
+	MsgDBEditField    = "db_edit_field"
+	MsgDBEditSave     = "db_edit_save"
+	MsgDBEditCancel   = "db_edit_cancel"
+	MsgChatMessage    = "chat_message"
+	MsgGetHistory     = "get_history"
+	MsgPing           = "ping"
+)
+
+// Room collaboration roles (per-room, bukan JWT role aplikasi)
+const (
+	RoomRoleOwner  = "owner"
+	RoomRoleEditor = "editor"
+	RoomRoleViewer = "viewer"
 )
 
 // Server → Client message types
@@ -40,6 +50,10 @@ const (
 	MsgUserJoined       = "user_joined" // legacy alias
 	MsgUserLeft         = "user_left"   // legacy alias
 	MsgCursorUpdate     = "cursor_update"
+	MsgViewportSync     = "viewport_sync" // mirror ke follower
+	MsgFollowStarted    = "follow_started"
+	MsgFollowStopped    = "follow_stopped"
+	MsgFollowState      = "follow_state" // snapshot follow graph
 	MsgUserSearching    = "user_searching"
 	MsgFoodSearchShared = "food_search_shared"
 	MsgFoodSelected     = "food_selected"
@@ -58,6 +72,7 @@ const (
 	MsgStateSync        = "state_sync"
 )
 
+// newMessage - helper pembuat Message dengan timestamp sekarang dan payload non-nil
 func newMessage(msgType, roomID, userID, username string, payload map[string]interface{}) *Message {
 	if payload == nil {
 		payload = map[string]interface{}{}
@@ -72,6 +87,7 @@ func newMessage(msgType, roomID, userID, username string, payload map[string]int
 	}
 }
 
+// payloadString - ambil nilai string dari payload secara aman; "" kalau tidak ada / bukan string
 func payloadString(payload map[string]interface{}, key string) string {
 	if payload == nil {
 		return ""
@@ -82,6 +98,7 @@ func payloadString(payload map[string]interface{}, key string) string {
 	return ""
 }
 
+// payloadInt - ambil nilai int dari payload secara aman (JSON number masuk sebagai float64); 0 kalau gagal
 func payloadInt(payload map[string]interface{}, key string) int {
 	if payload == nil {
 		return 0

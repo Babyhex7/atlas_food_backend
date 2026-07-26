@@ -22,6 +22,7 @@ type SurveySubmission struct {
 	CreatedAt       time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model SurveySubmission
 func (SurveySubmission) TableName() string {
 	return "survey_submissions"
 }

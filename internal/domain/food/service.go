@@ -55,11 +55,13 @@ type Service interface {
 	ListFoodsByCategoryCode(categoryCode string, page, limit int) ([]Food, int64, error)
 }
 
+// foodService - implementasi Service; butuh repository food + service anotasi untuk fitur foto
 type foodService struct {
 	repo Repository
 	ann  *annotation.Service
 }
 
+// NewService - buat service food dengan repository dan service anotasi yang dipakai
 func NewService(repo Repository, ann *annotation.Service) Service {
 	return &foodService{repo: repo, ann: ann}
 }

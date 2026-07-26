@@ -92,6 +92,7 @@ func SeedFindYourFoodData(db *gorm.DB, jsonFilePath string) error {
 	return nil
 }
 
+// seedCategories - isi 13 kategori Atlas Makananku (MP, LH, LN, ...); kategori yang sudah ada dilewati
 func seedCategories(tx *gorm.DB) error {
 	categories := []map[string]interface{}{
 		{"code": "MP", "name": "Makanan Pokok", "icon": "🍚", "display_order": 1},
@@ -123,6 +124,7 @@ func seedCategories(tx *gorm.DB) error {
 	return nil
 }
 
+// seedFoodsFromAtlas - isi tabel foods dari data JSON Atlas Makananku, dipetakan ke kategori berdasarkan kode
 func seedFoodsFromAtlas(tx *gorm.DB, atlasData []AtlasFoodItem) error {
 	// Get category IDs
 	categoryMap := make(map[string]string) // category_code -> category_id

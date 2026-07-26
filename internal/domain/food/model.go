@@ -14,6 +14,7 @@ type Category struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model Category
 func (Category) TableName() string {
 	return "categories"
 }
@@ -32,6 +33,7 @@ type Food struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model Food
 func (Food) TableName() string {
 	return "foods"
 }
@@ -44,6 +46,7 @@ type NutrientUnit struct {
 	Symbol string `gorm:"type:varchar(10);not null" json:"symbol"`
 }
 
+// TableName - nama tabel di database untuk model NutrientUnit
 func (NutrientUnit) TableName() string {
 	return "nutrient_units"
 }
@@ -59,6 +62,7 @@ type NutrientType struct {
 	IsActive     bool         `gorm:"default:true" json:"is_active"`
 }
 
+// TableName - nama tabel di database untuk model NutrientType
 func (NutrientType) TableName() string {
 	return "nutrient_types"
 }
@@ -71,6 +75,7 @@ type FoodNutrient struct {
 	ValuePer100g   float64      `gorm:"type:decimal(10,4);not null" json:"value_per_100g"`
 }
 
+// TableName - nama tabel di database untuk model FoodNutrient
 func (FoodNutrient) TableName() string {
 	return "food_nutrients"
 }
@@ -86,6 +91,7 @@ type AssociatedFood struct {
 	CreatedAt        time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model AssociatedFood
 func (AssociatedFood) TableName() string {
 	return "associated_foods"
 }
@@ -105,6 +111,7 @@ type PortionSizeMethod struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model PortionSizeMethod
 func (PortionSizeMethod) TableName() string {
 	return "food_portion_size_methods"
 }
@@ -120,6 +127,7 @@ type AsServedSet struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model AsServedSet
 func (AsServedSet) TableName() string {
 	return "as_served_sets"
 }
@@ -137,6 +145,7 @@ type AsServedImage struct {
 	CreatedAt    time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model AsServedImage
 func (AsServedImage) TableName() string {
 	return "as_served_images"
 }

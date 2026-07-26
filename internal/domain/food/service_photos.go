@@ -18,10 +18,12 @@ import (
 // Prefiks di as_served_images.description untuk menautkan ke food_images.id
 const foodImageLinkPrefix = "food_image:"
 
+// foodImageLink - bentuk penanda "food_image:<id>" yang disimpan di kolom description as_served_images
 func foodImageLink(foodImageID string) string {
 	return foodImageLinkPrefix + foodImageID
 }
 
+// photoMaxForType - batas jumlah foto per makanan sesuai tipe: range atau series
 func photoMaxForType(photoType string) int {
 	if photoType == "range" {
 		return MaxRangePhotos
@@ -313,6 +315,8 @@ func (s *foodService) UpdateFoodPhoto(foodID, photoID string, req UpdateFoodPhot
 	return s.getFoodPhotoCard(foodID, photoID)
 }
 
+// findLinkedPortion - cari foto porsi yang tertaut ke sebuah anotasi; dicoba lewat penanda description,
+// lalu fallback cocokkan image URL (menangani data lama yang penandanya tidak lengkap)
 func (s *foodService) findLinkedPortion(setID, photoID, imageURL string) (*AsServedImage, error) {
 	portion, err := s.repo.GetAsServedImageByDescription(setID, foodImageLink(photoID))
 	if err == nil && portion != nil {
@@ -391,6 +395,7 @@ func (s *foodService) UnpublishFoodPhoto(foodID, photoID string) (*FoodPhotoResp
 	return s.getFoodPhotoCard(foodID, photoID)
 }
 
+// assertPhotoBelongsToFood - pastikan foto/anotasi memang milik makanan tersebut sebelum diubah
 func (s *foodService) assertPhotoBelongsToFood(foodID, photoID string) error {
 	if _, err := s.repo.GetFoodByID(foodID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -411,6 +416,7 @@ func (s *foodService) assertPhotoBelongsToFood(foodID, photoID string) error {
 	return nil
 }
 
+// getFoodPhotoCard - ambil satu kartu foto (anotasi + gram) dari daftar foto milik makanan
 func (s *foodService) getFoodPhotoCard(foodID, photoID string) (*FoodPhotoResponse, error) {
 	list, err := s.ListFoodPhotos(foodID)
 	if err != nil {
@@ -424,6 +430,7 @@ func (s *foodService) getFoodPhotoCard(foodID, photoID string) (*FoodPhotoRespon
 	return nil, utils.NewAppError(http.StatusNotFound, "NOT_FOUND", "Foto tidak ditemukan")
 }
 
+// ensurePrimaryAsServedSetByFoodID - versi ensurePrimaryAsServedSet yang menerima ID makanan
 func (s *foodService) ensurePrimaryAsServedSetByFoodID(foodID string) (*AsServedSet, error) {
 	food, err := s.repo.GetFoodByID(foodID)
 	if err != nil {
@@ -486,6 +493,8 @@ func (s *foodService) ensurePrimaryAsServedSet(food *Food) (*AsServedSet, error)
 	return set, nil
 }
 
+// ensureAsServedPortionMethod - pastikan makanan punya metode porsi "as_served" yang menunjuk ke setCode;
+// kalau belum ada, dibuatkan otomatis
 func (s *foodService) ensureAsServedPortionMethod(foodID, setCode string) error {
 	methods, err := s.repo.GetPortionMethodsByFoodID(foodID)
 	if err != nil {

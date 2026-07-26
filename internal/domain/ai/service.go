@@ -26,6 +26,8 @@ func NewService(repo Repository, groqClient *groq.Client) Service {
 	return &service{repo: repo, groq: groqClient}
 }
 
+// AnalyzeNutrition - analisis gizi sebuah submission memakai Groq.
+// Memastikan submission memang milik user yang meminta, lalu memakai hasil lama bila sudah pernah dianalisis
 func (s *service) AnalyzeNutrition(userID string, req NutritionAnalysisRequest) (*NutritionAnalysisResult, error) {
 	if req.SubmissionID == "" {
 		return nil, utils.NewAppError(http.StatusBadRequest, "VALIDATION_ERROR", "submission_id wajib diisi")

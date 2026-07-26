@@ -13,6 +13,7 @@ type Hub struct {
 	unregister chan *Client
 	broadcast  chan *Message
 	locks      *LockManager
+	invites    *InviteStore
 	mu         sync.RWMutex
 	stopCh     chan struct{}
 }
@@ -25,6 +26,7 @@ func NewHub() *Hub {
 		unregister: make(chan *Client, 256),
 		broadcast:  make(chan *Message, 1024),
 		locks:      NewLockManager(),
+		invites:    NewInviteStore(),
 		stopCh:     make(chan struct{}),
 	}
 }
@@ -32,6 +34,11 @@ func NewHub() *Hub {
 // Locks returns the in-memory lock manager.
 func (h *Hub) Locks() *LockManager {
 	return h.locks
+}
+
+// Invites returns invite token store.
+func (h *Hub) Invites() *InviteStore {
+	return h.invites
 }
 
 // Run starts the hub's main event loop
@@ -79,34 +86,53 @@ func (h *Hub) GetOrCreateRoom(roomID string) *Room {
 	return room
 }
 
+// registerClient - daftarkan client ke room, kirim presence/state/follow ke yang baru join.
+//
+// Satu user boleh punya banyak socket sekaligus (multi-tab / multi-device), persis
+// seperti Figma. Socket lama TIDAK ditendang: kalau ditendang, tab lama akan
+// otomatis reconnect lalu menendang tab baru, dan keduanya saling tendang tanpa
+// henti. Duplikasi ditangani di tempat yang benar: presence list dedupe by user_id
+// dan event "joined" hanya disiarkan untuk socket pertama milik user tersebut.
 func (h *Hub) registerClient(client *Client) {
 	room := h.GetOrCreateRoom(client.RoomID)
 
-	// Satu user = satu socket per room. Reconnect / Strict Mode sering buka
-	// koneksi baru tanpa menutup lama — tanpa ini presence & activity "join"
-	// menumpuk meski orangnya cuma satu.
 	room.mu.Lock()
-	replaced := false
+	isFirst := len(room.clients) == 0
+	// alreadyPresent = user ini sudah punya socket lain di room (tab kedua)
+	alreadyPresent := false
 	for existing := range room.clients {
 		if existing.UserID != "" && existing.UserID == client.UserID && existing != client {
-			delete(room.clients, existing)
-			close(existing.send)
-			replaced = true
+			// Tab baru mewarisi room role tab lama supaya owner tidak turun
+			// jadi editor hanya karena membuka tab kedua.
+			if client.RoomRole == "" || client.RoomRole == RoomRoleEditor {
+				client.RoomRole = existing.RoomRole
+			}
+			alreadyPresent = true
 		}
+	}
+	// Orang pertama di room jadi owner — kecuali dia masuk lewat invite "viewer",
+	// yang memang sengaja dibatasi hanya boleh menonton.
+	if isFirst && client.RoomRole != RoomRoleViewer {
+		client.RoomRole = RoomRoleOwner
+	}
+	if client.RoomRole == "" {
+		client.RoomRole = RoomRoleEditor
 	}
 	room.clients[client] = true
 	room.mu.Unlock()
 
-	log.Printf("✅ Client %s joined room %s (total: %d, reconnect=%v)", client.UserID, client.RoomID, room.GetClientCount(), replaced)
+	log.Printf("✅ Client %s joined room %s as %s (total: %d, tab_kedua=%v)", client.UserID, client.RoomID, client.RoomRole, room.GetClientCount(), alreadyPresent)
 
 	// Sync state to joining client
 	client.sendQuiet(h.buildPresenceList(room))
 	client.sendQuiet(h.buildStateSync(room))
+	client.sendQuiet(h.buildFollowState(room))
 
 	// Presence list ke room selalu di-refresh (dedupe by user)
 	h.broadcastToRoom(room, h.buildPresenceList(room), client)
 
-	if replaced {
+	// Tab kedua user yang sama: cukup refresh presence, jangan umumkan "bergabung" lagi
+	if alreadyPresent {
 		return
 	}
 
@@ -114,6 +140,7 @@ func (h *Hub) registerClient(client *Client) {
 		"user_id":      client.UserID,
 		"username":     client.Username,
 		"role":         client.Role,
+		"room_role":    client.RoomRole,
 		"display_name": client.Username,
 		"color":        colorForUser(client.UserID),
 		"timestamp":    time.Now().Unix(),
@@ -123,10 +150,15 @@ func (h *Hub) registerClient(client *Client) {
 	h.broadcastToRoom(room, newMessage(MsgPresenceJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
 	h.broadcastToRoom(room, newMessage(MsgActivityLog, client.RoomID, client.UserID, client.Username, map[string]interface{}{
 		"action":  "joined",
-		"details": client.Username + " bergabung",
+		"details": client.Username + " bergabung (" + client.RoomRole + ")",
 	}), client)
 }
 
+// unregisterClient - keluarkan satu socket dari room.
+//
+// Event "keluar" hanya disiarkan bila itu socket TERAKHIR milik user tersebut —
+// menutup satu dari dua tab bukan berarti orangnya pergi. Relasi follow pun baru
+// dilepas kalau leader-nya benar-benar sudah tidak punya socket lagi.
 func (h *Hub) unregisterClient(client *Client) {
 	h.mu.RLock()
 	room, exists := h.rooms[client.RoomID]
@@ -142,9 +174,33 @@ func (h *Hub) unregisterClient(client *Client) {
 		close(client.send)
 	}
 	remaining := len(room.clients)
+
+	// Masih ada socket lain milik user yang sama? Berarti dia belum benar-benar keluar.
+	stillOnline := false
+	for other := range room.clients {
+		if other.UserID != "" && other.UserID == client.UserID {
+			stillOnline = true
+			break
+		}
+	}
+	if !stillOnline {
+		// Leader-nya benar-benar pergi — lepas semua follower yang mengikutinya
+		for other := range room.clients {
+			if other.FollowingUserID == client.UserID {
+				other.FollowingUserID = ""
+			}
+		}
+	}
 	room.mu.Unlock()
 
 	if !ok {
+		return
+	}
+
+	// Tab lain user ini masih terbuka: cukup refresh presence, jangan umumkan "keluar"
+	if stillOnline {
+		log.Printf("➖ Satu tab %s ditutup di room %s (socket tersisa: %d)", client.UserID, client.RoomID, remaining)
+		h.broadcastToRoom(room, h.buildPresenceList(room), nil)
 		return
 	}
 
@@ -161,12 +217,14 @@ func (h *Hub) unregisterClient(client *Client) {
 		"action":  "left",
 		"details": client.Username + " keluar",
 	}), nil)
+	h.broadcastToRoom(room, h.buildFollowState(room), nil)
 
 	if remaining == 0 {
 		log.Printf("🗑️  Room %s is now empty", client.RoomID)
 	}
 }
 
+// broadcastMessage - simpan pesan ke history room lalu sebarkan ke semua anggota room
 func (h *Hub) broadcastMessage(message *Message) {
 	h.mu.RLock()
 	room, exists := h.rooms[message.RoomID]
@@ -192,7 +250,7 @@ func (h *Hub) broadcastToRoom(room *Room, message *Message, skip *Client) {
 		if skip == nil && message.UserID != "" && client.UserID == message.UserID {
 			// Still allow presence_list / history / pong / error / state_sync to reach sender when UserID matches
 			switch message.Type {
-			case MsgPresenceList, MsgHistory, MsgPong, MsgError, MsgStateSync:
+			case MsgPresenceList, MsgHistory, MsgPong, MsgError, MsgStateSync, MsgFollowState, MsgFollowStarted, MsgFollowStopped:
 				// deliver
 			default:
 				continue
@@ -207,6 +265,7 @@ func (h *Hub) broadcastToRoom(room *Room, message *Message, skip *Client) {
 	}
 }
 
+// buildPresenceList - susun daftar user aktif di room (unik per user_id) beserta warna & role-nya
 func (h *Hub) buildPresenceList(room *Room) *Message {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
@@ -223,6 +282,8 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 			"username":     c.Username,
 			"display_name": c.Username,
 			"role":         c.Role,
+			"room_role":    c.RoomRole,
+			"following":    c.FollowingUserID,
 			"color":        colorForUser(c.UserID),
 		})
 	}
@@ -231,14 +292,91 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 	})
 }
 
+// buildStateSync - susun snapshot state room (lock aktif + 30 pesan terakhir) untuk client yang baru join
 func (h *Hub) buildStateSync(room *Room) *Message {
 	return newMessage(MsgStateSync, room.ID, "", "", map[string]interface{}{
-		"locks":    h.locks.Snapshot(),
-		"history":  room.GetHistory(30),
-		"room_id":  room.ID,
+		"locks":   h.locks.Snapshot(),
+		"history": room.GetHistory(30),
+		"room_id": room.ID,
 	})
 }
 
+// buildFollowState - susun graf follow room (pasangan follower -> leader) agar UI bisa gambar garis follow
+func (h *Hub) buildFollowState(room *Room) *Message {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+
+	pairs := make([]map[string]interface{}, 0)
+	seen := make(map[string]bool)
+	for c := range room.clients {
+		if c.UserID == "" || c.FollowingUserID == "" || seen[c.UserID] {
+			continue
+		}
+		seen[c.UserID] = true
+		pairs = append(pairs, map[string]interface{}{
+			"follower_id": c.UserID,
+			"leader_id":   c.FollowingUserID,
+		})
+	}
+	return newMessage(MsgFollowState, room.ID, "", "", map[string]interface{}{
+		"follows": pairs,
+	})
+}
+
+// findClientInRoom - cari client di room berdasarkan userID; nil kalau tidak ada
+func (h *Hub) findClientInRoom(room *Room, userID string) *Client {
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+	for c := range room.clients {
+		if c.UserID == userID {
+			return c
+		}
+	}
+	return nil
+}
+
+// broadcastToFollowers mengirim viewport_sync hanya ke client yang mengikuti leaderID.
+func (h *Hub) broadcastToFollowers(roomID, leaderID string, message *Message) {
+	h.mu.RLock()
+	room, exists := h.rooms[roomID]
+	h.mu.RUnlock()
+	if !exists {
+		return
+	}
+	room.mu.RLock()
+	defer room.mu.RUnlock()
+	for client := range room.clients {
+		if client.FollowingUserID != leaderID {
+			continue
+		}
+		select {
+		case client.send <- message:
+		default:
+			log.Printf("⚠️  Skipped slow follower %s", client.UserID)
+		}
+	}
+}
+
+// ResolveRoomRole menentukan role join: invite > first owner > editor default.
+func (h *Hub) ResolveRoomRole(roomID, inviteToken string) string {
+	if inviteToken != "" {
+		if inv, ok := h.invites.Get(inviteToken); ok && inv.RoomID == roomID {
+			return inv.Role
+		}
+	}
+	h.mu.RLock()
+	room, exists := h.rooms[roomID]
+	h.mu.RUnlock()
+	if !exists {
+		return RoomRoleOwner // akan di-set owner di register bila first
+	}
+	if room.GetClientCount() == 0 {
+		return RoomRoleOwner
+	}
+	return RoomRoleEditor
+}
+
+// cleanupInactiveRooms - hapus room yang sudah kosong (dipanggil ticker tiap 30 detik) agar memori tidak bocor
 func (h *Hub) cleanupInactiveRooms() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -281,10 +419,11 @@ func (h *Hub) GetRoomInfo(roomID string) map[string]interface{} {
 	users := make([]map[string]string, 0, len(room.clients))
 	for client := range room.clients {
 		users = append(users, map[string]string{
-			"user_id":  client.UserID,
-			"username": client.Username,
-			"role":     client.Role,
-			"color":    colorForUser(client.UserID),
+			"user_id":   client.UserID,
+			"username":  client.Username,
+			"role":      client.Role,
+			"room_role": client.RoomRole,
+			"color":     colorForUser(client.UserID),
 		})
 	}
 
@@ -324,6 +463,7 @@ func (h *Hub) Publish(msg *Message) {
 	}
 }
 
+// colorForUser - tentukan warna kursor user secara deterministik dari hash userID (8 warna palette)
 func colorForUser(userID string) string {
 	palette := []string{
 		"#E11D48", "#EA580C", "#CA8A04", "#16A34A",

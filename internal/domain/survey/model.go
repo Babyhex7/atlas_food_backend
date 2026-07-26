@@ -11,6 +11,7 @@ type Locale struct {
 	Name string `gorm:"type:varchar(50);not null" json:"name"`
 }
 
+// TableName - nama tabel di database untuk model Locale
 func (Locale) TableName() string {
 	return "locales"
 }
@@ -34,6 +35,7 @@ type Survey struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
+// TableName - nama tabel di database untuk model Survey
 func (Survey) TableName() string {
 	return "surveys"
 }
@@ -48,6 +50,7 @@ type SurveyParticipant struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// TableName - nama tabel di database untuk model SurveyParticipant
 func (SurveyParticipant) TableName() string {
 	return "survey_participants"
 }

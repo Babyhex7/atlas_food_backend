@@ -49,6 +49,8 @@ func JWTAuth() gin.HandlerFunc {
 	}
 }
 
+// extractToken - ambil JWT dari header "Authorization: Bearer <token>", fallback ke query ?token=
+// (dipakai koneksi WebSocket yang tidak bisa kirim custom header)
 func extractToken(c *gin.Context) string {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader != "" {

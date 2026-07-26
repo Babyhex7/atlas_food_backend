@@ -10,16 +10,19 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Handler - HTTP handler domain food, meneruskan request ke Service
 type Handler struct {
 	service Service
 }
 
+// NewHandler - buat handler food dengan service yang dipakai
 func NewHandler(service Service) *Handler {
 	return &Handler{service: service}
 }
 
 // ============ ADMIN ENDPOINTS ============
 
+// CreateFood - POST /admin/foods — tambah makanan baru
 func (h *Handler) CreateFood(c *gin.Context) {
 	var req CreateFoodRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -36,6 +39,7 @@ func (h *Handler) CreateFood(c *gin.Context) {
 	utils.CreatedResponse(c, response)
 }
 
+// ListFoods - GET /admin/foods — daftar makanan untuk admin, mendukung filter kategori/pencarian/photo_type/is_active + pagination
 func (h *Handler) ListFoods(c *gin.Context) {
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
@@ -75,6 +79,7 @@ func (h *Handler) ListFoods(c *gin.Context) {
 	})
 }
 
+// GetFood - GET /admin/foods/:id — detail satu makanan (termasuk gizi & metode porsi)
 func (h *Handler) GetFood(c *gin.Context) {
 	id := c.Param("id")
 	response, err := h.service.GetFoodDetail(id)
@@ -89,6 +94,7 @@ func (h *Handler) GetFood(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// UpdateFood - PUT /admin/foods/:id — ubah data makanan
 func (h *Handler) UpdateFood(c *gin.Context) {
 	id := c.Param("id")
 	var req UpdateFoodRequest
@@ -105,6 +111,7 @@ func (h *Handler) UpdateFood(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// DeleteFood - DELETE /admin/foods/:id — hapus makanan
 func (h *Handler) DeleteFood(c *gin.Context) {
 	id := c.Param("id")
 	if err := h.service.DeleteFood(id); err != nil {
@@ -114,6 +121,7 @@ func (h *Handler) DeleteFood(c *gin.Context) {
 	utils.SuccessResponse(c, gin.H{"message": "Food deleted successfully"})
 }
 
+// AddPortionMethod - POST /admin/foods/:id/portion-methods — tambah metode porsi ke sebuah makanan
 func (h *Handler) AddPortionMethod(c *gin.Context) {
 	foodID := c.Param("id")
 	var req CreatePortionMethodRequest
@@ -132,6 +140,7 @@ func (h *Handler) AddPortionMethod(c *gin.Context) {
 
 // ============ PUBLIC ENDPOINTS ============
 
+// SearchFoods - GET pencarian makanan untuk responden; query minimal 3 karakter, bisa difilter kategori/tipe
 func (h *Handler) SearchFoods(c *gin.Context) {
 	query := c.Query("q")
 	if len(strings.TrimSpace(query)) < 3 {
@@ -151,6 +160,7 @@ func (h *Handler) SearchFoods(c *gin.Context) {
 	utils.SuccessResponse(c, response)
 }
 
+// ListCategories - GET daftar kategori makanan untuk ditampilkan di frontend
 func (h *Handler) ListCategories(c *gin.Context) {
 	response, err := h.service.ListCategories()
 	if err != nil {
@@ -187,6 +197,7 @@ func (h *Handler) GetFoodsByCategory(c *gin.Context) {
 	})
 }
 
+// SetupRoutes - daftarkan seluruh route domain food (admin butuh auth + role admin; route publik diurus PublicHandler)
 func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	// Admin routes
 	admin := router.Group("/admin", authMiddleware, middleware.AdminOnly())

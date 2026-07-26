@@ -48,6 +48,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// main - baca flag CLI lalu jalankan proses salin foto (opsional: dry-run, generate SQL, atau langsung update DB)
 func main() {
 	// --- flags ---
 	sourceFlag := flag.String("source", "", "Path ke folder Atlas_Makananku_Photos/ (wajib)")

@@ -17,7 +17,10 @@ const (
 // Point - satu titik polygon dalam pixel space gambar asli ([x, y])
 type Point [2]float64
 
+// X - koordinat horizontal titik (pixel)
 func (p Point) X() float64 { return p[0] }
+
+// Y - koordinat vertikal titik (pixel)
 func (p Point) Y() float64 { return p[1] }
 
 // Polygon - kumpulan titik yang disimpan sebagai kolom JSON MySQL
@@ -84,6 +87,7 @@ type FoodImage struct {
 	Areas []FoodArea `gorm:"foreignKey:FoodImageID" json:"areas"`
 }
 
+// TableName - nama tabel di database untuk model FoodImage
 func (FoodImage) TableName() string {
 	return "food_images"
 }
@@ -100,6 +104,7 @@ type FoodArea struct {
 	UpdatedAt   time.Time `json:"updated_at"`
 }
 
+// TableName - nama tabel di database untuk model FoodArea
 func (FoodArea) TableName() string {
 	return "food_areas"
 }

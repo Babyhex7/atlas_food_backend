@@ -166,6 +166,7 @@ Do not add markdown fences. Keep recommendations practical and concise.`
 	}, nil
 }
 
+// trimCodeFence - buang pembungkus markdown ```json ... ``` dari jawaban LLM supaya bisa di-parse sebagai JSON
 func trimCodeFence(content string) string {
 	content = strings.TrimSpace(content)
 	content = strings.TrimPrefix(content, "```json")

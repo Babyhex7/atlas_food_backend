@@ -100,6 +100,7 @@ func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
 	return nil
 }
 
+// importSampleData - jalankan SQL contoh (satuan & tipe nutrisi, dsb) untuk mengisi data awal database
 func importSampleData(db *gorm.DB) {
 	importSQL := `
 INSERT INTO nutrient_units (id, code, name, symbol) VALUES

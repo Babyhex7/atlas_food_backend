@@ -64,18 +64,22 @@ type Repository interface {
 	GetPortionMethodByID(id int) (*PortionSizeMethod, error)
 }
 
+// foodRepository - implementasi Repository di atas GORM
 type foodRepository struct {
 	db *gorm.DB
 }
 
+// NewRepository - buat instance repository food dengan koneksi database
 func NewRepository(db *gorm.DB) Repository {
 	return &foodRepository{db: db}
 }
 
+// CreateFood - simpan food baru ke tabel foods
 func (r *foodRepository) CreateFood(food *Food) error {
 	return r.db.Create(food).Error
 }
 
+// GetFoodByID - ambil satu food berdasarkan ID beserta kategorinya
 func (r *foodRepository) GetFoodByID(id string) (*Food, error) {
 	var food Food
 	err := r.db.Preload("Category").Where("id = ?", id).First(&food).Error
@@ -85,16 +89,19 @@ func (r *foodRepository) GetFoodByID(id string) (*Food, error) {
 	return &food, nil
 }
 
+// GetFoodByCode - ambil satu food berdasarkan kode unik (mis. MP-01)
 func (r *foodRepository) GetFoodByCode(code string) (*Food, error) {
 	var food Food
 	err := r.db.Where("code = ?", code).First(&food).Error
 	return &food, err
 }
 
+// ListFoods - daftar food per halaman (admin: termasuk yang non-aktif)
 func (r *foodRepository) ListFoods(categoryID string, page, limit int) ([]Food, int64, error) {
 	return r.ListFoodsFiltered(ListFoodsFilter{CategoryID: categoryID, Page: page, Limit: limit})
 }
 
+// ListActiveFoods - daftar food per halaman, hanya yang is_active = true (dipakai endpoint publik)
 func (r *foodRepository) ListActiveFoods(categoryID string, page, limit int) ([]Food, int64, error) {
 	return r.ListFoodsFiltered(ListFoodsFilter{CategoryID: categoryID, Page: page, Limit: limit, ActiveOnly: true})
 }
@@ -110,6 +117,8 @@ type ListFoodsFilter struct {
 	Limit      int
 }
 
+// ListFoodsFiltered - query daftar food dengan filter kategori/status/tipe foto/pencarian + pagination.
+// Mengembalikan data halaman ini dan total seluruh baris yang cocok
 func (r *foodRepository) ListFoodsFiltered(f ListFoodsFilter) ([]Food, int64, error) {
 	var foods []Food
 	var total int64
@@ -151,6 +160,7 @@ func (r *foodRepository) ListFoodsFiltered(f ListFoodsFilter) ([]Food, int64, er
 	return foods, total, err
 }
 
+// listFoods - pembungkus internal ListFoodsFiltered untuk pemakaian lama
 func (r *foodRepository) listFoods(categoryID string, page, limit int, activeOnly bool) ([]Food, int64, error) {
 	return r.ListFoodsFiltered(ListFoodsFilter{
 		CategoryID: categoryID,
@@ -160,14 +170,18 @@ func (r *foodRepository) listFoods(categoryID string, page, limit int, activeOnl
 	})
 }
 
+// UpdateFood - simpan perubahan data food
 func (r *foodRepository) UpdateFood(food *Food) error {
 	return r.db.Save(food).Error
 }
 
+// DeleteFood - hapus food berdasarkan ID
 func (r *foodRepository) DeleteFood(id string) error {
 	return r.db.Where("id = ?", id).Delete(&Food{}).Error
 }
 
+// SearchFoods - cari makanan aktif dengan FULLTEXT (MATCH ... AGAINST) plus fallback LIKE pada nama/nama lokal/kode.
+// Bisa dipersempit per kategori atau per tipe (food/drink)
 func (r *foodRepository) SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error) {
 	var foods []Food
 
@@ -204,12 +218,14 @@ func (r *foodRepository) SearchFoods(query string, categoryID string, foodType s
 	return foods, err
 }
 
+// GetNutrientsByFoodID - ambil semua nilai gizi per 100g milik sebuah food beserta tipe & satuannya
 func (r *foodRepository) GetNutrientsByFoodID(foodID string) ([]FoodNutrient, error) {
 	var nutrients []FoodNutrient
 	err := r.db.Preload("NutrientType.Unit").Where("food_id = ?", foodID).Find(&nutrients).Error
 	return nutrients, err
 }
 
+// UpsertFoodNutrients - simpan/perbarui banyak nilai gizi sekaligus dalam satu transaksi
 func (r *foodRepository) UpsertFoodNutrients(nutrients []FoodNutrient) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		for _, n := range nutrients {
@@ -221,82 +237,98 @@ func (r *foodRepository) UpsertFoodNutrients(nutrients []FoodNutrient) error {
 	})
 }
 
+// GetNutrientTypeByID - ambil tipe nutrisi (mis. energi, protein) beserta satuannya
 func (r *foodRepository) GetNutrientTypeByID(id int) (*NutrientType, error) {
 	var nt NutrientType
 	err := r.db.Preload("Unit").Where("id = ?", id).First(&nt).Error
 	return &nt, err
 }
 
+// ListCategories - ambil semua kategori, urut sesuai display_order
 func (r *foodRepository) ListCategories() ([]Category, error) {
 	var categories []Category
 	err := r.db.Order("display_order ASC").Find(&categories).Error
 	return categories, err
 }
 
+// GetCategoryByID - ambil satu kategori berdasarkan ID
 func (r *foodRepository) GetCategoryByID(id string) (*Category, error) {
 	var category Category
 	err := r.db.Where("id = ?", id).First(&category).Error
 	return &category, err
 }
 
+// GetCategoryByCode - ambil satu kategori berdasarkan kode (mis. "drinks")
 func (r *foodRepository) GetCategoryByCode(code string) (*Category, error) {
 	var category Category
 	err := r.db.Where("code = ?", code).First(&category).Error
 	return &category, err
 }
 
+// GetPortionMethodsByFoodID - ambil semua metode porsi milik sebuah food, urut display_order
 func (r *foodRepository) GetPortionMethodsByFoodID(foodID string) ([]PortionSizeMethod, error) {
 	var methods []PortionSizeMethod
 	err := r.db.Where("food_id = ?", foodID).Order("display_order ASC").Find(&methods).Error
 	return methods, err
 }
 
+// CreatePortionMethod - simpan metode porsi baru untuk sebuah food
 func (r *foodRepository) CreatePortionMethod(method *PortionSizeMethod) error {
 	return r.db.Create(method).Error
 }
 
+// UpdatePortionMethod - simpan perubahan metode porsi
 func (r *foodRepository) UpdatePortionMethod(method *PortionSizeMethod) error {
 	return r.db.Save(method).Error
 }
 
+// DeletePortionMethod - hapus metode porsi berdasarkan ID
 func (r *foodRepository) DeletePortionMethod(id int) error {
 	return r.db.Where("id = ?", id).Delete(&PortionSizeMethod{}).Error
 }
 
+// ListAsServedSets - ambil semua set foto as-served
 func (r *foodRepository) ListAsServedSets() ([]AsServedSet, error) {
 	var sets []AsServedSet
 	err := r.db.Find(&sets).Error
 	return sets, err
 }
 
+// CreateAsServedSet - simpan set foto as-served baru
 func (r *foodRepository) CreateAsServedSet(set *AsServedSet) error {
 	return r.db.Create(set).Error
 }
 
+// GetAsServedSetByCode - ambil set as-served berdasarkan kode uniknya
 func (r *foodRepository) GetAsServedSetByCode(code string) (*AsServedSet, error) {
 	var set AsServedSet
 	err := r.db.Where("code = ?", code).First(&set).Error
 	return &set, err
 }
 
+// GetAsServedSetsByFoodID - ambil semua set as-served milik sebuah food, urut waktu dibuat
 func (r *foodRepository) GetAsServedSetsByFoodID(foodID string) ([]AsServedSet, error) {
 	var sets []AsServedSet
 	err := r.db.Where("food_id = ?", foodID).Order("created_at ASC").Find(&sets).Error
 	return sets, err
 }
 
+// GetAsServedImageByDescription - cari satu foto porsi di dalam set berdasarkan kolom description
+// (dipakai untuk mendeteksi foto yang sudah ada saat sinkronisasi)
 func (r *foodRepository) GetAsServedImageByDescription(setID, description string) (*AsServedImage, error) {
 	var image AsServedImage
 	err := r.db.Where("set_id = ? AND description = ?", setID, description).First(&image).Error
 	return &image, err
 }
 
+// GetAsServedImagesBySetID - ambil semua foto porsi dalam satu set, urut display_order
 func (r *foodRepository) GetAsServedImagesBySetID(setID string) ([]AsServedImage, error) {
 	var images []AsServedImage
 	err := r.db.Where("set_id = ?", setID).Order("display_order ASC").Find(&images).Error
 	return images, err
 }
 
+// CreateAsServedImages - simpan banyak foto porsi sekaligus (bulk insert)
 func (r *foodRepository) CreateAsServedImages(images []AsServedImage) error {
 	return r.db.Create(&images).Error
 }

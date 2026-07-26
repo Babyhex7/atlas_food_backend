@@ -6,14 +6,17 @@ import "gorm.io/gorm"
 
 // ============ CATEGORY ============
 
+// CreateCategory - simpan kategori baru
 func (r *foodRepository) CreateCategory(category *Category) error {
 	return r.db.Create(category).Error
 }
 
+// UpdateCategory - simpan perubahan kategori
 func (r *foodRepository) UpdateCategory(category *Category) error {
 	return r.db.Save(category).Error
 }
 
+// DeleteCategory - hapus kategori berdasarkan ID
 func (r *foodRepository) DeleteCategory(id string) error {
 	return r.db.Delete(&Category{}, "id = ?", id).Error
 }
@@ -28,6 +31,7 @@ func (r *foodRepository) CountFoodsByCategoryID(id string) (int64, error) {
 
 // ============ AS-SERVED SET ============
 
+// GetAsServedSetByID - ambil satu set as-served berdasarkan ID
 func (r *foodRepository) GetAsServedSetByID(id string) (*AsServedSet, error) {
 	var set AsServedSet
 	if err := r.db.Where("id = ?", id).First(&set).Error; err != nil {
@@ -36,6 +40,7 @@ func (r *foodRepository) GetAsServedSetByID(id string) (*AsServedSet, error) {
 	return &set, nil
 }
 
+// UpdateAsServedSet - simpan perubahan set as-served
 func (r *foodRepository) UpdateAsServedSet(set *AsServedSet) error {
 	return r.db.Save(set).Error
 }
@@ -53,6 +58,7 @@ func (r *foodRepository) DeleteAsServedSet(id string) error {
 
 // ============ AS-SERVED IMAGE ============
 
+// GetAsServedImageByID - ambil satu foto porsi berdasarkan ID
 func (r *foodRepository) GetAsServedImageByID(id string) (*AsServedImage, error) {
 	var image AsServedImage
 	if err := r.db.Where("id = ?", id).First(&image).Error; err != nil {
@@ -61,16 +67,19 @@ func (r *foodRepository) GetAsServedImageByID(id string) (*AsServedImage, error)
 	return &image, nil
 }
 
+// UpdateAsServedImage - simpan perubahan foto porsi
 func (r *foodRepository) UpdateAsServedImage(image *AsServedImage) error {
 	return r.db.Save(image).Error
 }
 
+// DeleteAsServedImage - hapus foto porsi berdasarkan ID
 func (r *foodRepository) DeleteAsServedImage(id string) error {
 	return r.db.Delete(&AsServedImage{}, "id = ?", id).Error
 }
 
 // ============ PORTION METHOD ============
 
+// GetPortionMethodByID - ambil satu metode porsi berdasarkan ID
 func (r *foodRepository) GetPortionMethodByID(id int) (*PortionSizeMethod, error) {
 	var method PortionSizeMethod
 	if err := r.db.Where("id = ?", id).First(&method).Error; err != nil {

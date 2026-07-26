@@ -3,6 +3,7 @@ package collab
 import (
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -29,12 +30,7 @@ func NewHandler(hub *Hub) *Handler {
 }
 
 // HandleWebSocket upgrades HTTP to WebSocket for a collaboration room.
-// @Summary WebSocket connection for real-time collaboration
-// @Tags collaboration
-// @Param room_id path string true "Room ID"
-// @Param token query string false "JWT access token (required for browser WS)"
-// @Security BearerAuth
-// @Router /collab/rooms/{room_id}/ws [get]
+// Query: token (JWT), invite (optional invite token for room role).
 func (h *Handler) HandleWebSocket(c *gin.Context) {
 	roomID := c.Param("room_id")
 	if roomID == "" {
@@ -52,7 +48,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{
 			"status":  "error",
-			"message": "Unauthorized",
+			"message": "Unauthorized — login diperlukan",
 		})
 		return
 	}
@@ -72,19 +68,34 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 		roleStr, _ = role.(string)
 	}
 
+	inviteTok := strings.TrimSpace(c.Query("invite"))
+	// Validasi invite bila ada: harus match room
+	if inviteTok != "" {
+		inv, ok := h.hub.Invites().Get(inviteTok)
+		if !ok || inv.RoomID != roomID {
+			c.JSON(http.StatusForbidden, gin.H{
+				"status":  "error",
+				"message": "Invite tidak valid atau sudah kedaluwarsa",
+			})
+			return
+		}
+	}
+
+	roomRole := h.hub.ResolveRoomRole(roomID, inviteTok)
+
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade connection: %v", err)
 		return
 	}
 
-	client := NewClient(conn, h.hub, roomID, userID.(string), username.(string), roleStr)
+	client := NewClient(conn, h.hub, roomID, userID.(string), username.(string), roleStr, roomRole)
 	h.hub.register <- client
 
 	go client.WritePump()
 	go client.ReadPump()
 
-	log.Printf("✅ WebSocket connected: user=%s, room=%s", userID, roomID)
+	log.Printf("✅ WebSocket connected: user=%s, room=%s, room_role=%s", userID, roomID, roomRole)
 }
 
 // GetRoomInfo returns information about a room
@@ -121,7 +132,11 @@ func (h *Handler) GetHubStats(c *gin.Context) {
 	})
 }
 
-// InviteToRoom returns a shareable room join hint (in-memory; no Redis).
+type inviteRequest struct {
+	Role string `json:"role"` // editor | viewer
+}
+
+// InviteToRoom membuat invite token berbatas waktu + URL share.
 func (h *Handler) InviteToRoom(c *gin.Context) {
 	roomID := c.Param("room_id")
 	if roomID == "" {
@@ -132,13 +147,48 @@ func (h *Handler) InviteToRoom(c *gin.Context) {
 		return
 	}
 
+	var req inviteRequest
+	_ = c.ShouldBindJSON(&req)
+	role := strings.TrimSpace(req.Role)
+	if role == "" {
+		role = RoomRoleEditor
+	}
+	if role != RoomRoleEditor && role != RoomRoleViewer {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "role harus editor atau viewer",
+		})
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	createdBy, _ := userID.(string)
+
+	inv := h.hub.Invites().Create(roomID, role, createdBy, 24*time.Hour)
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data": gin.H{
-			"room_id":    roomID,
-			"join_path":  "?room=" + roomID,
-			"expires_at": time.Now().Add(24 * time.Hour).UTC(),
-			"note":       "Bagikan URL halaman dengan query ?room=" + roomID + " ke kolaborator (login required).",
+			"room_id":      roomID,
+			"invite_token": inv.Token,
+			"role":         inv.Role,
+			"join_path":    "?room=" + roomID + "&invite=" + inv.Token,
+			"expires_at":   inv.ExpiresAt.UTC(),
+			"note":         "Bagikan URL dengan ?room= & ?invite=. Penerima harus login. Role: " + inv.Role,
 		},
+	})
+}
+
+// RevokeInvite membatalkan invite token.
+func (h *Handler) RevokeInvite(c *gin.Context) {
+	token := strings.TrimSpace(c.Param("token"))
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "token wajib"})
+		return
+	}
+	h.hub.Invites().Revoke(token)
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   gin.H{"revoked": true, "token": token},
 	})
 }

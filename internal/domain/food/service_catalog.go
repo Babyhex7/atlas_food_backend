@@ -27,6 +27,7 @@ func conflict(message string) error {
 
 // ============ CATEGORY ============
 
+// CreateCategory - buat kategori baru; kode wajib unik supaya URL Find Food tidak bentrok
 func (s *foodService) CreateCategory(req CreateCategoryRequest) (*Category, error) {
 	code := strings.TrimSpace(req.Code)
 
@@ -51,6 +52,7 @@ func (s *foodService) CreateCategory(req CreateCategoryRequest) (*Category, erro
 	return category, nil
 }
 
+// GetCategory - ambil kategori berdasarkan ID, balikan error 404 kalau tidak ada
 func (s *foodService) GetCategory(id string) (*Category, error) {
 	category, err := s.repo.GetCategoryByID(id)
 	if err != nil {
@@ -62,6 +64,7 @@ func (s *foodService) GetCategory(id string) (*Category, error) {
 	return category, nil
 }
 
+// UpdateCategory - ubah kategori secara partial (hanya field yang dikirim); kode baru dicek keunikannya
 func (s *foodService) UpdateCategory(id string, req UpdateCategoryRequest) (*Category, error) {
 	category, err := s.GetCategory(id)
 	if err != nil {
@@ -106,6 +109,7 @@ func (s *foodService) UpdateCategory(id string, req UpdateCategoryRequest) (*Cat
 	return category, nil
 }
 
+// DeleteCategory - hapus kategori; ditolak (409) kalau masih dipakai makanan
 func (s *foodService) DeleteCategory(id string) error {
 	if _, err := s.GetCategory(id); err != nil {
 		return err
@@ -126,10 +130,12 @@ func (s *foodService) DeleteCategory(id string) error {
 
 // ============ AS-SERVED SET ============
 
+// ListAsServedSets - ambil semua set foto porsi
 func (s *foodService) ListAsServedSets() ([]AsServedSet, error) {
 	return s.repo.ListAsServedSets()
 }
 
+// CreateAsServedSet - buat set foto porsi baru dengan kode unik
 func (s *foodService) CreateAsServedSet(req CreateAsServedSetRequest) (*AsServedSet, error) {
 	code := strings.TrimSpace(req.Code)
 
@@ -155,6 +161,7 @@ func (s *foodService) CreateAsServedSet(req CreateAsServedSetRequest) (*AsServed
 	return set, nil
 }
 
+// GetAsServedSet - ambil detail set foto porsi beserta seluruh fotonya
 func (s *foodService) GetAsServedSet(id string) (*AsServedSetDetailResponse, error) {
 	set, err := s.repo.GetAsServedSetByID(id)
 	if err != nil {
@@ -175,6 +182,7 @@ func (s *foodService) GetAsServedSet(id string) (*AsServedSetDetailResponse, err
 	return &AsServedSetDetailResponse{AsServedSet: *set, Images: images}, nil
 }
 
+// UpdateAsServedSet - ubah set foto porsi secara partial; kode baru dicek keunikannya
 func (s *foodService) UpdateAsServedSet(id string, req UpdateAsServedSetRequest) (*AsServedSet, error) {
 	set, err := s.repo.GetAsServedSetByID(id)
 	if err != nil {
@@ -223,6 +231,7 @@ func (s *foodService) UpdateAsServedSet(id string, req UpdateAsServedSetRequest)
 	return set, nil
 }
 
+// DeleteAsServedSet - hapus set foto porsi beserta seluruh fotonya
 func (s *foodService) DeleteAsServedSet(id string) error {
 	if _, err := s.repo.GetAsServedSetByID(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -235,6 +244,7 @@ func (s *foodService) DeleteAsServedSet(id string) error {
 
 // ============ AS-SERVED IMAGE ============
 
+// AddAsServedImages - tambah beberapa foto porsi sekaligus ke dalam sebuah set
 func (s *foodService) AddAsServedImages(setID string, reqs []AsServedImageRequest) ([]AsServedImage, error) {
 	if _, err := s.repo.GetAsServedSetByID(setID); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -268,6 +278,7 @@ func (s *foodService) AddAsServedImages(setID string, reqs []AsServedImageReques
 	return images, nil
 }
 
+// UpdateAsServedImage - ubah data satu foto porsi secara partial (label, URL, berat gram, urutan)
 func (s *foodService) UpdateAsServedImage(id string, req UpdateAsServedImageRequest) (*AsServedImage, error) {
 	image, err := s.repo.GetAsServedImageByID(id)
 	if err != nil {
@@ -307,6 +318,7 @@ func (s *foodService) UpdateAsServedImage(id string, req UpdateAsServedImageRequ
 	return image, nil
 }
 
+// DeleteAsServedImage - hapus satu foto porsi
 func (s *foodService) DeleteAsServedImage(id string) error {
 	if _, err := s.repo.GetAsServedImageByID(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -319,6 +331,7 @@ func (s *foodService) DeleteAsServedImage(id string) error {
 
 // ============ PORTION METHOD ============
 
+// UpdatePortionMethod - ubah metode porsi secara partial lalu kembalikan bentuk response-nya
 func (s *foodService) UpdatePortionMethod(id int, req UpdatePortionMethodRequest) (*PortionMethodResponse, error) {
 	method, err := s.repo.GetPortionMethodByID(id)
 	if err != nil {
@@ -371,6 +384,7 @@ func (s *foodService) UpdatePortionMethod(id int, req UpdatePortionMethodRequest
 	}, nil
 }
 
+// DeletePortionMethod - hapus metode porsi berdasarkan ID
 func (s *foodService) DeletePortionMethod(id int) error {
 	if _, err := s.repo.GetPortionMethodByID(id); err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {

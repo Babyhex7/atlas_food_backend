@@ -62,10 +62,12 @@ func (r *Room) AddMessage(msg *Message) {
 	r.hub.Publish(msg)
 }
 
+// shouldBatchMessage - true untuk pesan high-frequency (kursor/viewport) yang perlu di-batch dulu
 func (r *Room) shouldBatchMessage(msg *Message) bool {
-	return msg.Type == MsgCursorMove || msg.Type == MsgCursorUpdate
+	return msg.Type == MsgCursorMove || msg.Type == MsgCursorUpdate || msg.Type == MsgViewportSync
 }
 
+// flushBatchedMessages - kirim semua pesan yang tertahan di batch queue lalu kosongkan queue
 func (r *Room) flushBatchedMessages() {
 	r.batchMu.Lock()
 	if len(r.batchQueue) == 0 {
@@ -83,9 +85,10 @@ func (r *Room) flushBatchedMessages() {
 	}
 }
 
+// addToHistory - simpan pesan ke ring buffer history (kursor & viewport diabaikan supaya tidak membanjiri)
 func (r *Room) addToHistory(msg *Message) {
-	// Don't flood history with cursor updates
-	if msg.Type == MsgCursorUpdate || msg.Type == MsgCursorMove {
+	// Don't flood history with cursor / viewport updates
+	if msg.Type == MsgCursorUpdate || msg.Type == MsgCursorMove || msg.Type == MsgViewportSync {
 		return
 	}
 	r.historyMu.Lock()

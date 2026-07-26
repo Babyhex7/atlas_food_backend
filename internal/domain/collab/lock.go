@@ -21,12 +21,14 @@ type LockManager struct {
 	locks map[string]*EntityLock // key: entityType:entityID
 }
 
+// NewLockManager - buat LockManager kosong
 func NewLockManager() *LockManager {
 	return &LockManager{
 		locks: make(map[string]*EntityLock),
 	}
 }
 
+// lockKey - susun key map lock dengan format "entityType:entityID"
 func lockKey(entityType, entityID string) string {
 	return entityType + ":" + entityID
 }

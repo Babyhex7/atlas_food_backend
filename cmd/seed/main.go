@@ -12,6 +12,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+// main - CLI seeding data Find Your Food dari file Atlas_Makananku_FINAL.json ke database.
+// Path JSON bisa diatur lewat env ATLAS_JSON_PATH
 func main() {
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
