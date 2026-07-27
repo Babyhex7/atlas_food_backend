@@ -110,13 +110,22 @@ func (h *Hub) registerClient(client *Client) {
 			alreadyPresent = true
 		}
 	}
-	// Orang pertama di room jadi owner — kecuali dia masuk lewat invite "viewer",
-	// yang memang sengaja dibatasi hanya boleh menonton.
-	if isFirst && client.RoomRole != RoomRoleViewer {
+	// Role yang pernah tercatat menang atas default, supaya reconnect atau pindah
+	// halaman (tanpa ?invite=) tidak menaikkan viewer jadi editor.
+	if remembered := room.roles[client.UserID]; remembered != "" {
+		if client.RoomRole == "" || client.RoomRole == RoomRoleEditor {
+			client.RoomRole = remembered
+		}
+	} else if isFirst && client.RoomRole != RoomRoleViewer {
+		// Orang pertama di room jadi owner — kecuali dia masuk lewat invite
+		// "viewer", yang memang sengaja dibatasi hanya boleh menonton.
 		client.RoomRole = RoomRoleOwner
 	}
 	if client.RoomRole == "" {
 		client.RoomRole = RoomRoleEditor
+	}
+	if client.UserID != "" {
+		room.roles[client.UserID] = client.RoomRole
 	}
 	room.clients[client] = true
 	room.mu.Unlock()
@@ -125,7 +134,7 @@ func (h *Hub) registerClient(client *Client) {
 
 	// Sync state to joining client
 	client.sendQuiet(h.buildPresenceList(room))
-	client.sendQuiet(h.buildStateSync(room))
+	client.sendQuiet(h.buildStateSync(room, client))
 	client.sendQuiet(h.buildFollowState(room))
 
 	// Presence list ke room selalu di-refresh (dedupe by user)
@@ -292,12 +301,25 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 	})
 }
 
-// buildStateSync - susun snapshot state room (lock aktif + 30 pesan terakhir) untuk client yang baru join
-func (h *Hub) buildStateSync(room *Room) *Message {
+// buildStateSync - susun snapshot state room (lock aktif + 30 pesan terakhir) untuk client yang baru join.
+//
+// Menyertakan blok "self" berisi identitas client itu sendiri. Frontend tidak boleh
+// menebak user_id-nya dari auth store: store itu tidak dipersist, jadi setelah refresh
+// atau di tab baru nilainya null dan avatar sendiri jadi ikut bisa di-Follow.
+// Server adalah satu-satunya sumber kebenaran identitas di dalam room.
+func (h *Hub) buildStateSync(room *Room, client *Client) *Message {
 	return newMessage(MsgStateSync, room.ID, "", "", map[string]interface{}{
 		"locks":   h.locks.Snapshot(),
 		"history": room.GetHistory(30),
 		"room_id": room.ID,
+		"self": map[string]interface{}{
+			"user_id":      client.UserID,
+			"username":     client.Username,
+			"display_name": client.Username,
+			"role":         client.Role,
+			"room_role":    client.RoomRole,
+			"color":        colorForUser(client.UserID),
+		},
 	})
 }
 
@@ -357,8 +379,16 @@ func (h *Hub) broadcastToFollowers(roomID, leaderID string, message *Message) {
 	}
 }
 
-// ResolveRoomRole menentukan role join: invite > first owner > editor default.
-func (h *Hub) ResolveRoomRole(roomID, inviteToken string) string {
+// ResolveRoomRole menentukan role join dengan urutan prioritas:
+//
+//  1. invite token yang valid — niat eksplisit pemilik room
+//  2. role yang sudah pernah tercatat untuk user ini di room tsb
+//  3. room masih kosong → owner
+//  4. selain itu → editor
+//
+// Langkah 2 yang membuat viewer tetap viewer saat pindah halaman atau reconnect,
+// meski query ?invite= sudah tidak ada lagi di URL.
+func (h *Hub) ResolveRoomRole(roomID, userID, inviteToken string) string {
 	if inviteToken != "" {
 		if inv, ok := h.invites.Get(inviteToken); ok && inv.RoomID == roomID {
 			return inv.Role
@@ -369,6 +399,9 @@ func (h *Hub) ResolveRoomRole(roomID, inviteToken string) string {
 	h.mu.RUnlock()
 	if !exists {
 		return RoomRoleOwner // akan di-set owner di register bila first
+	}
+	if remembered := room.RememberedRole(userID); remembered != "" {
+		return remembered
 	}
 	if room.GetClientCount() == 0 {
 		return RoomRoleOwner

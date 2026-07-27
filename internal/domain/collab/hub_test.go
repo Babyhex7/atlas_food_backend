@@ -117,6 +117,60 @@ func TestSecondTabInheritsRoomRole(t *testing.T) {
 	}
 }
 
+// TestViewerTetapViewerSaatPindahHalaman - viewer yang pindah halaman kehilangan
+// query ?invite= di URL. Role-nya harus tetap viewer, bukan naik jadi editor.
+func TestViewerTetapViewerSaatPindahHalaman(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Stop()
+
+	// Owner sudah di dalam room
+	hub.registerClient(newTestClient(hub, "room-6", "user-owner", "Budi"))
+
+	// Viewer join lewat invite
+	inv := hub.Invites().Create("room-6", RoomRoleViewer, "user-owner", time.Hour)
+	viewer := newTestClient(hub, "room-6", "user-viewer", "Sari")
+	viewer.RoomRole = hub.ResolveRoomRole("room-6", "user-viewer", inv.Token)
+	hub.registerClient(viewer)
+	if viewer.RoomRole != RoomRoleViewer {
+		t.Fatalf("viewer harus masuk sebagai viewer, dapat %q", viewer.RoomRole)
+	}
+
+	// Pindah halaman: socket lama tutup, socket baru konek TANPA invite token
+	hub.unregisterClient(viewer)
+	rejoin := newTestClient(hub, "room-6", "user-viewer", "Sari")
+	rejoin.RoomRole = hub.ResolveRoomRole("room-6", "user-viewer", "")
+	hub.registerClient(rejoin)
+
+	if rejoin.RoomRole != RoomRoleViewer {
+		t.Fatalf("viewer naik jadi %q setelah pindah halaman — role harus tetap viewer", rejoin.RoomRole)
+	}
+	if rejoin.canEdit() {
+		t.Fatal("viewer lolos pengecekan canEdit setelah pindah halaman")
+	}
+}
+
+// TestOwnerTetapOwnerSaatPindahHalaman - owner yang reconnect tidak boleh turun
+// jadi editor hanya karena room sudah berisi orang lain.
+func TestOwnerTetapOwnerSaatPindahHalaman(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Stop()
+
+	owner := newTestClient(hub, "room-7", "user-owner", "Budi")
+	hub.registerClient(owner)
+	hub.registerClient(newTestClient(hub, "room-7", "user-lain", "Sari"))
+
+	hub.unregisterClient(owner)
+	rejoin := newTestClient(hub, "room-7", "user-owner", "Budi")
+	rejoin.RoomRole = hub.ResolveRoomRole("room-7", "user-owner", "")
+	hub.registerClient(rejoin)
+
+	if rejoin.RoomRole != RoomRoleOwner {
+		t.Fatalf("owner turun jadi %q setelah pindah halaman", rejoin.RoomRole)
+	}
+}
+
 // TestUnregisterKeepsOtherTab - menutup satu tab tidak boleh memutus tab lain
 // milik user yang sama.
 func TestUnregisterKeepsOtherTab(t *testing.T) {

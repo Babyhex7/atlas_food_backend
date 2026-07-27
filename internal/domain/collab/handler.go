@@ -81,7 +81,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 		}
 	}
 
-	roomRole := h.hub.ResolveRoomRole(roomID, inviteTok)
+	roomRole := h.hub.ResolveRoomRole(roomID, userID.(string), inviteTok)
 
 	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {

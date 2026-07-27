@@ -19,6 +19,12 @@ type Room struct {
 	lastBatchSent  time.Time
 	stopCh         chan struct{}
 	mu             sync.RWMutex
+
+	// roles - room role yang sudah pernah diberikan ke sebuah user (key: userID).
+	// Wajib diingat server: kalau role hanya mengandalkan ?invite= di URL, seorang
+	// viewer yang pindah halaman (query invite ikut hilang) akan naik jadi editor.
+	// Dilindungi mu yang sama dengan clients.
+	roles map[string]string
 }
 
 // NewRoom creates a new Room
@@ -31,7 +37,15 @@ func NewRoom(id string, hub *Hub) *Room {
 		batchQueue:     make([]*Message, 0, 50),
 		batchTicker:    time.NewTicker(50 * time.Millisecond),
 		stopCh:         make(chan struct{}),
+		roles:          make(map[string]string),
 	}
+}
+
+// RememberedRole - room role yang sudah tercatat untuk user ini, "" kalau belum ada
+func (r *Room) RememberedRole(userID string) string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	return r.roles[userID]
 }
 
 // Run starts the room's message batching loop (cursor moves)
