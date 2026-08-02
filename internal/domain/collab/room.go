@@ -81,7 +81,8 @@ func (r *Room) shouldBatchMessage(msg *Message) bool {
 	return msg.Type == MsgCursorMove || msg.Type == MsgCursorUpdate || msg.Type == MsgViewportSync
 }
 
-// flushBatchedMessages - kirim semua pesan yang tertahan di batch queue lalu kosongkan queue
+// flushBatchedMessages - kirim pesan tertahan; cursor di-coalesce ke latest per user
+// (best practice realtime: drop intermediate frames, kirim posisi terakhir saja).
 func (r *Room) flushBatchedMessages() {
 	r.batchMu.Lock()
 	if len(r.batchQueue) == 0 {
@@ -94,7 +95,19 @@ func (r *Room) flushBatchedMessages() {
 	r.lastBatchSent = time.Now()
 	r.batchMu.Unlock()
 
+	latestCursor := make(map[string]*Message)
+	var others []*Message
 	for _, msg := range messages {
+		if msg.Type == MsgCursorMove || msg.Type == MsgCursorUpdate {
+			latestCursor[msg.UserID] = msg
+			continue
+		}
+		others = append(others, msg)
+	}
+	for _, msg := range latestCursor {
+		r.hub.Publish(msg)
+	}
+	for _, msg := range others {
 		r.hub.Publish(msg)
 	}
 }

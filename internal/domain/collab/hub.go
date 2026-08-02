@@ -192,11 +192,13 @@ func (h *Hub) unregisterClient(client *Client) {
 			break
 		}
 	}
+	var detachedFollowers []*Client
 	if !stillOnline {
-		// Leader-nya benar-benar pergi — lepas semua follower yang mengikutinya
+		// Leader benar-benar pergi — lepas follower + siapkan follow_stopped ke FE
 		for other := range room.clients {
 			if other.FollowingUserID == client.UserID {
 				other.FollowingUserID = ""
+				detachedFollowers = append(detachedFollowers, other)
 			}
 		}
 	}
@@ -214,6 +216,16 @@ func (h *Hub) unregisterClient(client *Client) {
 	}
 
 	log.Printf("❌ Client %s left room %s (remaining: %d)", client.UserID, client.RoomID, remaining)
+
+	// Beritahu follower secara eksplisit agar banner "Following…" ikut hilang di FE
+	for _, follower := range detachedFollowers {
+		stopped := newMessage(MsgFollowStopped, client.RoomID, follower.UserID, follower.Username, map[string]interface{}{
+			"follower_id": follower.UserID,
+			"leader_id":   client.UserID,
+			"reason":      "leader_left",
+		})
+		follower.sendQuiet(stopped)
+	}
 
 	leavePayload := map[string]interface{}{
 		"user_id":   client.UserID,
