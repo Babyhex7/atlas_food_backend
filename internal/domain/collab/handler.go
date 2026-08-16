@@ -6,6 +6,8 @@ import (
 	"strings"
 	"time"
 
+	"atlas_food/internal/pkg/utils"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
@@ -70,15 +72,15 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 
 	inviteTok := strings.TrimSpace(c.Query("invite"))
 	// Validasi invite bila ada: harus match room
+	fromInvite := false
 	if inviteTok != "" {
 		inv, ok := h.hub.Invites().Get(inviteTok)
 		if !ok || inv.RoomID != roomID {
-			c.JSON(http.StatusForbidden, gin.H{
-				"status":  "error",
-				"message": "Invite tidak valid atau sudah kedaluwarsa",
-			})
+			utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN",
+				"Invite tidak valid atau sudah kedaluwarsa")
 			return
 		}
+		fromInvite = true
 	}
 
 	roomRole := h.hub.ResolveRoomRole(roomID, userID.(string), inviteTok)
@@ -90,6 +92,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 	}
 
 	client := NewClient(conn, h.hub, roomID, userID.(string), username.(string), roleStr, roomRole)
+	client.RoleFromInvite = fromInvite
 	h.hub.register <- client
 
 	go client.WritePump()
@@ -137,13 +140,32 @@ type inviteRequest struct {
 }
 
 // InviteToRoom membuat invite token berbatas waktu + URL share.
+//
+// Izin membagikan mengikuti aturan yang sama dengan Figma: hanya anggota room
+// dengan hak ubah (owner/editor) yang boleh mengundang, dan tidak seorang pun
+// boleh memberi role di atas miliknya sendiri. Tanpa penjagaan ini, viewer bisa
+// mencetak undangan editor — menaikkan hak orang lain melebihi haknya sendiri —
+// dan orang di luar room bisa membuat undangan untuk room mana pun asal tahu
+// id-nya.
 func (h *Handler) InviteToRoom(c *gin.Context) {
 	roomID := c.Param("room_id")
 	if roomID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "room_id is required",
-		})
+		utils.ErrorResponse(c, http.StatusBadRequest, "VALIDATION_ERROR", "room_id wajib diisi")
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	createdBy, _ := userID.(string)
+
+	callerRole := h.hub.RoomRoleOf(roomID, createdBy)
+	if callerRole == "" {
+		utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN",
+			"Anda bukan anggota sesi ini")
+		return
+	}
+	if callerRole != RoomRoleOwner && callerRole != RoomRoleEditor {
+		utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN",
+			"Mode hanya lihat tidak bisa membagikan sesi. Minta owner untuk mengundang.")
 		return
 	}
 
@@ -153,42 +175,52 @@ func (h *Handler) InviteToRoom(c *gin.Context) {
 	if role == "" {
 		role = RoomRoleEditor
 	}
+	// Owner tidak bisa dibagikan lewat link: pemindahan kepemilikan adalah
+	// tindakan tersendiri, bukan efek samping menyalin URL.
 	if role != RoomRoleEditor && role != RoomRoleViewer {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"status":  "error",
-			"message": "role harus editor atau viewer",
-		})
+		utils.ErrorResponse(c, http.StatusBadRequest, "VALIDATION_ERROR",
+			"role harus editor atau viewer")
 		return
 	}
 
-	userID, _ := c.Get("userID")
-	createdBy, _ := userID.(string)
-
 	inv := h.hub.Invites().Create(roomID, role, createdBy, 24*time.Hour)
 
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data": gin.H{
-			"room_id":      roomID,
-			"invite_token": inv.Token,
-			"role":         inv.Role,
-			"join_path":    "?room=" + roomID + "&invite=" + inv.Token,
-			"expires_at":   inv.ExpiresAt.UTC(),
-			"note":         "Bagikan URL dengan ?room= & ?invite=. Penerima harus login. Role: " + inv.Role,
-		},
+	utils.SuccessResponse(c, gin.H{
+		"room_id":      roomID,
+		"invite_token": inv.Token,
+		"role":         inv.Role,
+		"join_path":    "?room=" + roomID + "&invite=" + inv.Token,
+		"expires_at":   inv.ExpiresAt.UTC(),
+		"note":         "Bagikan URL dengan ?room= & ?invite=. Penerima harus login. Role: " + inv.Role,
 	})
 }
 
 // RevokeInvite membatalkan invite token.
+//
+// Hanya pembuat undangan atau owner room yang boleh mencabut; sebelumnya siapa
+// pun yang tahu tokennya bisa membatalkan undangan orang lain.
 func (h *Handler) RevokeInvite(c *gin.Context) {
 	token := strings.TrimSpace(c.Param("token"))
 	if token == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": "token wajib"})
+		utils.ErrorResponse(c, http.StatusBadRequest, "VALIDATION_ERROR", "token wajib diisi")
 		return
 	}
+
+	inv, ok := h.hub.Invites().Get(token)
+	if !ok {
+		utils.ErrorResponse(c, http.StatusNotFound, "NOT_FOUND",
+			"Undangan tidak ditemukan atau sudah kedaluwarsa")
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	callerID, _ := userID.(string)
+	if callerID != inv.CreatedBy && h.hub.RoomRoleOf(inv.RoomID, callerID) != RoomRoleOwner {
+		utils.ErrorResponse(c, http.StatusForbidden, "FORBIDDEN",
+			"Hanya pembuat undangan atau owner sesi yang bisa mencabutnya")
+		return
+	}
+
 	h.hub.Invites().Revoke(token)
-	c.JSON(http.StatusOK, gin.H{
-		"status": "success",
-		"data":   gin.H{"revoked": true, "token": token},
-	})
+	utils.SuccessResponse(c, gin.H{"revoked": true, "token": token})
 }

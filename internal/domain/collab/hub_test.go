@@ -76,7 +76,8 @@ func TestSameUserAppearsOnceInPresence(t *testing.T) {
 	}
 }
 
-// TestFirstClientBecomesOwner - client pertama di room jadi owner, sisanya editor.
+// TestFirstClientBecomesOwner - client pertama di room jadi owner; yang menyusul
+// tanpa undangan hanya boleh menonton.
 func TestFirstClientBecomesOwner(t *testing.T) {
 	hub := NewHub()
 	go hub.Run()
@@ -85,13 +86,73 @@ func TestFirstClientBecomesOwner(t *testing.T) {
 	first := newTestClient(hub, "room-3", "user-1", "Budi")
 	hub.registerClient(first)
 	second := newTestClient(hub, "room-3", "user-2", "Sari")
+	second.RoomRole = hub.ResolveRoomRole("room-3", "user-2", "")
 	hub.registerClient(second)
 
 	if first.RoomRole != RoomRoleOwner {
 		t.Fatalf("client pertama harus owner, dapat %q", first.RoomRole)
 	}
-	if second.RoomRole != RoomRoleEditor {
-		t.Fatalf("client kedua harus editor, dapat %q", second.RoomRole)
+	if second.RoomRole != RoomRoleViewer {
+		t.Fatalf("client kedua tanpa undangan harus viewer, dapat %q", second.RoomRole)
+	}
+}
+
+// TestInviteEditorMemberiHakUbah - hak ubah hanya datang dari undangan bertoken.
+func TestInviteEditorMemberiHakUbah(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Stop()
+
+	hub.registerClient(newTestClient(hub, "room-8", "user-owner", "Budi"))
+
+	inv := hub.Invites().Create("room-8", RoomRoleEditor, "user-owner", time.Hour)
+	editor := newTestClient(hub, "room-8", "user-editor", "Sari")
+	editor.RoomRole = hub.ResolveRoomRole("room-8", "user-editor", inv.Token)
+	editor.RoleFromInvite = true
+	hub.registerClient(editor)
+
+	if editor.RoomRole != RoomRoleEditor {
+		t.Fatalf("penerima undangan editor harus editor, dapat %q", editor.RoomRole)
+	}
+	if !editor.canEdit() {
+		t.Fatal("editor harus boleh mengubah data")
+	}
+}
+
+// TestUndanganViewerTidakNaikJadiOwnerDiRoomKosong - role dari undangan tidak
+// boleh dinaikkan aturan "orang pertama jadi owner".
+func TestUndanganViewerTidakNaikJadiOwnerDiRoomKosong(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Stop()
+
+	inv := hub.Invites().Create("room-9", RoomRoleViewer, "user-owner", time.Hour)
+	viewer := newTestClient(hub, "room-9", "user-viewer", "Sari")
+	viewer.RoomRole = hub.ResolveRoomRole("room-9", "user-viewer", inv.Token)
+	viewer.RoleFromInvite = true
+	hub.registerClient(viewer)
+
+	if viewer.RoomRole != RoomRoleViewer {
+		t.Fatalf("undangan viewer harus tetap viewer walau room kosong, dapat %q", viewer.RoomRole)
+	}
+}
+
+// TestRoomRoleOf - dasar pemeriksaan izin endpoint invite/revoke.
+func TestRoomRoleOf(t *testing.T) {
+	hub := NewHub()
+	go hub.Run()
+	defer hub.Stop()
+
+	hub.registerClient(newTestClient(hub, "room-10", "user-owner", "Budi"))
+
+	if got := hub.RoomRoleOf("room-10", "user-owner"); got != RoomRoleOwner {
+		t.Fatalf("anggota room harus mengembalikan rolenya, dapat %q", got)
+	}
+	if got := hub.RoomRoleOf("room-10", "user-asing"); got != "" {
+		t.Fatalf("bukan anggota harus kosong, dapat %q", got)
+	}
+	if got := hub.RoomRoleOf("room-entah", "user-owner"); got != "" {
+		t.Fatalf("room tidak dikenal harus kosong, dapat %q", got)
 	}
 }
 
@@ -109,7 +170,7 @@ func TestSecondTabInheritsRoomRole(t *testing.T) {
 	}
 
 	tabB := newTestClient(hub, "room-4", "user-1", "Budi")
-	tabB.RoomRole = RoomRoleEditor // hasil ResolveRoomRole untuk room yang sudah ada isinya
+	tabB.RoomRole = hub.ResolveRoomRole("room-4", "user-1", "") // seperti koneksi sungguhan
 	hub.registerClient(tabB)
 
 	if tabB.RoomRole != RoomRoleOwner {

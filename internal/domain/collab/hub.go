@@ -103,8 +103,10 @@ func (h *Hub) registerClient(client *Client) {
 	for existing := range room.clients {
 		if existing.UserID != "" && existing.UserID == client.UserID && existing != client {
 			// Tab baru mewarisi room role tab lama supaya owner tidak turun
-			// jadi editor hanya karena membuka tab kedua.
-			if client.RoomRole == "" || client.RoomRole == RoomRoleEditor {
+			// hanya karena membuka tab kedua. Satu orang di satu room selalu
+			// punya satu role — kecuali koneksi ini memang datang membawa
+			// undangan yang menetapkan role lain.
+			if !client.RoleFromInvite {
 				client.RoomRole = existing.RoomRole
 			}
 			alreadyPresent = true
@@ -116,13 +118,18 @@ func (h *Hub) registerClient(client *Client) {
 		if client.RoomRole == "" || client.RoomRole == RoomRoleEditor {
 			client.RoomRole = remembered
 		}
-	} else if isFirst && client.RoomRole != RoomRoleViewer {
-		// Orang pertama di room jadi owner — kecuali dia masuk lewat invite
-		// "viewer", yang memang sengaja dibatasi hanya boleh menonton.
+	} else if isFirst && !client.RoleFromInvite {
+		// Orang pertama di room jadi owner — kecuali rolenya datang dari
+		// undangan, yang memang sengaja ditetapkan pengundang.
+		//
+		// Penanda invite dipakai di sini, bukan "role != viewer": sejak join
+		// tanpa undangan default-nya viewer, mengecek nilai role akan membuat
+		// orang yang datang tepat saat room kosong terkunci sebagai viewer di
+		// room miliknya sendiri.
 		client.RoomRole = RoomRoleOwner
 	}
 	if client.RoomRole == "" {
-		client.RoomRole = RoomRoleEditor
+		client.RoomRole = RoomRoleViewer
 	}
 	if client.UserID != "" {
 		room.roles[client.UserID] = client.RoomRole
@@ -418,7 +425,28 @@ func (h *Hub) ResolveRoomRole(roomID, userID, inviteToken string) string {
 	if room.GetClientCount() == 0 {
 		return RoomRoleOwner
 	}
-	return RoomRoleEditor
+	// Masuk hanya berbekal ?room= tanpa undangan = hanya boleh menonton.
+	// Sebelumnya default-nya editor, sehingga link room yang diteruskan ke
+	// siapa pun langsung memberi hak mengubah data — hak edit sekarang harus
+	// datang dari undangan bertoken yang dibuat owner/editor.
+	return RoomRoleViewer
+}
+
+// RoomRoleOf - role seseorang di sebuah room; "" kalau dia bukan anggota.
+//
+// Dipakai endpoint HTTP (invite/revoke) untuk memeriksa izin, karena di sana
+// tidak ada *Client yang bisa ditanya.
+func (h *Hub) RoomRoleOf(roomID, userID string) string {
+	if roomID == "" || userID == "" {
+		return ""
+	}
+	h.mu.RLock()
+	room, exists := h.rooms[roomID]
+	h.mu.RUnlock()
+	if !exists {
+		return ""
+	}
+	return room.RememberedRole(userID)
 }
 
 // cleanupInactiveRooms - hapus room yang sudah kosong (dipanggil ticker tiap 30 detik) agar memori tidak bocor

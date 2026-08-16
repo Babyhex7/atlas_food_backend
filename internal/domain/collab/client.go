@@ -25,6 +25,11 @@ type Client struct {
 	Username        string
 	Role            string // JWT app role (admin/respondent)
 	RoomRole        string // per-room: owner|editor|viewer
+	// RoleFromInvite menandai role yang berasal dari token undangan. Role
+	// semacam itu tidak boleh dinaikkan oleh aturan "orang pertama jadi owner":
+	// undangan viewer harus tetap viewer meski dia kebetulan masuk saat room
+	// sedang kosong.
+	RoleFromInvite  bool
 	FollowingUserID string // Figma-like follow target
 	Viewport        map[string]interface{}
 	send            chan *Message
@@ -36,7 +41,8 @@ type Client struct {
 // NewClient creates a new WebSocket client
 func NewClient(conn *websocket.Conn, hub *Hub, roomID, userID, username, role, roomRole string) *Client {
 	if roomRole == "" {
-		roomRole = RoomRoleEditor
+		// Fail-closed: role yang tidak diketahui hanya boleh menonton.
+		roomRole = RoomRoleViewer
 	}
 	return &Client{
 		conn:     conn,
