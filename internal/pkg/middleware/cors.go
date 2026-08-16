@@ -18,6 +18,10 @@ func CORS() gin.HandlerFunc {
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
 		c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization, Accept, Origin, Cache-Control, X-Requested-With")
 		c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS, PATCH")
+		// Tanpa ini, browser strip header Content-Disposition dari response
+		// cross-origin sehingga frontend tidak bisa baca nama file asli saat
+		// download (mis. export CSV survey).
+		c.Writer.Header().Set("Access-Control-Expose-Headers", "Content-Disposition")
 
 		// Handle preflight request
 		if c.Request.Method == "OPTIONS" {
