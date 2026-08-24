@@ -224,6 +224,13 @@ func (h *Hub) unregisterClient(client *Client) {
 
 	log.Printf("❌ Client %s left room %s (remaining: %d)", client.UserID, client.RoomID, remaining)
 
+	// Bubble cursor chat yang masih terbuka harus ikut hilang di layar peer —
+	// tanpa ini bubble jadi "hantu" tertinggal selamanya kalau user disconnect
+	// mendadak (tutup tab/refresh) di tengah mengetik.
+	if client.ChatBubble != nil {
+		h.broadcastToRoom(room, newMessage(MsgCursorChatClosed, client.RoomID, client.UserID, client.Username, map[string]interface{}{}), nil)
+	}
+
 	// Beritahu follower secara eksplisit agar banner "Following…" ikut hilang di FE
 	for _, follower := range detachedFollowers {
 		stopped := newMessage(MsgFollowStopped, client.RoomID, follower.UserID, follower.Username, map[string]interface{}{

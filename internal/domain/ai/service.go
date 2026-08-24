@@ -69,7 +69,15 @@ func (s *service) AnalyzeNutrition(userID string, req NutritionAnalysisRequest) 
 	}
 
 	payloadBytes, _ := json.MarshalIndent(inputPayload, "", "  ")
-	systemPrompt := `Analyze the submission and return only valid JSON with keys overall_status, overall_message, nutritional_analysis, ai_recommendation, recommended_foods, health_insight, suggested_activities.`
+	// Prompt ini hanya menjelaskan BENTUK INPUT. Skema output, bahasa, dan angka
+	// rujukan AKG dipegang groq.Client agar satu tempat saja yang mendefinisikannya.
+	systemPrompt := `INPUT adalah satu submission food recall 24 jam:
+- meals_data: daftar waktu makan beserta makanan dan porsinya
+- missing_foods: makanan yang dilaporkan responden tapi belum ada di database (boleh kosong)
+- daily_total: total energi (kkal), protein (g), karbohidrat (g), lemak (g) sehari
+
+Analisis daily_total terhadap angka rujukan, lalu perhatikan pola meals_data
+(waktu makan yang terlewat, keragaman bahan) saat menyusun rekomendasi.`
 	result, err := s.groq.Analyze(systemPrompt, string(payloadBytes))
 	if err != nil {
 		if appErr, ok := err.(*utils.AppError); ok {

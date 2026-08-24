@@ -33,7 +33,17 @@ const (
 	MsgChatMessage    = "chat_message"
 	MsgGetHistory     = "get_history"
 	MsgPing           = "ping"
+
+	// Cursor chat (ala Figma "/"): bubble teks ephemeral yang nempel di kursor,
+	// terpisah dari MsgChatMessage (panel chat biasa) — lihat
+	// docs/superpowers/specs/2026-08-16-cursor-chat-prd.md
+	MsgCursorChatOpen   = "cursor_chat_open"
+	MsgCursorChatUpdate = "cursor_chat_update"
+	MsgCursorChatClose  = "cursor_chat_close"
 )
+
+// cursorChatMaxTextLen - batas panjang teks bubble; cegah payload nakal membanjiri broadcast
+const cursorChatMaxTextLen = 200
 
 // Room collaboration roles (per-room, bukan JWT role aplikasi)
 const (
@@ -44,32 +54,34 @@ const (
 
 // Server → Client message types
 const (
-	MsgPresenceList     = "presence_list"
-	MsgPresenceJoined   = "presence_joined"
-	MsgPresenceLeft     = "presence_left"
-	MsgUserJoined       = "user_joined" // legacy alias
-	MsgUserLeft         = "user_left"   // legacy alias
-	MsgCursorUpdate     = "cursor_update"
-	MsgViewportSync     = "viewport_sync" // mirror ke follower
-	MsgFollowStarted    = "follow_started"
-	MsgFollowStopped    = "follow_stopped"
-	MsgFollowState      = "follow_state" // snapshot follow graph
-	MsgUserSearching    = "user_searching"
-	MsgFoodSearchShared = "food_search_shared"
-	MsgFoodSelected     = "food_selected"
-	MsgMealUpdated      = "meal_updated"
-	MsgPortionUpdated   = "portion_updated"
-	MsgPortionSelected  = "portion_selected" // legacy alias
-	MsgReviewSubmitted  = "review_submitted"
-	MsgDBLocked         = "db_locked"
-	MsgDBFieldUpdated   = "db_field_updated"
-	MsgDBEditSaved      = "db_edit_saved"
-	MsgDBUnlocked       = "db_unlocked"
-	MsgActivityLog      = "activity_log"
-	MsgError            = "error"
-	MsgPong             = "pong"
-	MsgHistory          = "history"
-	MsgStateSync        = "state_sync"
+	MsgPresenceList      = "presence_list"
+	MsgPresenceJoined    = "presence_joined"
+	MsgPresenceLeft      = "presence_left"
+	MsgUserJoined        = "user_joined" // legacy alias
+	MsgUserLeft          = "user_left"   // legacy alias
+	MsgCursorUpdate      = "cursor_update"
+	MsgViewportSync      = "viewport_sync" // mirror ke follower
+	MsgFollowStarted     = "follow_started"
+	MsgFollowStopped     = "follow_stopped"
+	MsgFollowState       = "follow_state" // snapshot follow graph
+	MsgUserSearching     = "user_searching"
+	MsgFoodSearchShared  = "food_search_shared"
+	MsgFoodSelected      = "food_selected"
+	MsgMealUpdated       = "meal_updated"
+	MsgPortionUpdated    = "portion_updated"
+	MsgPortionSelected   = "portion_selected" // legacy alias
+	MsgReviewSubmitted   = "review_submitted"
+	MsgDBLocked          = "db_locked"
+	MsgDBFieldUpdated    = "db_field_updated"
+	MsgDBEditSaved       = "db_edit_saved"
+	MsgDBUnlocked        = "db_unlocked"
+	MsgActivityLog       = "activity_log"
+	MsgError             = "error"
+	MsgPong              = "pong"
+	MsgHistory           = "history"
+	MsgStateSync         = "state_sync"
+	MsgCursorChatUpdated = "cursor_chat_updated"
+	MsgCursorChatClosed  = "cursor_chat_closed"
 )
 
 // newMessage - helper pembuat Message dengan timestamp sekarang dan payload non-nil

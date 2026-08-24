@@ -75,10 +75,10 @@ func Load() *Config {
 
 		// Groq AI config
 		GroqAPIKey:      getEnv("GROQ_API_KEY", ""),
-		GroqModel:       getEnv("GROQ_MODEL", "llama3-8b-8192"),
+		GroqModel:       getEnv("GROQ_MODEL", "llama-3.3-70b-versatile"),
 		GroqBaseURL:     getEnv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
-		GroqTimeoutSecs: parseInt(getEnv("GROQ_TIMEOUT_SECONDS", "15")),
-		GroqMaxTokens:   parseInt(getEnv("GROQ_MAX_TOKENS", "512")),
+		GroqTimeoutSecs: parseInt(getEnv("GROQ_TIMEOUT_SECONDS", "45")),
+		GroqMaxTokens:   parseInt(getEnv("GROQ_MAX_TOKENS", "2048")),
 
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),

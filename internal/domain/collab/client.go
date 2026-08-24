@@ -18,13 +18,13 @@ const (
 
 // Client represents a WebSocket client
 type Client struct {
-	conn            *websocket.Conn
-	hub             *Hub
-	RoomID          string
-	UserID          string
-	Username        string
-	Role            string // JWT app role (admin/respondent)
-	RoomRole        string // per-room: owner|editor|viewer
+	conn     *websocket.Conn
+	hub      *Hub
+	RoomID   string
+	UserID   string
+	Username string
+	Role     string // JWT app role (admin/respondent)
+	RoomRole string // per-room: owner|editor|viewer
 	// RoleFromInvite menandai role yang berasal dari token undangan. Role
 	// semacam itu tidak boleh dinaikkan oleh aturan "orang pertama jadi owner":
 	// undangan viewer harus tetap viewer meski dia kebetulan masuk saat room
@@ -32,6 +32,7 @@ type Client struct {
 	RoleFromInvite  bool
 	FollowingUserID string // Figma-like follow target
 	Viewport        map[string]interface{}
+	ChatBubble      map[string]interface{} // cursor chat aktif client ini: {x, y, text}; nil kalau tidak ada
 	send            chan *Message
 	lastMessageTime time.Time
 	messageCount    int
@@ -186,6 +187,15 @@ func (c *Client) handleMessage(msg *Message) {
 	case MsgUnfollowUser:
 		c.handleUnfollowUser()
 
+	case MsgCursorChatOpen:
+		c.handleCursorChatOpen(msg)
+
+	case MsgCursorChatUpdate:
+		c.handleCursorChatUpdate(msg)
+
+	case MsgCursorChatClose:
+		c.handleCursorChatClose()
+
 	case MsgFoodSearch:
 		if !c.canEdit() {
 			c.sendError("FORBIDDEN", "Viewer hanya bisa mengikuti — tidak bisa mencari bersama")
@@ -286,13 +296,13 @@ func (c *Client) handleViewportUpdate(msg *Message) {
 	}
 	// Simpan viewport leader untuk follower yang baru join follow
 	c.Viewport = map[string]interface{}{
-		"page":       payloadString(payload, "page"),
-		"scroll_x":   payload["scroll_x"],
-		"scroll_y":   payload["scroll_y"],
-		"step":       payloadString(payload, "step"),
-		"path":       payloadString(payload, "path"),
-		"zoom":       payload["zoom"],
-		"timestamp":  time.Now().UnixMilli(),
+		"page":      payloadString(payload, "page"),
+		"scroll_x":  payload["scroll_x"],
+		"scroll_y":  payload["scroll_y"],
+		"step":      payloadString(payload, "step"),
+		"path":      payloadString(payload, "path"),
+		"zoom":      payload["zoom"],
+		"timestamp": time.Now().UnixMilli(),
 	}
 	payload["color"] = colorForUser(c.UserID)
 	payload["display_name"] = c.Username
@@ -366,6 +376,55 @@ func (c *Client) handleUnfollowUser() {
 		leader.sendQuiet(stopped)
 	}
 	c.hub.broadcastToRoom(room, c.hub.buildFollowState(room), nil)
+}
+
+// clampCursorChatText - trim & potong teks bubble ke batas aman sebelum disimpan/disiarkan
+func clampCursorChatText(raw string) string {
+	if len(raw) > cursorChatMaxTextLen {
+		raw = raw[:cursorChatMaxTextLen]
+	}
+	return raw
+}
+
+// broadcastCursorChatState - siarkan state bubble client ini (posisi + teks tersimpan di c.ChatBubble)
+func (c *Client) broadcastCursorChatState() {
+	payload := map[string]interface{}{
+		"x":         c.ChatBubble["x"],
+		"y":         c.ChatBubble["y"],
+		"text":      c.ChatBubble["text"],
+		"color":     colorForUser(c.UserID),
+		"room_role": c.RoomRole,
+	}
+	c.hub.Publish(newMessage(MsgCursorChatUpdated, c.RoomID, c.UserID, c.Username, payload))
+}
+
+// handleCursorChatOpen - buka bubble chat baru di posisi kursor saat ini (dipicu tombol "/" di FE).
+// Posisi di-anchor sekali di sini dan tidak berubah lagi selama bubble ini terbuka.
+func (c *Client) handleCursorChatOpen(msg *Message) {
+	c.ChatBubble = map[string]interface{}{
+		"x":    msg.Payload["x"],
+		"y":    msg.Payload["y"],
+		"text": clampCursorChatText(payloadString(msg.Payload, "text")),
+	}
+	c.broadcastCursorChatState()
+}
+
+// handleCursorChatUpdate - perbarui teks bubble yang sedang terbuka; diabaikan kalau belum ada open
+func (c *Client) handleCursorChatUpdate(msg *Message) {
+	if c.ChatBubble == nil {
+		return
+	}
+	c.ChatBubble["text"] = clampCursorChatText(payloadString(msg.Payload, "text"))
+	c.broadcastCursorChatState()
+}
+
+// handleCursorChatClose - tutup bubble (Enter/Esc/timeout di FE) dan beritahu room agar bubble dihapus
+func (c *Client) handleCursorChatClose() {
+	if c.ChatBubble == nil {
+		return
+	}
+	c.ChatBubble = nil
+	c.hub.Publish(newMessage(MsgCursorChatClosed, c.RoomID, c.UserID, c.Username, map[string]interface{}{}))
 }
 
 // handleFoodSearch - siarkan kata kunci pencarian makanan ke seluruh anggota room + catat activity log

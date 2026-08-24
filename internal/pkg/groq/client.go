@@ -90,17 +90,34 @@ func (c *Client) Analyze(systemPrompt, userPrompt string) (*Result, error) {
 	systemPrompt = strings.TrimSpace(systemPrompt)
 	userPrompt = strings.TrimSpace(userPrompt)
 
-	fullSystemPrompt := `You are a nutrition analyst for meal recall data. Return ONLY valid JSON matching this schema:
+	fullSystemPrompt := `You are a nutrition analyst reviewing 24-hour food recall data from Indonesia.
+
+OUTPUT LANGUAGE: every human-readable string you produce (overall_message, description,
+ai_recommendation, recommended_foods, health_insight, suggested_activities) MUST be written
+in Bahasa Indonesia. Only the enum values below stay in English.
+
+REFERENCE (Angka Kecukupan Gizi, rata-rata dewasa Indonesia, per hari):
+energi 2150 kkal, protein 60 g, karbohidrat 320 g, lemak 65 g.
+Bandingkan daily_total terhadap angka ini. Toleransi +/-10% dihitung "good";
+di bawahnya "low"/"less", di atasnya "high"/"excess".
+
+Return ONLY valid JSON matching this schema:
 {
   "overall_status": "good|less|excess",
   "overall_message": "string",
-  "nutritional_analysis": [{"label":"Calories|Protein|Balance","status":"low|partial|good|high","description":"string"}],
+  "nutritional_analysis": [{"label":"Energi|Protein|Karbohidrat|Lemak","status":"low|partial|good|high","description":"string"}],
   "ai_recommendation": "string",
   "recommended_foods": ["string"],
   "health_insight": {"title":"string","description":"string"},
   "suggested_activities": ["string"]
 }
-Do not add markdown fences. Keep recommendations practical and concise.`
+
+RULES:
+- nutritional_analysis harus berisi tepat 4 item, satu untuk tiap label di atas, urut sesuai daftar.
+- recommended_foods: 3-5 nama makanan Indonesia yang benar-benar mudah didapat.
+- suggested_activities: 2-4 aktivitas fisik yang realistis.
+- Setiap description maksimal 2 kalimat. Jangan mengarang angka yang tidak ada di input.
+- Jangan menambahkan pagar markdown atau teks apa pun di luar objek JSON.`
 
 	reqBody := groqRequest{
 		Model: c.model,
