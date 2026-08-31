@@ -335,9 +335,10 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 // Server adalah satu-satunya sumber kebenaran identitas di dalam room.
 func (h *Hub) buildStateSync(room *Room, client *Client) *Message {
 	return newMessage(MsgStateSync, room.ID, "", "", map[string]interface{}{
-		"locks":   h.locks.Snapshot(),
-		"history": room.GetHistory(30),
-		"room_id": room.ID,
+		"locks":          h.locks.Snapshot(),
+		"history":        room.GetHistory(30),
+		"canvas_strokes": room.GetCanvasStrokes(),
+		"room_id":        room.ID,
 		"self": map[string]interface{}{
 			"user_id":      client.UserID,
 			"username":     client.Username,
