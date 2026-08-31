@@ -66,9 +66,9 @@ func Load() *Config {
 		JWTExpiration:          parseDuration(getEnv("JWT_EXPIRATION", "24h")),
 		RefreshTokenExpiration: parseDuration(getEnv("REFRESH_TOKEN_EXPIRATION", "168h")),
 
-		// Server config
-		ServerPort: getEnv("SERVER_PORT", "8080"),
-		ServerMode: getEnv("SERVER_MODE", "debug"),
+		// Server config (Railway/Render secara otomatis menyuntikkan PORT)
+		ServerPort: getEnv("PORT", getEnv("SERVER_PORT", "8080")),
+		ServerMode: getEnv("SERVER_MODE", "release"),
 
 		// Frontend config
 		FrontendURL: getEnv("FRONTEND_URL", "http://localhost:3000"),
