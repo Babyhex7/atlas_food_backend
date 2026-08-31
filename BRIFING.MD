@@ -1,4 +1,4 @@
-# 🎯 Atlas Food — MVP SUPER MINIMAL
+# 🎯 Atlas Food — MVP BRIEFING (17 Tabel)
 
 > Food recall survey platform (inspired by Intake24). Versi minimal yang bisa jalan.
 > Fitur non-esensial ditandai "NANTI AJA".
@@ -198,7 +198,7 @@ Link ──▶ Step 1 ──▶ Step 2 ──▶ Step 3 ──▶ Step 4 ──�
 
 ---
 
-## 🗄️ TABEL MVP (16 TABEL)
+## 🗄️ TABEL MVP (17 TABEL)
 
 ### 1. Auth (Minimal)
 
@@ -597,6 +597,7 @@ INSERT INTO food_portion_size_methods (food_id, method_type, label, description,
   "placeholder": "Enter grams..."
 }
 ');
+````
 
 **Contoh Data Images:**
 
@@ -701,7 +702,11 @@ INSERT INTO associated_foods (food_id, associated_food_id, priority, is_default)
 -- Nasi goreng → telur
 ('uuid-nasi-goreng', 'uuid-telur', 1, FALSE);
 
--- 🔌 API MVP (Minimal)
+```
+
+---
+
+## 🔌 Rumus Kalkulasi Porsi
 
 **1. Image Method (As Served - untuk Food & Drinks):**
 
@@ -818,7 +823,7 @@ CREATE TABLE survey_submissions (
     -- Missing foods (kalau user ketik makanan ga ketemu di DB)
     missing_foods JSON,
 
-    submitted_at TIMESTAMP NOT PNULL,
+    submitted_at TIMESTAMP NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
     FOREIGN KEY (survey_id) REFERENCES surveys(id) ON DELETE CASCADE,
@@ -893,6 +898,9 @@ GET  /as-served-sets/:code/images                # Get portion images (food & dr
 GET  /categories              # List kategori
 
 POST /survey/submit         # Submit final (meals di JSON)
+
+# 🤖 AI Nutrition Analysis (on-demand)
+POST /ai/nutrition-analysis # Analisis nutrisi submission dengan Groq AI
 ```
 
 **SKIP (NANTI AJA):**
@@ -1157,7 +1165,7 @@ internal/domain/portion/
 ### Phase 3: Food DB + Portion Size (Week 2-3)
 
 - [ ] Tabel `categories`
-- [ ] Tabel `foods` (tanpa nutrisi JSON - pake tabel terpisah)
+- [ ] Tabel `foods` (nutrisi disimpan di tabel terpisah, bukan JSON)
 - [ ] Tabel `food_categories`
 - [ ] 🔥 Tabel `nutrient_units`, `nutrient_types`, `food_nutrients`
 - [ ] 🔥 Tabel `associated_foods` (sereal → susu)
@@ -1181,10 +1189,19 @@ internal/domain/portion/
 - [ ] API Submit dengan meals JSON
 - [ ] Admin: Lihat submissions & Export CSV
 
+### Phase 5: AI Nutrition Analysis (Week 4 — 1-2 hari)
+
+- [ ] 🤖 Daftar Groq API Key (gratis di console.groq.com)
+- [ ] 🤖 Buat `internal/pkg/groq/client.go`
+- [ ] 🤖 Buat domain `internal/domain/ai/` (handler, service, repository, dto)
+- [ ] 🤖 Migration tabel `ai_result_logs`
+- [ ] 🤖 Endpoint `POST /ai/nutrition-analysis` (cache by submission_id)
+- [ ] 🤖 Frontend: Tombol "AI Recommendation" di halaman hasil submission
+
 ### SKIP (NANTI AJA setelah MVP jalan):
 
 - [ ] Session auto-save (DB) - pake localStorage dulu
-- [ ] Respondent register/login
+- [ ] Respondent register/login mandiri
 - [ ] Advanced food search (synonyms, fuzzy)
 - [ ] Multi-language (i18n file JSON dulu)
 - [ ] RBAC roles & permissions
@@ -1264,37 +1281,39 @@ internal/domain/portion/
 
 ## ❌ YANG DI-SKIP (NANTI AJA)
 
-| Fitur                        | Alasan Skip                     |
-| ---------------------------- | ------------------------------- |
-| **Semua portion gambar**     | Complex, butuh image processing |
-| **Tabel nutrisi terpisah**   | JSON cukup buat MVP             |
-| **Synonyms & fuzzy search**  | MySQL FULLTEXT cukup dulu       |
-| **Associated foods**         | Bisa ditambah di form manual    |
-| **Session auto-save DB**     | localStorage frontend cukup     |
-| **RBAC kompleks**            | 1 field `role` enum cukup       |
-| **Language translations DB** | next-intl file JSON cukup       |
-| **Email service**            | Skip, password reset nanti      |
-| **Social login**             | Email/pass dulu                 |
+| Fitur                        | Alasan Skip                              |
+| ---------------------------- | ---------------------------------------- |
+| **Drinkware sets/scales**    | Drinks pakai `as_served` aja             |
+| **Synonyms & fuzzy search**  | MySQL FULLTEXT cukup dulu                |
+| **Session auto-save DB**     | `localStorage` frontend cukup           |
+| **RBAC kompleks**            | 1 field `role` enum cukup                |
+| **Language translations DB** | next-intl file JSON cukup                |
+| **Email service**            | Skip, password reset nanti              |
+| **Social login**             | Email/pass dulu                          |
+| **Multiple nutrient sources**| USDA/BPOM — single source cukup MVP     |
+| **Guide images**             | Area-based portions — as_served dulu    |
+| **Image processing auto**    | Upload manual dulu (resize, thumbnail)  |
 
 ---
 
 ## 🏁 FINAL: MASUK MVP V2 vs SKIP (Penjelasan Lengkap)
 
-### ✅ MASUK MVP V2 (16 Tabel + Fitur)
+### ✅ MASUK MVP V2 (17 Tabel + Fitur)
 
-| #   | Fitur/Tabel             | Penjelasan                                            | Kenapa Masuk                     |
-| --- | ----------------------- | ----------------------------------------------------- | -------------------------------- |
-| 1   | **Login/Auth**          | JWT + Refresh Token                                   | Core requirement                 |
-| 2   | **Surveys**             | Create, manage, share link                            | Core requirement                 |
-| 3   | **Food Database**       | Makanan + kategori + 🔥 nutrisi tabel                 | Core requirement                 |
-| 4   | **🔥 Portion Images**   | Langsung pilih gambar porsi (tanpa pilih metode dulu) | **WAJIB** - simple & cepat       |
-| 5   | **🔥 As Served Sets**   | Foto porsi ½,1,1½,2,3 + berat (food **& drinks!**)    | **WAJIB** - visual portion guide |
-| 6   | **🔥 Nutrisi Tabel**    | nutrient_types, nutrient_units, food_nutrients        | **WAJIB** - perhitungan akurat   |
-| 8   | **🔥 Associated Foods** | Sereal → susu, Roti → Selai                           | **WAJIB** - UX lebih baik        |
-| 9   | **Input Flow**          | Add makanan → Continue → Portion (langsung)           | **WAJIB** - 4 step saja          |
-| 10  | **Submission JSON**     | Simpan hasil recall                                   | Core requirement                 |
+| #   | Fitur/Tabel             | Penjelasan                                            | Kenapa Masuk                        |
+| --- | ----------------------- | ----------------------------------------------------- | ----------------------------------- |
+| 1   | **Login/Auth**          | JWT + Refresh Token                                   | Core requirement                    |
+| 2   | **Surveys**             | Create, manage, share link                            | Core requirement                    |
+| 3   | **Food Database**       | Makanan + kategori + nutrisi tabel                    | Core requirement                    |
+| 4   | **🔥 Portion Images**   | Langsung pilih gambar porsi (tanpa pilih metode dulu) | **WAJIB** - simple & cepat          |
+| 5   | **🔥 As Served Sets**   | Foto porsi ½,1,1½,2,3 + berat (food **& drinks!**)    | **WAJIB** - visual portion guide    |
+| 6   | **🔥 Nutrisi Tabel**    | nutrient_types, nutrient_units, food_nutrients        | **WAJIB** - perhitungan akurat      |
+| 7   | **🔥 Associated Foods** | Sereal → susu, Roti → Selai                           | **WAJIB** - UX lebih baik           |
+| 8   | **Input Flow**          | Add makanan → Continue → Portion (langsung)           | **WAJIB** - 4 step saja             |
+| 9   | **Submission JSON**     | Simpan hasil recall                                   | Core requirement                    |
+| 10  | **🤖 AI Analysis**      | Groq AI untuk analisis nutrisi & rekomendasi          | **WAJIB** - nilai tambah utama      |
 
-**Total: 16 Tabel**
+**Total: 17 Tabel**
 
 - `users`, `refresh_tokens`
 - `surveys`, `survey_participants`
@@ -1302,9 +1321,10 @@ internal/domain/portion/
 - `categories`, `foods`, `food_categories`
 - `food_portion_size_methods` 🔥
 - `as_served_sets`, `as_served_images` 🔥 (juga untuk drinks!)
-- 🔥 `nutrient_units`, `nutrient_types`, `food_nutrients`
-- 🔥 `associated_foods`
+- `nutrient_units`, `nutrient_types`, `food_nutrients` 🔥
+- `associated_foods` 🔥
 - `survey_submissions`
+- `ai_result_logs` 🤖 ← tabel ke-17
 
 > 💡 **Note:** `drinkware_sets` & `drinkware_scales` **DI-SKIP** - drinks pakai `as_served` aja!
 
@@ -1346,7 +1366,7 @@ internal/domain/portion/
 
 ---
 
-### 🎯 Kesimpusan
+### 🎯 Kesimpulan
 
 **MVP V2 Fokus ke:**
 
@@ -1359,10 +1379,13 @@ internal/domain/portion/
 
 ```
 Link ──▶ Pilih Waktu ──▶ Add Foods/Drinks ──▶ Continue ──▶
-Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit
+Portion Selection (langsung gambar!) ──▶ Review ──▶ Submit ──▶
+[Opsional] AI Recommendation Button ──▶ Analisis Nutrisi
 ```
 
 **Simplify:** Tidak ada step "Pilih Metode" (In a plate/glass/weight) — langsung tampilkan gambar porsi + input manual dalam satu layar!
+
+> 💡 **AI Button** muncul setelah submit di halaman hasil. Dipanggil on-demand, tidak memperlambat proses submit.
 
 ---
 
@@ -1602,11 +1625,12 @@ uuid-123,Budi,Sarapan,Telur Goreng,60,90,6,1,6
 
 **Checklist Pra-Develop:**
 
-- [ ] Setup: Node.js + MySQL + Git
-- [ ] Design DB: Jalankan SQL schema
-- [ ] Seed: Insert data makanan Indonesia
+- [ ] Setup: **Go** (backend) + Node.js (frontend) + MySQL + Git
+- [ ] Design DB: Jalankan SQL schema (17 tabel)
+- [ ] Seed: Insert data makanan Indonesia (~100 item)
 - [ ] API: Postman collection ready
-- [ ] Frontend: Next.js + shadcn/ui installed
+- [ ] Frontend: Next.js + Tailwind + shadcn/ui installed
+- [ ] AI: Daftar Groq API Key gratis di console.groq.com
 
 **Estimasi Waktu:**
 
@@ -1614,9 +1638,68 @@ uuid-123,Budi,Sarapan,Telur Goreng,60,90,6,1,6
 - Phase 2 (Survey): 3-4 hari
 - Phase 3 (Food + Portion): 5-7 hari
 - Phase 4 (Flow + Submit): 5-7 hari
+- Phase 5 (AI Groq): 1-2 hari
 - Polish & Bugfix: 3-5 hari
 
 **Total: 3-4 minggu untuk MVP** ✅
+
+---
+
+_Versi ini realistis untuk 1 developer dalam 1 bulan._
+
+---
+
+## 🤖 AI INTEGRATION (Groq — Ringkasan Cepat)
+
+> Detail lengkap: lihat `docs/brif_ai.md`
+
+### Kapan AI dipanggil?
+
+**BUKAN saat submit.** AI dipanggil **on-demand** ketika respondent/admin menekan tombol **"AI Recommendation"** di halaman hasil submission.
+
+```
+Submit Survey
+  └──▶ Backend simpan submission + hitung nutrisi  (cepat, tanpa AI)
+       └──▶ Halaman hasil tampil langsung
+            └──▶ [Tombol AI Recommendation]
+                 └──▶ POST /ai/nutrition-analysis { submission_id }
+                      └──▶ Backend → Groq LLM → return JSON hasil analisis
+```
+
+### Tabel tambahan: `ai_result_logs` (Tabel ke-17)
+
+```sql
+CREATE TABLE ai_result_logs (
+    id              CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    submission_id   CHAR(36) NOT NULL UNIQUE,  -- 1 submission = 1 hasil AI (cache)
+    input_payload   JSON NOT NULL,
+    raw_response    JSON NOT NULL,
+    overall_status  ENUM('good', 'less', 'excess') NOT NULL,
+    model_used      VARCHAR(50) NOT NULL DEFAULT 'llama3-8b-8192',
+    token_used      INT,
+    latency_ms      INT,
+    created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (submission_id) REFERENCES survey_submissions(id) ON DELETE CASCADE
+);
+```
+
+### Output AI
+
+| Field | Contoh |
+| --- | --- |
+| `overall_status` | `"good"` / `"less"` / `"excess"` |
+| `overall_message` | Narasi kondisi gizi |
+| `nutritional_analysis` | Array 3 item: Calories, Protein, Balance |
+| `ai_recommendation` | Tips perbaikan gizi |
+| `recommended_foods` | 6-8 nama makanan yang disarankan |
+| `suggested_activities` | 2-4 aktivitas fisik ringan |
+
+### Keamanan & Performa
+
+- **Cache by `submission_id`** — panggil Groq hanya 1x per submission
+- **Groq gratis** — ~14.400 req/hari (lebih dari cukup untuk MVP)
+- **API key di backend** — `GROQ_API_KEY` jangan pernah bocor ke frontend
+- **Latency Groq** — ~300-800ms, tampilkan loading spinner di tombol
 
 ---
 
