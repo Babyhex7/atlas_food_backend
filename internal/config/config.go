@@ -54,12 +54,12 @@ func Load() *Config {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		// Database config
-		DBHost:     getEnv("DB_HOST", "localhost"),
-		DBPort:     getEnv("DB_PORT", "3306"),
-		DBUser:     getEnv("DB_USER", "root"),
-		DBPassword: getEnv("DB_PASSWORD", ""),
-		DBName:     getEnv("DB_NAME", "atlas_food"),
+		// Database config (Otomatis membaca variabel standar Railway MySQL: MYSQLHOST, MYSQLPASSWORD, dll)
+		DBHost:     getEnv("DB_HOST", getEnv("MYSQLHOST", "localhost")),
+		DBPort:     getEnv("DB_PORT", getEnv("MYSQLPORT", "3306")),
+		DBUser:     getEnv("DB_USER", getEnv("MYSQLUSER", "root")),
+		DBPassword: getEnv("DB_PASSWORD", getEnv("MYSQLPASSWORD", getEnv("MYSQL_ROOT_PASSWORD", ""))),
+		DBName:     getEnv("DB_NAME", getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", "db_atlas_food"))),
 
 		// JWT config
 		JWTSecret:              getEnv("JWT_SECRET", "default-secret-key-minimal-32-chars"),
