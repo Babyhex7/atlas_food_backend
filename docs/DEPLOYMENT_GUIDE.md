@@ -89,8 +89,8 @@ GROQ_MODEL=llama-3.3-70b-versatile
 4. Di bagian **Environment Variables**, tambahkan:
 
 ```env
-# API Backend di Railway
-NEXT_PUBLIC_API_BASE_URL=https://atlas-food-backend-production.up.railway.app/api/v1
+# API Backend di Railway (NEXT_PUBLIC_API_URL & NEXT_PUBLIC_API_BASE_URL didukung otomatis)
+NEXT_PUBLIC_API_URL=https://atlas-food-backend-production.up.railway.app/api/v1
 
 # WebSocket Backend di Railway (wajib gunakan wss:// untuk HTTPS)
 NEXT_PUBLIC_WS_BASE_URL=wss://atlas-food-backend-production.up.railway.app/api/v1
