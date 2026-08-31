@@ -12,6 +12,20 @@ import (
 // InitDB - inisialisasi koneksi ke database MySQL
 // Mengembalikan pointer ke gorm.DB untuk digunakan di seluruh aplikasi
 func InitDB(cfg *Config) *gorm.DB {
+	// Buat database otomatis jika belum ada (berguna saat first deploy di Railway/Cloud)
+	dsnRoot := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
+		cfg.DBUser,
+		cfg.DBPassword,
+		cfg.DBHost,
+		cfg.DBPort,
+	)
+	if dbRoot, errRoot := gorm.Open(mysql.Open(dsnRoot), &gorm.Config{}); errRoot == nil {
+		_ = dbRoot.Exec(fmt.Sprintf("CREATE DATABASE IF NOT EXISTS `%s` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;", cfg.DBName)).Error
+		if sqlRoot, errSql := dbRoot.DB(); errSql == nil {
+			_ = sqlRoot.Close()
+		}
+	}
+
 	// Format DSN (Data Source Name) untuk MySQL
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
 		cfg.DBUser,
