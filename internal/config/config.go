@@ -2,8 +2,10 @@ package config
 
 import (
 	"log"
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -53,13 +55,16 @@ func Load() *Config {
 	// Load .env file (ignore error kalau file tidak ada)
 	_ = godotenv.Load()
 
+	rawURL := getEnv("MYSQL_URL", getEnv("DATABASE_URL", ""))
+	urlHost, urlPort, urlUser, urlPass, urlDB := parseDBURL(rawURL)
+
 	cfg := &Config{
-		// Database config (Otomatis membaca variabel standar Railway MySQL: MYSQLHOST, MYSQLPASSWORD, dll)
-		DBHost:     getEnv("DB_HOST", getEnv("MYSQLHOST", "localhost")),
-		DBPort:     getEnv("DB_PORT", getEnv("MYSQLPORT", "3306")),
-		DBUser:     getEnv("DB_USER", getEnv("MYSQLUSER", "root")),
-		DBPassword: getEnv("DB_PASSWORD", getEnv("MYSQLPASSWORD", getEnv("MYSQL_ROOT_PASSWORD", ""))),
-		DBName:     getEnv("DB_NAME", getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", "db_atlas_food"))),
+		// Database config (Mendukung MYSQL_URL, DATABASE_URL, maupun variabel terpisah Railway MySQL)
+		DBHost:     getEnv("DB_HOST", getEnv("MYSQLHOST", firstNonEmpty(urlHost, "localhost"))),
+		DBPort:     getEnv("DB_PORT", getEnv("MYSQLPORT", firstNonEmpty(urlPort, "3306"))),
+		DBUser:     getEnv("DB_USER", getEnv("MYSQLUSER", firstNonEmpty(urlUser, "root"))),
+		DBPassword: getEnv("DB_PASSWORD", getEnv("MYSQLPASSWORD", getEnv("MYSQL_ROOT_PASSWORD", urlPass))),
+		DBName:     getEnv("DB_NAME", getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", firstNonEmpty(urlDB, "db_atlas_food")))),
 
 		// JWT config
 		JWTSecret:              getEnv("JWT_SECRET", "default-secret-key-minimal-32-chars"),
@@ -127,4 +132,36 @@ func parseInt(s string) int {
 		return 0
 	}
 	return n
+}
+
+// firstNonEmpty - mengembalikan argumen pertama yang tidak kosong
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if v != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+// parseDBURL - mengekstrak host, port, user, password, dbname dari format URL database (misal MYSQL_URL)
+func parseDBURL(rawURL string) (host, port, user, password, dbname string) {
+	if rawURL == "" {
+		return
+	}
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return
+	}
+	host = u.Hostname()
+	port = u.Port()
+	if port == "" {
+		port = "3306"
+	}
+	if u.User != nil {
+		user = u.User.Username()
+		password, _ = u.User.Password()
+	}
+	dbname = strings.TrimPrefix(u.Path, "/")
+	return
 }
