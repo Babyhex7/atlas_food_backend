@@ -40,6 +40,13 @@ const (
 	MsgCursorChatOpen   = "cursor_chat_open"
 	MsgCursorChatUpdate = "cursor_chat_update"
 	MsgCursorChatClose  = "cursor_chat_close"
+
+	// Live Canvas Annotation (Coret-coret layar real-time)
+	MsgCanvasDrawStart = "canvas_draw_start"
+	MsgCanvasDrawMove  = "canvas_draw_move"
+	MsgCanvasDrawEnd   = "canvas_draw_end"
+	MsgCanvasLaserMove = "canvas_laser_move"
+	MsgCanvasClear     = "canvas_clear"
 )
 
 // cursorChatMaxTextLen - batas panjang teks bubble; cegah payload nakal membanjiri broadcast
@@ -82,6 +89,14 @@ const (
 	MsgStateSync         = "state_sync"
 	MsgCursorChatUpdated = "cursor_chat_updated"
 	MsgCursorChatClosed  = "cursor_chat_closed"
+
+	// Server -> Client Canvas Annotation
+	MsgCanvasStrokeStarted = "canvas_stroke_started"
+	MsgCanvasStrokeUpdated = "canvas_stroke_updated"
+	MsgCanvasStrokeEnded   = "canvas_stroke_ended"
+	MsgCanvasLaserUpdated = "canvas_laser_updated"
+	MsgCanvasCleared      = "canvas_cleared"
+	MsgCanvasStateSync    = "canvas_state_sync"
 )
 
 // newMessage - helper pembuat Message dengan timestamp sekarang dan payload non-nil
@@ -124,5 +139,22 @@ func payloadInt(payload map[string]interface{}, key string) int {
 		return int(v)
 	default:
 		return 0
+	}
+}
+
+// payloadFloat64 - ambil nilai float64 dari payload secara aman; defaultVal kalau gagal
+func payloadFloat64(payload map[string]interface{}, key string, defaultVal float64) float64 {
+	if payload == nil {
+		return defaultVal
+	}
+	switch v := payload[key].(type) {
+	case float64:
+		return v
+	case int:
+		return float64(v)
+	case int64:
+		return float64(v)
+	default:
+		return defaultVal
 	}
 }

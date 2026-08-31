@@ -259,6 +259,41 @@ func (c *Client) handleMessage(msg *Message) {
 		}
 		c.handleDBEditCancel(msg)
 
+	case MsgCanvasDrawStart:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer role tidak dapat menggambar di canvas")
+			return
+		}
+		c.handleCanvasDrawStart(msg)
+
+	case MsgCanvasDrawMove:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer role tidak dapat menggambar di canvas")
+			return
+		}
+		c.handleCanvasDrawMove(msg)
+
+	case MsgCanvasDrawEnd:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer role tidak dapat menggambar di canvas")
+			return
+		}
+		c.handleCanvasDrawEnd(msg)
+
+	case MsgCanvasLaserMove:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer role tidak dapat menggunakan laser pointer")
+			return
+		}
+		c.handleCanvasLaserMove(msg)
+
+	case MsgCanvasClear:
+		if !c.canEdit() {
+			c.sendError("FORBIDDEN", "Viewer role tidak dapat menghapus canvas")
+			return
+		}
+		c.handleCanvasClear(msg)
+
 	case MsgChatMessage:
 		c.handleChatMessage(msg)
 
@@ -607,6 +642,140 @@ func (c *Client) checkRateLimit() bool {
 	}
 	c.messageCount++
 	return c.messageCount <= 50
+}
+
+// handleCanvasDrawStart - inisiasi stroke baru di canvas: simpan ke memory room & broadcast
+func (c *Client) handleCanvasDrawStart(msg *Message) {
+	payload := msg.Payload
+	if payload == nil {
+		c.sendError("INVALID_PAYLOAD", "Payload canvas_draw_start tidak boleh kosong")
+		return
+	}
+	strokeID := payloadString(payload, "stroke_id")
+	if strokeID == "" {
+		c.sendError("INVALID_PAYLOAD", "stroke_id wajib diisi")
+		return
+	}
+	tool := payloadString(payload, "tool")
+	if tool == "" {
+		tool = "pencil"
+	}
+	color := payloadString(payload, "color")
+	if color == "" {
+		color = colorForUser(c.UserID)
+	}
+	width := payloadFloat64(payload, "width", 3.0)
+	if width <= 0 {
+		width = 3
+	}
+	targetImageID := payloadString(payload, "target_image_id")
+
+	x := payloadFloat64(payload, "x", 0.0)
+	y := payloadFloat64(payload, "y", 0.0)
+
+	initialPoints := [][]float64{{x, y}}
+
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	room.AddCanvasStroke(&CanvasStrokeItem{
+		StrokeID:      strokeID,
+		UserID:        c.UserID,
+		Username:      c.Username,
+		Tool:          tool,
+		Color:         color,
+		Width:         width,
+		TargetImageID: targetImageID,
+		Points:        initialPoints,
+		Timestamp:     time.Now().UnixMilli(),
+	})
+
+	outPayload := map[string]interface{}{
+		"stroke_id":       strokeID,
+		"user_id":         c.UserID,
+		"username":        c.Username,
+		"tool":            tool,
+		"color":           color,
+		"width":           width,
+		"target_image_id": targetImageID,
+		"x":               x,
+		"y":               y,
+		"points":          initialPoints,
+	}
+
+	c.hub.Publish(newMessage(MsgCanvasStrokeStarted, c.RoomID, c.UserID, c.Username, outPayload))
+}
+
+// handleCanvasDrawMove - perbarui stroke dengan sekumpulan koordinat titik baru
+func (c *Client) handleCanvasDrawMove(msg *Message) {
+	payload := msg.Payload
+	if payload == nil {
+		return
+	}
+	strokeID := payloadString(payload, "stroke_id")
+	if strokeID == "" {
+		return
+	}
+
+	var points [][]float64
+	if rawPoints, ok := payload["points"].([]interface{}); ok {
+		for _, pt := range rawPoints {
+			if ptArr, ok := pt.([]interface{}); ok && len(ptArr) >= 2 {
+				x, _ := ptArr[0].(float64)
+				y, _ := ptArr[1].(float64)
+				points = append(points, []float64{x, y})
+			}
+		}
+	}
+
+	if len(points) > 0 {
+		room := c.hub.GetOrCreateRoom(c.RoomID)
+		room.AppendCanvasPoints(strokeID, points)
+	}
+
+	outPayload := map[string]interface{}{
+		"stroke_id": strokeID,
+		"user_id":   c.UserID,
+		"points":    points,
+	}
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	room.AddMessage(newMessage(MsgCanvasStrokeUpdated, c.RoomID, c.UserID, c.Username, outPayload))
+}
+
+// handleCanvasDrawEnd - selesaikan stroke canvas
+func (c *Client) handleCanvasDrawEnd(msg *Message) {
+	payload := msg.Payload
+	strokeID := payloadString(payload, "stroke_id")
+	outPayload := map[string]interface{}{
+		"stroke_id": strokeID,
+		"user_id":   c.UserID,
+	}
+	c.hub.Publish(newMessage(MsgCanvasStrokeEnded, c.RoomID, c.UserID, c.Username, outPayload))
+}
+
+// handleCanvasLaserMove - siarkan posisi laser pointer
+func (c *Client) handleCanvasLaserMove(msg *Message) {
+	payload := msg.Payload
+	if payload == nil {
+		return
+	}
+	payload["user_id"] = c.UserID
+	payload["username"] = c.Username
+	if payloadString(payload, "color") == "" {
+		payload["color"] = colorForUser(c.UserID)
+	}
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	room.AddMessage(newMessage(MsgCanvasLaserUpdated, c.RoomID, c.UserID, c.Username, payload))
+}
+
+// handleCanvasClear - hapus seluruh coretan canvas di room
+func (c *Client) handleCanvasClear(msg *Message) {
+	targetImageID := payloadString(msg.Payload, "target_image_id")
+	room := c.hub.GetOrCreateRoom(c.RoomID)
+	room.ClearCanvasStrokes(targetImageID)
+
+	c.hub.Publish(newMessage(MsgCanvasCleared, c.RoomID, c.UserID, c.Username, map[string]interface{}{
+		"target_image_id": targetImageID,
+		"cleared_by":      c.UserID,
+	}))
 }
 
 // Stop stops the client
