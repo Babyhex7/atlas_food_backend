@@ -83,12 +83,17 @@ type SubmissionResponse struct {
 
 // ListSubmissionResponse - DTO untuk list submission di admin
 type ListSubmissionResponse struct {
-	ID             string  `json:"id"`
-	RespondentName string  `json:"respondent_name"`
-	SubmittedAt    string  `json:"submitted_at"`
-	MealCount      int     `json:"meal_count"`
-	TotalFoods     int     `json:"total_foods"`
-	TotalEnergy    float64 `json:"total_energy"`
+	ID              string          `json:"id"`
+	RespondentName  string          `json:"respondent_name"`
+	RespondentEmail string          `json:"respondent_email"`
+	SubmittedAt     string          `json:"submitted_at"`
+	MealCount       int             `json:"meal_count"`
+	TotalFoods      int             `json:"total_foods"`
+	TotalEnergy     float64         `json:"total_energy"`
+	TotalProtein    float64         `json:"total_protein"`
+	TotalCarbs      float64         `json:"total_carbs"`
+	TotalFat        float64         `json:"total_fat"`
+	MealsData       json.RawMessage `json:"meals_data,omitempty"`
 }
 
 // SubmissionDetailResponse - detail submission untuk admin

@@ -152,7 +152,6 @@ func (s *submissionService) ListSubmissions(surveyID string, page, limit int) ([
 
 	resp := make([]ListSubmissionResponse, len(submissions))
 	for i, sub := range submissions {
-		// Hitung jumlah meal dan food dari JSON
 		var meals []MealData
 		json.Unmarshal([]byte(sub.MealsData), &meals)
 
@@ -162,12 +161,17 @@ func (s *submissionService) ListSubmissions(surveyID string, page, limit int) ([
 		}
 
 		resp[i] = ListSubmissionResponse{
-			ID:             sub.ID,
-			RespondentName: sub.RespondentName,
-			SubmittedAt:    sub.SubmittedAt.Format("2006-01-02 15:04:05"),
-			MealCount:      len(meals),
-			TotalFoods:     foodCount,
-			TotalEnergy:    sub.TotalEnergy,
+			ID:              sub.ID,
+			RespondentName:  sub.RespondentName,
+			RespondentEmail: sub.RespondentEmail,
+			SubmittedAt:     sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+			MealCount:       len(meals),
+			TotalFoods:      foodCount,
+			TotalEnergy:     sub.TotalEnergy,
+			TotalProtein:    sub.TotalProtein,
+			TotalCarbs:      sub.TotalCarbs,
+			TotalFat:        sub.TotalFat,
+			MealsData:       json.RawMessage(sub.MealsData),
 		}
 	}
 
@@ -192,12 +196,17 @@ func (s *submissionService) GetMySubmissions(userID, userEmail string, page, lim
 		}
 
 		resp[i] = ListSubmissionResponse{
-			ID:             sub.ID,
-			RespondentName: sub.RespondentName,
-			SubmittedAt:    sub.SubmittedAt.Format("2006-01-02 15:04:05"),
-			MealCount:      len(meals),
-			TotalFoods:     foodCount,
-			TotalEnergy:    sub.TotalEnergy,
+			ID:              sub.ID,
+			RespondentName:  sub.RespondentName,
+			RespondentEmail: sub.RespondentEmail,
+			SubmittedAt:     sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+			MealCount:       len(meals),
+			TotalFoods:      foodCount,
+			TotalEnergy:     sub.TotalEnergy,
+			TotalProtein:    sub.TotalProtein,
+			TotalCarbs:      sub.TotalCarbs,
+			TotalFat:        sub.TotalFat,
+			MealsData:       json.RawMessage(sub.MealsData),
 		}
 	}
 
