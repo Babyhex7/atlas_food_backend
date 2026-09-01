@@ -2,12 +2,12 @@
 ### ATLAS FOOD — AUTH & PROFILE (STATIC EMAIL VERSION)
 ### =============================================================================
 
-@baseUrl = http://localhost:8080/api/v1
+@baseUrl = https://atlasfoodbackend-dev.up.railway.app/api/v1
 
 # Ganti email di sini jika ingin mengetes user lain
-@email = tester01@mail.com
-@password = Password123!
-@name = Tester Atlas
+@email = 09@mail.com
+@password = password
+@name = Tester Atlas King
 
 # Dynamic Token (Otomatis terisi setelah Login)
 @accessToken = {{login.response.body.data.access_token}}

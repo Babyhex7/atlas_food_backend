@@ -18,7 +18,9 @@ import (
 type Service interface {
 	SubmitSurvey(req SubmitSurveyRequest, userID string) (*SubmissionResponse, error)
 	ListSubmissions(surveyID string, page, limit int) ([]ListSubmissionResponse, int64, error)
+	GetMySubmissions(userID, userEmail string, page, limit int) ([]ListSubmissionResponse, int64, error)
 	GetSubmissionDetail(id string) (*SubmissionDetailResponse, error)
+	GetMySubmissionDetail(id, userID, userEmail string) (*SubmissionDetailResponse, error)
 	ExportSubmissionsCSV(surveyID string) ([]byte, string, error)
 }
 
@@ -172,9 +174,63 @@ func (s *submissionService) ListSubmissions(surveyID string, page, limit int) ([
 	return resp, total, nil
 }
 
+// GetMySubmissions - list submission milik user yang sedang login (respondent)
+func (s *submissionService) GetMySubmissions(userID, userEmail string, page, limit int) ([]ListSubmissionResponse, int64, error) {
+	submissions, total, err := s.repo.ListSubmissionsByUserID(userID, userEmail, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	resp := make([]ListSubmissionResponse, len(submissions))
+	for i, sub := range submissions {
+		var meals []MealData
+		json.Unmarshal([]byte(sub.MealsData), &meals)
+
+		foodCount := 0
+		for _, m := range meals {
+			foodCount += len(m.Foods)
+		}
+
+		resp[i] = ListSubmissionResponse{
+			ID:             sub.ID,
+			RespondentName: sub.RespondentName,
+			SubmittedAt:    sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+			MealCount:      len(meals),
+			TotalFoods:     foodCount,
+			TotalEnergy:    sub.TotalEnergy,
+		}
+	}
+
+	return resp, total, nil
+}
+
 // GetSubmissionDetail - detail submission untuk admin
 func (s *submissionService) GetSubmissionDetail(id string) (*SubmissionDetailResponse, error) {
 	sub, err := s.repo.GetSubmissionByID(id)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Submission tidak ditemukan")
+	}
+
+	return &SubmissionDetailResponse{
+		ID:              sub.ID,
+		SurveyID:        sub.SurveyID,
+		RespondentName:  sub.RespondentName,
+		RespondentEmail: sub.RespondentEmail,
+		MealsData:       json.RawMessage(sub.MealsData),
+		MissingFoods:    json.RawMessage(sub.MissingFoods),
+		DailyTotal: DailyTotal{
+			Energy:  sub.TotalEnergy,
+			Protein: sub.TotalProtein,
+			Carbs:   sub.TotalCarbs,
+			Fat:     sub.TotalFat,
+		},
+		SubmittedAt: sub.SubmittedAt.Format("2006-01-02 15:04:05"),
+	}, nil
+}
+
+// GetMySubmissionDetail - detail submission milik user yang sedang login
+func (s *submissionService) GetMySubmissionDetail(id, userID, userEmail string) (*SubmissionDetailResponse, error) {
+	sub, err := s.repo.GetSubmissionByIDAndUser(id, userID, userEmail)
 	if err != nil {
 		return nil, utils.NewAppError(404, "NOT_FOUND", "Submission tidak ditemukan")
 	}
