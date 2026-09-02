@@ -31,6 +31,12 @@ func (h *Handler) SubmitSurvey(c *gin.Context) {
 		return
 	}
 
+	// Extract Idempotency-Key dari Header jika ada
+	idempotencyKey := c.GetHeader("Idempotency-Key")
+	if idempotencyKey != "" && req.LocalID == "" {
+		req.LocalID = idempotencyKey
+	}
+
 	if email, exists := c.Get("email"); exists {
 		if req.RespondentEmail == "" {
 			req.RespondentEmail = email.(string)
@@ -57,6 +63,27 @@ func (h *Handler) SubmitSurvey(c *gin.Context) {
 	}
 
 	utils.CreatedResponse(c, response)
+}
+
+// BatchSubmitSurvey - POST /api/v1/survey/sync/batch
+// Menangani pengiriman banyak survey submission sekaligus dari antrean offline
+func (h *Handler) BatchSubmitSurvey(c *gin.Context) {
+	var req BatchSyncRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Format data batch sync tidak valid: "+err.Error())
+		return
+	}
+
+	userID, _ := c.Get("userID")
+	userIDStr, _ := userID.(string)
+
+	response, err := h.service.BatchSubmitSurveys(req, userIDStr)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, response)
 }
 
 // ============ ADMIN ENDPOINTS ============
@@ -184,6 +211,7 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 	respondent := router.Group("/survey", authMiddleware, middleware.RespondentOnly())
 	{
 		respondent.POST("/submit", h.SubmitSurvey)
+		respondent.POST("/sync/batch", h.BatchSubmitSurvey)
 		respondent.GET("/my-submissions", h.GetMySubmissions)
 		respondent.GET("/my-submissions/:id", h.GetMySubmissionDetail)
 	}

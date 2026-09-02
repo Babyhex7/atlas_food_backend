@@ -105,39 +105,41 @@ func (h *Hub) registerClient(client *Client) {
 			// Tab baru mewarisi room role tab lama supaya owner tidak turun
 			// hanya karena membuka tab kedua. Satu orang di satu room selalu
 			// punya satu role — kecuali koneksi ini memang datang membawa
-			// undangan yang menetapkan role lain.
+			// undangan yang menetapkan role lain (invite token menang).
 			if !client.RoleFromInvite {
 				client.RoomRole = existing.RoomRole
 			}
 			alreadyPresent = true
 		}
 	}
-	// Role yang pernah tercatat menang atas default, supaya reconnect atau pindah
-	// halaman (tanpa ?invite=) tidak menaikkan viewer jadi editor.
-	if remembered := room.roles[client.UserID]; remembered != "" {
-		if client.RoomRole == "" || client.RoomRole == RoomRoleEditor {
+
+	// Urutan prioritas role (tertinggi ke terendah):
+	// 1. Invite token (RoleFromInvite=true) — niat eksplisit pemilik room, selalu menang.
+	// 2. Remembered role — cegah viewer naik jadi editor hanya karena pindah halaman/reconnect.
+	// 3. Orang pertama di room tanpa invite → owner.
+	// 4. Fallback → viewer (fail-closed).
+	if !client.RoleFromInvite {
+		// Invite TIDAK ada: gunakan role yang pernah tercatat (jika ada).
+		if remembered := room.roles[client.UserID]; remembered != "" {
 			client.RoomRole = remembered
+		} else if isFirst {
+			// Orang pertama di room tanpa undangan jadi owner.
+			client.RoomRole = RoomRoleOwner
 		}
-	} else if isFirst && !client.RoleFromInvite {
-		// Orang pertama di room jadi owner — kecuali rolenya datang dari
-		// undangan, yang memang sengaja ditetapkan pengundang.
-		//
-		// Penanda invite dipakai di sini, bukan "role != viewer": sejak join
-		// tanpa undangan default-nya viewer, mengecek nilai role akan membuat
-		// orang yang datang tepat saat room kosong terkunci sebagai viewer di
-		// room miliknya sendiri.
-		client.RoomRole = RoomRoleOwner
 	}
+	// Jika setelah semua pengecekan di atas role masih kosong, paksa viewer.
 	if client.RoomRole == "" {
 		client.RoomRole = RoomRoleViewer
 	}
+	// Simpan role yang berlaku — termasuk yang datang dari invite — ke memori room.
+	// Ini penting agar user yang baru di-upgrade ke editor tetap editor saat pindah halaman.
 	if client.UserID != "" {
 		room.roles[client.UserID] = client.RoomRole
 	}
 	room.clients[client] = true
 	room.mu.Unlock()
 
-	log.Printf("✅ Client %s joined room %s as %s (total: %d, tab_kedua=%v)", client.UserID, client.RoomID, client.RoomRole, room.GetClientCount(), alreadyPresent)
+	log.Printf("✅ Client %s joined room %s as %s (total: %d, tab_kedua=%v, from_invite=%v)", client.UserID, client.RoomID, client.RoomRole, room.GetClientCount(), alreadyPresent, client.RoleFromInvite)
 
 	// Sync state to joining client
 	client.sendQuiet(h.buildPresenceList(room))

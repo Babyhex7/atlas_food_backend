@@ -8,6 +8,7 @@ import (
 type Repository interface {
 	CreateSubmission(submission *SurveySubmission) error
 	GetSubmissionByID(id string) (*SurveySubmission, error)
+	FindByLocalID(localID string) (*SurveySubmission, error)
 	ListSubmissionsBySurvey(surveyID string, page, limit int) ([]SurveySubmission, int64, error)
 	ListSubmissionsByUserID(userID, userEmail string, page, limit int) ([]SurveySubmission, int64, error)
 	GetSubmissionByIDAndUser(id, userID, userEmail string) (*SurveySubmission, error)
@@ -33,6 +34,16 @@ func (r *submissionRepository) GetSubmissionByID(id string) (*SurveySubmission, 
 	var submission SurveySubmission
 	err := r.db.Where("id = ?", id).First(&submission).Error
 	return &submission, err
+}
+
+// FindByLocalID - cari submission berdasarkan local_id (untuk idempotency check)
+func (r *submissionRepository) FindByLocalID(localID string) (*SurveySubmission, error) {
+	var submission SurveySubmission
+	err := r.db.Where("local_id = ?", localID).First(&submission).Error
+	if err != nil {
+		return nil, err
+	}
+	return &submission, nil
 }
 
 // ListSubmissionsBySurvey - ambil semua submission untuk satu survey (admin)

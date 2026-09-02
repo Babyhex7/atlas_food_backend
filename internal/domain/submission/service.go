@@ -17,6 +17,7 @@ import (
 // Service - interface untuk business logic submission
 type Service interface {
 	SubmitSurvey(req SubmitSurveyRequest, userID string) (*SubmissionResponse, error)
+	BatchSubmitSurveys(req BatchSyncRequest, userID string) (*BatchSyncResponse, error)
 	ListSubmissions(surveyID string, page, limit int) ([]ListSubmissionResponse, int64, error)
 	GetMySubmissions(userID, userEmail string, page, limit int) ([]ListSubmissionResponse, int64, error)
 	GetSubmissionDetail(id string) (*SubmissionDetailResponse, error)
@@ -38,6 +39,16 @@ func NewService(repo Repository, surveyRepo survey.Repository, foodRepo fooddoma
 // SubmitSurvey - simpan hasil recall dari respondent
 // userID diambil dari JWT (bukan dari body request) agar participant tidak bisa dipalsukan (anti-IDOR).
 func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string) (*SubmissionResponse, error) {
+	// IDEMPOTENCY CHECK
+	if req.LocalID != "" {
+		existing, err := s.repo.FindByLocalID(req.LocalID)
+		if err == nil && existing != nil {
+			return &SubmissionResponse{
+				SubmissionID: existing.ID,
+				Message:      "Survey sudah pernah diterima (idempotent)",
+			}, nil
+		}
+	}
 	if req.SurveyID == "" {
 		return nil, errors.New("survey_id wajib diisi")
 	}
@@ -112,6 +123,11 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string)
 		SubmittedAt:     time.Now(),
 	}
 
+	if req.LocalID != "" {
+		locID := req.LocalID
+		submission.LocalID = &locID
+	}
+
 	if req.ParticipantID != "" {
 		pID := req.ParticipantID
 		submission.ParticipantID = &pID
@@ -140,6 +156,64 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string)
 	return &SubmissionResponse{
 		SubmissionID: submission.ID,
 		Message:      "Survey berhasil dikirim, terima kasih!",
+	}, nil
+}
+
+// BatchSubmitSurveys - memproses banyak submission offline sekaligus secara idempotent
+func (s *submissionService) BatchSubmitSurveys(req BatchSyncRequest, userID string) (*BatchSyncResponse, error) {
+	if len(req.Items) == 0 {
+		return nil, errors.New("tidak ada item untuk disinkronkan")
+	}
+
+	results := make([]BatchSyncItemResult, 0, len(req.Items))
+	syncedCount := 0
+	failedCount := 0
+
+	for _, item := range req.Items {
+		localID := item.LocalID
+
+		// Cek Idempotency terlebih dahulu untuk batch item
+		if localID != "" {
+			existing, err := s.repo.FindByLocalID(localID)
+			if err == nil && existing != nil {
+				results = append(results, BatchSyncItemResult{
+					LocalID:  localID,
+					Status:   "SKIPPED",
+					ServerID: existing.ID,
+					Message:  "Data sudah pernah tersimpan di server",
+				})
+				syncedCount++
+				continue
+			}
+		}
+
+		res, err := s.SubmitSurvey(item, userID)
+		if err != nil {
+			failedCount++
+			errMsg := err.Error()
+			if appErr, ok := err.(*utils.AppError); ok {
+				errMsg = appErr.Message
+			}
+			results = append(results, BatchSyncItemResult{
+				LocalID: localID,
+				Status:  "FAILED",
+				Message: errMsg,
+			})
+		} else {
+			syncedCount++
+			results = append(results, BatchSyncItemResult{
+				LocalID:  localID,
+				Status:   "SYNCED",
+				ServerID: res.SubmissionID,
+				Message:  res.Message,
+			})
+		}
+	}
+
+	return &BatchSyncResponse{
+		Results:     results,
+		SyncedCount: syncedCount,
+		FailedCount: failedCount,
 	}, nil
 }
 

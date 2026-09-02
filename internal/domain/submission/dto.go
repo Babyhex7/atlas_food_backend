@@ -4,6 +4,7 @@ import "encoding/json"
 
 // SubmitSurveyRequest - DTO untuk input hasil survey
 type SubmitSurveyRequest struct {
+	LocalID         string            `json:"local_id,omitempty"`
 	SurveyID        string            `json:"survey_id" binding:"required"`
 	ParticipantID   string            `json:"participant_id"`
 	RespondentName  string            `json:"respondent_name"`
@@ -106,4 +107,24 @@ type SubmissionDetailResponse struct {
 	MissingFoods    json.RawMessage `json:"missing_foods"`
 	DailyTotal      DailyTotal      `json:"daily_total"`
 	SubmittedAt     string          `json:"submitted_at"`
+}
+
+// BatchSyncRequest - DTO untuk batch submission dari offline queue
+type BatchSyncRequest struct {
+	Items []SubmitSurveyRequest `json:"items" binding:"required"`
+}
+
+// BatchSyncItemResult - hasil sync per item
+type BatchSyncItemResult struct {
+	LocalID  string `json:"local_id"`
+	Status   string `json:"status"` // SYNCED, SKIPPED, FAILED
+	ServerID string `json:"server_id,omitempty"`
+	Message  string `json:"message,omitempty"`
+}
+
+// BatchSyncResponse - response dari batch sync endpoint
+type BatchSyncResponse struct {
+	Results     []BatchSyncItemResult `json:"results"`
+	SyncedCount int                   `json:"synced_count"`
+	FailedCount int                   `json:"failed_count"`
 }

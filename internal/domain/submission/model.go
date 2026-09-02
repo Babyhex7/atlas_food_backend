@@ -8,6 +8,7 @@ import (
 // Menyimpan hasil recall makanan dari responden
 type SurveySubmission struct {
 	ID              string    `gorm:"type:char(36);primaryKey;default:(UUID())" json:"id"`
+	LocalID         *string   `gorm:"type:varchar(36);uniqueIndex" json:"local_id,omitempty"`
 	SurveyID        string    `gorm:"type:char(36);not null;index" json:"survey_id"`
 	ParticipantID   *string   `gorm:"type:char(36);index" json:"participant_id"`
 	RespondentName  string    `gorm:"type:varchar(255)" json:"respondent_name"`
