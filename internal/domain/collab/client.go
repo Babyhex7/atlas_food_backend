@@ -297,6 +297,9 @@ func (c *Client) handleMessage(msg *Message) {
 	case MsgChatMessage:
 		c.handleChatMessage(msg)
 
+	case MsgUpdateUserRole:
+		c.handleUpdateUserRole(msg)
+
 	case MsgGetHistory:
 		c.sendRoomHistory()
 
@@ -776,6 +779,24 @@ func (c *Client) handleCanvasClear(msg *Message) {
 		"target_image_id": targetImageID,
 		"cleared_by":      c.UserID,
 	}))
+}
+
+// handleUpdateUserRole - memproses permintaan update role dari owner room
+func (c *Client) handleUpdateUserRole(msg *Message) {
+	if c.RoomRole != RoomRoleOwner {
+		c.sendError("FORBIDDEN", "Hanya owner room yang bisa mengubah role peserta")
+		return
+	}
+	targetID := payloadString(msg.Payload, "target_user_id")
+	newRole := payloadString(msg.Payload, "new_role")
+	if targetID == "" || (newRole != RoomRoleEditor && newRole != RoomRoleViewer) {
+		c.sendError("INVALID_PAYLOAD", "target_user_id dan new_role (editor|viewer) wajib diisi")
+		return
+	}
+	if err := c.hub.UpdateUserRole(c.RoomID, c.UserID, targetID, newRole); err != nil {
+		c.sendError("UPDATE_ROLE_FAILED", err.Error())
+		return
+	}
 }
 
 // Stop stops the client

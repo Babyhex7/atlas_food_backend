@@ -47,6 +47,9 @@ const (
 	MsgCanvasDrawEnd   = "canvas_draw_end"
 	MsgCanvasLaserMove = "canvas_laser_move"
 	MsgCanvasClear     = "canvas_clear"
+
+	// Live Dynamic Role Control (Owner ubah role peserta)
+	MsgUpdateUserRole = "update_user_role"
 )
 
 // cursorChatMaxTextLen - batas panjang teks bubble; cegah payload nakal membanjiri broadcast
@@ -89,6 +92,7 @@ const (
 	MsgStateSync         = "state_sync"
 	MsgCursorChatUpdated = "cursor_chat_updated"
 	MsgCursorChatClosed  = "cursor_chat_closed"
+	MsgUserRoleUpdated   = "user_role_updated"
 
 	// Server -> Client Canvas Annotation
 	MsgCanvasStrokeStarted = "canvas_stroke_started"

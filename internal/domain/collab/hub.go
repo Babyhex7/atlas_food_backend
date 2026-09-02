@@ -1,6 +1,7 @@
 package collab
 
 import (
+	"errors"
 	"log"
 	"sync"
 	"time"
@@ -112,7 +113,7 @@ func (h *Hub) registerClient(client *Client) {
 			alreadyPresent = true
 		}
 	}
-
+    
 	// Urutan prioritas role (tertinggi ke terendah):
 	// 1. Invite token (RoleFromInvite=true) — niat eksplisit pemilik room, selalu menang.
 	// 2. Remembered role — cegah viewer naik jadi editor hanya karena pindah halaman/reconnect.
@@ -457,6 +458,65 @@ func (h *Hub) RoomRoleOf(roomID, userID string) string {
 		return ""
 	}
 	return room.RememberedRole(userID)
+}
+
+// UpdateUserRole — memperbarui role seorang peserta di room secara real-time.
+// Mengubah memori room.roles[targetUserID], memperbarui c.RoomRole seluruh socket aktif target,
+// menyiarkan event user_role_updated, dan memperbarui presence list secara instan.
+func (h *Hub) UpdateUserRole(roomID, callerID, targetUserID, newRole string) error {
+	if roomID == "" || targetUserID == "" {
+		return errors.New("room_id dan target_user_id wajib diisi")
+	}
+	if newRole != RoomRoleEditor && newRole != RoomRoleViewer {
+		return errors.New("role harus editor atau viewer")
+	}
+
+	h.mu.RLock()
+	room, exists := h.rooms[roomID]
+	h.mu.RUnlock()
+	if !exists {
+		return errors.New("room tidak ditemukan")
+	}
+
+	// Hanya owner room yang boleh mengubah role peserta
+	if room.RememberedRole(callerID) != RoomRoleOwner {
+		return errors.New("hanya owner room yang bisa mengubah role peserta")
+	}
+
+	room.mu.Lock()
+	room.roles[targetUserID] = newRole
+
+	// Update seluruh socket aktif milik targetUserID
+	var targetClients []*Client
+	for client := range room.clients {
+		if client.UserID == targetUserID {
+			client.RoomRole = newRole
+			targetClients = append(targetClients, client)
+		}
+	}
+	room.mu.Unlock()
+
+	// Kirim pemberitahuan khusus langsung ke socket targetUserID
+	roleUpdatedMsg := newMessage(MsgUserRoleUpdated, roomID, targetUserID, "", map[string]interface{}{
+		"target_user_id": targetUserID,
+		"new_role":       newRole,
+		"changed_by":     callerID,
+	})
+	for _, client := range targetClients {
+		client.sendQuiet(roleUpdatedMsg)
+	}
+
+	// Broadcast presence list yang diperbarui ke seluruh anggota room
+	h.broadcastToRoom(room, h.buildPresenceList(room), nil)
+
+	// Catat di activity log
+	h.broadcastToRoom(room, newMessage(MsgActivityLog, roomID, callerID, "", map[string]interface{}{
+		"action":  "role_updated",
+		"details": "Hak akses peserta diperbarui menjadi " + newRole,
+	}), nil)
+
+	log.Printf("👑 Realtime role updated: room=%s, target=%s -> %s (by %s)", roomID, targetUserID, newRole, callerID)
+	return nil
 }
 
 // cleanupInactiveRooms - hapus room yang sudah kosong (dipanggil ticker tiap 30 detik) agar memori tidak bocor
