@@ -2,6 +2,7 @@ package submission
 
 import (
 	fooddomain "atlas_food/internal/domain/food"
+	"atlas_food/internal/domain/gamification"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/pkg/utils"
 	"encoding/csv"
@@ -26,14 +27,15 @@ type Service interface {
 }
 
 type submissionService struct {
-	repo       Repository
-	surveyRepo survey.Repository
-	foodRepo   fooddomain.Repository
+	repo         Repository
+	surveyRepo   survey.Repository
+	foodRepo     fooddomain.Repository
+	gamification gamification.Service
 }
 
 // NewService - buat instance service submission
-func NewService(repo Repository, surveyRepo survey.Repository, foodRepo fooddomain.Repository) Service {
-	return &submissionService{repo: repo, surveyRepo: surveyRepo, foodRepo: foodRepo}
+func NewService(repo Repository, surveyRepo survey.Repository, foodRepo fooddomain.Repository, gamification gamification.Service) Service {
+	return &submissionService{repo: repo, surveyRepo: surveyRepo, foodRepo: foodRepo, gamification: gamification}
 }
 
 // SubmitSurvey - simpan hasil recall dari respondent
@@ -151,6 +153,11 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string)
 	// Simpan ke database
 	if err := s.repo.CreateSubmission(submission); err != nil {
 		return nil, errors.New("gagal menyimpan hasil survey")
+	}
+
+	// Trigger gamification (ignore error to not block submission)
+	if s.gamification != nil {
+		s.gamification.AddXP(userID, "submit_survey", 50, "Submit survei pangan 24HR recall")
 	}
 
 	return &SubmissionResponse{

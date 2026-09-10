@@ -7,6 +7,7 @@ import (
 	"atlas_food/internal/domain/auth"
 	"atlas_food/internal/domain/collab"
 	"atlas_food/internal/domain/food"
+	"atlas_food/internal/domain/gamification"
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/domain/upload"
@@ -23,7 +24,11 @@ import (
 // hub: WebSocket hub untuk real-time collaboration
 func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 	// Set mode Gin (debug/release)
-	gin.SetMode(gin.DebugMode)
+	if cfg.ServerMode != "" {
+		gin.SetMode(cfg.ServerMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
 
 	// Buat router baru
 	r := gin.New()
@@ -93,18 +98,29 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		foodHandler := food.NewHandler(foodService)
 		foodHandler.SetupRoutes(v1, middleware.JWTAuth())
 
+		// Gamification domain
+		gamificationRepo := gamification.NewRepository(db)
+		gamificationService := gamification.NewService(gamificationRepo)
+		gamificationHandler := gamification.NewHandler(gamificationService)
+		gamificationHandler.SetupRoutes(v1, middleware.JWTAuth())
+
 		// Submission domain
 		subRepo := submission.NewRepository(db)
-		subService := submission.NewService(subRepo, surveyRepo, foodRepo)
+		subService := submission.NewService(subRepo, surveyRepo, foodRepo, gamificationService)
 		subHandler := submission.NewHandler(subService)
 		subHandler.SetupRoutes(v1, middleware.JWTAuth())
 
 		// AI domain
 		aiRepo := ai.NewRepository(db)
 		groqClient := groq.NewClient(cfg.GroqAPIKey, cfg.GroqModel, cfg.GroqBaseURL, cfg.GroqTimeoutSecs, cfg.GroqMaxTokens)
-		aiService := ai.NewService(aiRepo, groqClient)
+		aiService := ai.NewService(aiRepo, groqClient, gamificationService)
 		aiHandler := ai.NewHandler(aiService)
 		aiHandler.SetupRoutes(v1, middleware.JWTAuth())
+
+		aiChatRepo := ai.NewChatRepository(db)
+		aiChatService := ai.NewChatService(aiChatRepo, groqClient, gamificationService)
+		aiChatHandler := ai.NewChatHandler(aiChatService)
+		aiChatHandler.SetupChatRoutes(v1, middleware.JWTAuth())
 
 		// Annotation domain (admin CMS)
 		annotationHandler := annotation.NewHandler(annotationService)

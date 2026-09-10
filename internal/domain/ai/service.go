@@ -1,6 +1,7 @@
 package ai
 
 import (
+	"atlas_food/internal/domain/gamification"
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/pkg/groq"
 	"atlas_food/internal/pkg/utils"
@@ -17,13 +18,14 @@ type Service interface {
 }
 
 type service struct {
-	repo Repository
-	groq *groq.Client
+	repo         Repository
+	groq         *groq.Client
+	gamification gamification.Service
 }
 
 // NewService - buat service AI
-func NewService(repo Repository, groqClient *groq.Client) Service {
-	return &service{repo: repo, groq: groqClient}
+func NewService(repo Repository, groqClient *groq.Client, gamification gamification.Service) Service {
+	return &service{repo: repo, groq: groqClient, gamification: gamification}
 }
 
 // AnalyzeNutrition - analisis gizi sebuah submission memakai Groq.
@@ -105,6 +107,10 @@ Analisis daily_total terhadap angka rujukan, lalu perhatikan pola meals_data
 
 	if err := s.repo.Save(log); err != nil {
 		return nil, errors.New("gagal menyimpan hasil AI")
+	}
+
+	if s.gamification != nil {
+		s.gamification.AddXP(userID, "ai_analysis", 30, "Menganalisis nutrisi laporan 24HR recall dengan AI")
 	}
 
 	return &NutritionAnalysisResult{Source: "groq", Data: analysisData}, nil
