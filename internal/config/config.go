@@ -6,9 +6,17 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/joho/godotenv"
+)
+
+// Nilai default yang HANYA boleh dipakai di luar produksi. validate() menolak
+// boot kalau nilai-nilai ini masih terpasang saat SERVER_MODE=release.
+const (
+	defaultJWTSecret     = "default-secret-key-minimal-32-chars"
+	defaultAdminPassword = "Password123!"
 )
 
 // Config - struct untuk menyimpan semua konfigurasi aplikasi
@@ -47,11 +55,32 @@ type Config struct {
 	AdminSeedEmail    string
 	AdminSeedPassword string
 	AdminSeedName     string
+
+	// explicitProduction - true kalau SERVER_MODE/GIN_MODE benar-benar di-set
+	// ke release/production lewat environment (bukan sekadar nilai default).
+	explicitProduction bool
 }
 
-// Load - membaca konfigurasi dari environment variables
-// Mengembalikan pointer ke Config yang sudah terisi
+var (
+	loadOnce sync.Once
+	loaded   *Config
+)
+
+// Load - membaca konfigurasi dari environment variables.
+//
+// Hasilnya di-cache: Load() dipanggil di jalur panas (setiap generate/validate
+// JWT, artinya setiap request ter-autentikasi). Tanpa sync.Once setiap request
+// membaca file .env dari disk dan menulis satu baris log — pemborosan I/O yang
+// tidak terlihat sampai trafik naik.
 func Load() *Config {
+	loadOnce.Do(func() {
+		loaded = load()
+	})
+	return loaded
+}
+
+// load - pembacaan sebenarnya, dijalankan tepat satu kali
+func load() *Config {
 	// Load .env file (ignore error kalau file tidak ada)
 	_ = godotenv.Load()
 
@@ -67,7 +96,7 @@ func Load() *Config {
 		DBName:     getEnv("DB_NAME", getEnv("MYSQLDATABASE", getEnv("MYSQL_DATABASE", firstNonEmpty(urlDB, "db_atlas_food")))),
 
 		// JWT config
-		JWTSecret:              getEnv("JWT_SECRET", "default-secret-key-minimal-32-chars"),
+		JWTSecret:              getEnv("JWT_SECRET", defaultJWTSecret),
 		JWTExpiration:          parseDuration(getEnv("JWT_EXPIRATION", "24h")),
 		RefreshTokenExpiration: parseDuration(getEnv("REFRESH_TOKEN_EXPIRATION", "168h")),
 
@@ -91,12 +120,106 @@ func Load() *Config {
 
 		// Seed data config
 		AdminSeedEmail:    getEnv("ADMIN_SEED_EMAIL", "admin@mail.com"),
-		AdminSeedPassword: getEnv("ADMIN_SEED_PASSWORD", "Password123!"),
+		AdminSeedPassword: getEnv("ADMIN_SEED_PASSWORD", defaultAdminPassword),
 		AdminSeedName:     getEnv("ADMIN_SEED_NAME", "Admin Atlas"),
 	}
 
+	cfg.explicitProduction = isProductionMode(os.Getenv("SERVER_MODE")) || isProductionMode(os.Getenv("GIN_MODE"))
+	cfg.validate()
+	cfg.logOrigins()
+
 	log.Println("Konfigurasi berhasil dimuat")
 	return cfg
+}
+
+// IsProduction - true kalau server dijalankan di mode release
+func (c *Config) IsProduction() bool {
+	return isProductionMode(c.ServerMode)
+}
+
+// logOrigins - cetak allowlist yang berlaku saat boot.
+//
+// CORS dan handshake WebSocket sekarang memakai allowlist. Kalau origin
+// frontend tidak terdaftar, browser memblokir SEMUA request tanpa pesan yang
+// berguna di sisi server — gejalanya terlihat seperti "backend mati", padahal
+// hanya FRONTEND_URL yang belum di-set. Mencetaknya di log boot membuat
+// penyebabnya terlihat dalam hitungan detik, bukan jam.
+func (c *Config) logOrigins() {
+	origins := c.AllowedOrigins()
+	log.Printf("CORS/WebSocket mengizinkan origin: %v", origins)
+
+	if !c.IsProduction() {
+		return
+	}
+	if os.Getenv("FRONTEND_URL") == "" && os.Getenv("CORS_ALLOWED_ORIGINS") == "" {
+		log.Printf("PERINGATAN: FRONTEND_URL dan CORS_ALLOWED_ORIGINS keduanya kosong di mode produksi. " +
+			"Hanya %v yang diizinkan, jadi frontend yang ter-deploy AKAN diblokir browser. " +
+			"Set FRONTEND_URL ke domain frontend Anda.", origins)
+	}
+}
+
+// isProductionMode - kenali penamaan mode produksi yang lazim
+func isProductionMode(mode string) bool {
+	return strings.EqualFold(mode, "release") || strings.EqualFold(mode, "production")
+}
+
+// AllowedOrigins - daftar origin yang boleh mengakses API (CORS & WebSocket).
+//
+// Diambil dari CORS_ALLOWED_ORIGINS (dipisah koma) dan selalu menyertakan
+// FRONTEND_URL. Di mode non-produksi localhost ikut diizinkan supaya dev
+// tidak perlu mengonfigurasi apa pun.
+func (c *Config) AllowedOrigins() []string {
+	origins := make([]string, 0, 4)
+	seen := map[string]bool{}
+	add := func(o string) {
+		o = strings.TrimRight(strings.TrimSpace(o), "/")
+		if o == "" || seen[o] {
+			return
+		}
+		seen[o] = true
+		origins = append(origins, o)
+	}
+
+	add(c.FrontendURL)
+	for _, o := range strings.Split(getEnv("CORS_ALLOWED_ORIGINS", ""), ",") {
+		add(o)
+	}
+	if !c.IsProduction() {
+		add("http://localhost:3000")
+		add("http://127.0.0.1:3000")
+	}
+	return origins
+}
+
+// validate - hentikan boot kalau ada konfigurasi berbahaya di produksi.
+//
+// Rahasia default yang lolos ke produksi berarti siapa pun bisa menandatangani
+// token admin sendiri. Lebih baik gagal saat start daripada diam-diam tidak aman.
+//
+// Pemeriksaan keras HANYA berlaku kalau produksi dinyatakan eksplisit lewat
+// SERVER_MODE/GIN_MODE. Default ServerMode memang "release", tapi memakai itu
+// sebagai pemicu log.Fatal akan membuat `go run` di laptop tanpa .env langsung
+// mati — bukan itu yang kita mau.
+func (c *Config) validate() {
+	insecureSecret := c.JWTSecret == defaultJWTSecret || len(c.JWTSecret) < 32
+	insecurePassword := c.AdminSeedPassword == defaultAdminPassword
+
+	if !c.explicitProduction {
+		if insecureSecret {
+			log.Println("PERINGATAN: JWT_SECRET lemah/default — WAJIB diganti sebelum deploy")
+		}
+		if insecurePassword {
+			log.Println("PERINGATAN: ADMIN_SEED_PASSWORD masih default — WAJIB diganti sebelum deploy")
+		}
+		return
+	}
+
+	if insecureSecret {
+		log.Fatal("JWT_SECRET wajib di-set minimal 32 karakter saat SERVER_MODE=release")
+	}
+	if insecurePassword {
+		log.Fatal("ADMIN_SEED_PASSWORD wajib diganti saat SERVER_MODE=release")
+	}
 }
 
 // getEnv - ambil value dari env variable, return default kalau kosong

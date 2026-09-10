@@ -17,6 +17,7 @@ type Hub struct {
 	invites    *InviteStore
 	mu         sync.RWMutex
 	stopCh     chan struct{}
+	stopOnce   sync.Once
 }
 
 // NewHub creates a new Hub instance
@@ -51,6 +52,8 @@ func (h *Hub) Run() {
 			select {
 			case <-ticker.C:
 				h.cleanupInactiveRooms()
+				h.sweepExpiredLocks()
+				h.invites.SweepExpired()
 			case <-h.stopCh:
 				return
 			}
@@ -99,6 +102,7 @@ func (h *Hub) registerClient(client *Client) {
 
 	room.mu.Lock()
 	isFirst := len(room.clients) == 0
+	role := client.RoomRole()
 	// alreadyPresent = user ini sudah punya socket lain di room (tab kedua)
 	alreadyPresent := false
 	for existing := range room.clients {
@@ -108,12 +112,12 @@ func (h *Hub) registerClient(client *Client) {
 			// punya satu role — kecuali koneksi ini memang datang membawa
 			// undangan yang menetapkan role lain (invite token menang).
 			if !client.RoleFromInvite {
-				client.RoomRole = existing.RoomRole
+				role = existing.RoomRole()
 			}
 			alreadyPresent = true
 		}
 	}
-    
+
 	// Urutan prioritas role (tertinggi ke terendah):
 	// 1. Invite token (RoleFromInvite=true) — niat eksplisit pemilik room, selalu menang.
 	// 2. Remembered role — cegah viewer naik jadi editor hanya karena pindah halaman/reconnect.
@@ -122,25 +126,28 @@ func (h *Hub) registerClient(client *Client) {
 	if !client.RoleFromInvite {
 		// Invite TIDAK ada: gunakan role yang pernah tercatat (jika ada).
 		if remembered := room.roles[client.UserID]; remembered != "" {
-			client.RoomRole = remembered
+			role = remembered
 		} else if isFirst {
 			// Orang pertama di room tanpa undangan jadi owner.
-			client.RoomRole = RoomRoleOwner
+			role = RoomRoleOwner
 		}
 	}
 	// Jika setelah semua pengecekan di atas role masih kosong, paksa viewer.
-	if client.RoomRole == "" {
-		client.RoomRole = RoomRoleViewer
+	if role == "" {
+		role = RoomRoleViewer
 	}
+	client.SetRoomRole(role)
 	// Simpan role yang berlaku — termasuk yang datang dari invite — ke memori room.
 	// Ini penting agar user yang baru di-upgrade ke editor tetap editor saat pindah halaman.
 	if client.UserID != "" {
-		room.roles[client.UserID] = client.RoomRole
+		room.roles[client.UserID] = role
 	}
 	room.clients[client] = true
+	room.emptySince = time.Time{} // room terisi lagi — batalkan hitungan mundur pembersihan
+	clientCount := len(room.clients)
 	room.mu.Unlock()
 
-	log.Printf("✅ Client %s joined room %s as %s (total: %d, tab_kedua=%v, from_invite=%v)", client.UserID, client.RoomID, client.RoomRole, room.GetClientCount(), alreadyPresent, client.RoleFromInvite)
+	log.Printf("✅ Client %s joined room %s as %s (total: %d, tab_kedua=%v, from_invite=%v)", client.UserID, client.RoomID, role, clientCount, alreadyPresent, client.RoleFromInvite)
 
 	// Sync state to joining client
 	client.sendQuiet(h.buildPresenceList(room))
@@ -159,7 +166,7 @@ func (h *Hub) registerClient(client *Client) {
 		"user_id":      client.UserID,
 		"username":     client.Username,
 		"role":         client.Role,
-		"room_role":    client.RoomRole,
+		"room_role":    role,
 		"display_name": client.Username,
 		"color":        colorForUser(client.UserID),
 		"timestamp":    time.Now().Unix(),
@@ -169,7 +176,7 @@ func (h *Hub) registerClient(client *Client) {
 	h.broadcastToRoom(room, newMessage(MsgPresenceJoined, client.RoomID, client.UserID, client.Username, joinPayload), client)
 	h.broadcastToRoom(room, newMessage(MsgActivityLog, client.RoomID, client.UserID, client.Username, map[string]interface{}{
 		"action":  "joined",
-		"details": client.Username + " bergabung (" + client.RoomRole + ")",
+		"details": client.Username + " bergabung (" + role + ")",
 	}), client)
 }
 
@@ -190,9 +197,14 @@ func (h *Hub) unregisterClient(client *Client) {
 	_, ok := room.clients[client]
 	if ok {
 		delete(room.clients, client)
-		close(client.send)
+		// closeSend() aman dipanggil berkali-kali dan membuat semua trySend
+		// setelahnya jadi no-op, bukan panic.
+		client.closeSend()
 	}
 	remaining := len(room.clients)
+	if remaining == 0 {
+		room.emptySince = time.Now()
+	}
 
 	// Masih ada socket lain milik user yang sama? Berarti dia belum benar-benar keluar.
 	stillOnline := false
@@ -206,8 +218,8 @@ func (h *Hub) unregisterClient(client *Client) {
 	if !stillOnline {
 		// Leader benar-benar pergi — lepas follower + siapkan follow_stopped ke FE
 		for other := range room.clients {
-			if other.FollowingUserID == client.UserID {
-				other.FollowingUserID = ""
+			if other.FollowingUserID() == client.UserID {
+				other.SetFollowingUserID("")
 				detachedFollowers = append(detachedFollowers, other)
 			}
 		}
@@ -230,8 +242,18 @@ func (h *Hub) unregisterClient(client *Client) {
 	// Bubble cursor chat yang masih terbuka harus ikut hilang di layar peer —
 	// tanpa ini bubble jadi "hantu" tertinggal selamanya kalau user disconnect
 	// mendadak (tutup tab/refresh) di tengah mengetik.
-	if client.ChatBubble != nil {
+	if client.ChatBubbleCopy() != nil {
 		h.broadcastToRoom(room, newMessage(MsgCursorChatClosed, client.RoomID, client.UserID, client.Username, map[string]interface{}{}), nil)
+	}
+
+	// Lepas semua lock yang masih dipegang user ini. Tanpa ini, entity yang
+	// sedang diedit saat koneksi putus tetap terkunci sampai server restart.
+	for _, released := range h.locks.ReleaseAllByUser(client.RoomID, client.UserID) {
+		h.broadcastToRoom(room, newMessage(MsgDBUnlocked, client.RoomID, client.UserID, client.Username, map[string]interface{}{
+			"entity_type": released.EntityType,
+			"entity_id":   released.EntityID,
+			"reason":      "owner_disconnected",
+		}), nil)
 	}
 
 	// Beritahu follower secara eksplisit agar banner "Following…" ikut hilang di FE
@@ -295,10 +317,8 @@ func (h *Hub) broadcastToRoom(room *Room, message *Message, skip *Client) {
 			}
 		}
 
-		select {
-		case client.send <- message:
-		default:
-			log.Printf("⚠️  Skipped slow client %s in room %s", client.UserID, message.RoomID)
+		if !client.trySend(message) {
+			log.Printf("⚠️  Skipped slow/closed client %s in room %s", client.UserID, message.RoomID)
 		}
 	}
 }
@@ -320,8 +340,8 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 			"username":     c.Username,
 			"display_name": c.Username,
 			"role":         c.Role,
-			"room_role":    c.RoomRole,
-			"following":    c.FollowingUserID,
+			"room_role":    c.RoomRole(),
+			"following":    c.FollowingUserID(),
 			"color":        colorForUser(c.UserID),
 		})
 	}
@@ -338,7 +358,9 @@ func (h *Hub) buildPresenceList(room *Room) *Message {
 // Server adalah satu-satunya sumber kebenaran identitas di dalam room.
 func (h *Hub) buildStateSync(room *Room, client *Client) *Message {
 	return newMessage(MsgStateSync, room.ID, "", "", map[string]interface{}{
-		"locks":          h.locks.Snapshot(),
+		// Snapshot di-scope ke room ini saja — dulu seluruh lock hub ikut terkirim,
+		// sehingga peserta room A melihat (dan terblokir oleh) lock room B.
+		"locks":          h.locks.Snapshot(room.ID),
 		"history":        room.GetHistory(30),
 		"canvas_strokes": room.GetCanvasStrokes(),
 		"room_id":        room.ID,
@@ -347,7 +369,7 @@ func (h *Hub) buildStateSync(room *Room, client *Client) *Message {
 			"username":     client.Username,
 			"display_name": client.Username,
 			"role":         client.Role,
-			"room_role":    client.RoomRole,
+			"room_role":    client.RoomRole(),
 			"color":        colorForUser(client.UserID),
 		},
 	})
@@ -361,13 +383,14 @@ func (h *Hub) buildFollowState(room *Room) *Message {
 	pairs := make([]map[string]interface{}, 0)
 	seen := make(map[string]bool)
 	for c := range room.clients {
-		if c.UserID == "" || c.FollowingUserID == "" || seen[c.UserID] {
+		following := c.FollowingUserID()
+		if c.UserID == "" || following == "" || seen[c.UserID] {
 			continue
 		}
 		seen[c.UserID] = true
 		pairs = append(pairs, map[string]interface{}{
 			"follower_id": c.UserID,
-			"leader_id":   c.FollowingUserID,
+			"leader_id":   following,
 		})
 	}
 	return newMessage(MsgFollowState, room.ID, "", "", map[string]interface{}{
@@ -398,13 +421,11 @@ func (h *Hub) broadcastToFollowers(roomID, leaderID string, message *Message) {
 	room.mu.RLock()
 	defer room.mu.RUnlock()
 	for client := range room.clients {
-		if client.FollowingUserID != leaderID {
+		if client.FollowingUserID() != leaderID {
 			continue
 		}
-		select {
-		case client.send <- message:
-		default:
-			log.Printf("⚠️  Skipped slow follower %s", client.UserID)
+		if !client.trySend(message) {
+			log.Printf("⚠️  Skipped slow/closed follower %s", client.UserID)
 		}
 	}
 }
@@ -414,7 +435,7 @@ func (h *Hub) broadcastToFollowers(roomID, leaderID string, message *Message) {
 //  1. invite token yang valid — niat eksplisit pemilik room
 //  2. role yang sudah pernah tercatat untuk user ini di room tsb
 //  3. room masih kosong → owner
-//  4. selain itu → editor
+//  4. selain itu → viewer (fail-closed)
 //
 // Langkah 2 yang membuat viewer tetap viewer saat pindah halaman atau reconnect,
 // meski query ?invite= sudah tidak ada lagi di URL.
@@ -490,7 +511,7 @@ func (h *Hub) UpdateUserRole(roomID, callerID, targetUserID, newRole string) err
 	var targetClients []*Client
 	for client := range room.clients {
 		if client.UserID == targetUserID {
-			client.RoomRole = newRole
+			client.SetRoomRole(newRole)
 			targetClients = append(targetClients, client)
 		}
 	}
@@ -519,31 +540,66 @@ func (h *Hub) UpdateUserRole(roomID, callerID, targetUserID, newRole string) err
 	return nil
 }
 
-// cleanupInactiveRooms - hapus room yang sudah kosong (dipanggil ticker tiap 30 detik) agar memori tidak bocor
+// cleanupInactiveRooms - hapus room yang kosong LEBIH LAMA dari RoomEmptyGrace.
+//
+// Grace period penting: room menyimpan roles, history, dan canvas. Kalau room
+// dihapus begitu orang terakhir keluar, seorang viewer cukup menunggu room
+// sepi lalu masuk lagi tanpa undangan untuk otomatis menjadi owner — dan
+// semua coretan hilang hanya karena semua peserta refresh bersamaan.
 func (h *Hub) cleanupInactiveRooms() {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
+	now := time.Now()
 	for roomID, room := range h.rooms {
 		room.mu.RLock()
 		empty := len(room.clients) == 0
+		emptySince := room.emptySince
 		room.mu.RUnlock()
-		if empty {
-			close(room.stopCh)
-			delete(h.rooms, roomID)
-			log.Printf("🗑️  Cleaned up empty room: %s", roomID)
+
+		if !empty || emptySince.IsZero() || now.Sub(emptySince) < RoomEmptyGrace {
+			continue
 		}
+
+		room.stop()
+		delete(h.rooms, roomID)
+		h.locks.ReleaseRoom(roomID)
+		h.invites.RevokeRoom(roomID)
+		log.Printf("🗑️  Cleaned up empty room: %s", roomID)
 	}
 }
 
-// Stop stops the hub
-func (h *Hub) Stop() {
-	close(h.stopCh)
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	for _, room := range h.rooms {
-		close(room.stopCh)
+// sweepExpiredLocks - buang lock yang menggantung (pemiliknya hilang tanpa unlock)
+// lalu beri tahu room terkait supaya UI-nya ikut membuka kunci.
+func (h *Hub) sweepExpiredLocks() {
+	for _, expired := range h.locks.SweepExpired() {
+		h.mu.RLock()
+		room, exists := h.rooms[expired.RoomID]
+		h.mu.RUnlock()
+		if !exists {
+			continue
+		}
+		log.Printf("🔓 Lock kedaluwarsa dilepas: room=%s %s:%s (pemilik %s)",
+			expired.RoomID, expired.EntityType, expired.EntityID, expired.LockedBy)
+		h.broadcastToRoom(room, newMessage(MsgDBUnlocked, expired.RoomID, expired.LockedBy, expired.Username, map[string]interface{}{
+			"entity_type": expired.EntityType,
+			"entity_id":   expired.EntityID,
+			"reason":      "lock_expired",
+		}), nil)
 	}
+}
+
+// Stop stops the hub. Aman dipanggil lebih dari sekali dan aman berbarengan
+// dengan ticker cleanup — keduanya dulu bisa menutup channel yang sama dua kali.
+func (h *Hub) Stop() {
+	h.stopOnce.Do(func() {
+		close(h.stopCh)
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		for _, room := range h.rooms {
+			room.stop()
+		}
+	})
 }
 
 // GetRoomInfo returns information about a room
@@ -565,7 +621,7 @@ func (h *Hub) GetRoomInfo(roomID string) map[string]interface{} {
 			"user_id":   client.UserID,
 			"username":  client.Username,
 			"role":      client.Role,
-			"room_role": client.RoomRole,
+			"room_role": client.RoomRole(),
 			"color":     colorForUser(client.UserID),
 		})
 	}
@@ -574,7 +630,7 @@ func (h *Hub) GetRoomInfo(roomID string) map[string]interface{} {
 		"room_id":      roomID,
 		"client_count": len(room.clients),
 		"users":        users,
-		"locks":        h.locks.Snapshot(),
+		"locks":        h.locks.Snapshot(roomID),
 	}
 }
 
@@ -593,7 +649,7 @@ func (h *Hub) GetStats() map[string]interface{} {
 	return map[string]interface{}{
 		"total_rooms":   len(h.rooms),
 		"total_clients": totalClients,
-		"active_locks":  len(h.locks.Snapshot()),
+		"active_locks":  h.locks.Count(),
 	}
 }
 

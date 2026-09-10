@@ -162,6 +162,11 @@ func (s *Service) Update(id string, req UpdateFoodImageRequest) (*FoodImage, err
 // Menyimpan area TIDAK mengubah status. Gambar yang sudah published dan
 // diedit lagi akan tetap published — perubahan langsung terlihat user.
 // Editor menampilkan peringatan untuk kasus ini.
+//
+// Justru karena perubahan langsung tayang, gambar published divalidasi dengan
+// aturan publish yang ketat. Tanpa itu autosave bisa mendorong polygon 2 titik
+// atau nol area ke halaman publik, kondisi yang ditolak mentah-mentah kalau
+// gambar yang sama di-publish dari draft.
 func (s *Service) ReplaceAreas(id string, req ReplaceAreasRequest) (*ReplaceAreasResponse, error) {
 	image, err := s.repo.FindByID(id)
 	if err != nil {
@@ -171,6 +176,12 @@ func (s *Service) ReplaceAreas(id string, req ReplaceAreasRequest) (*ReplaceArea
 	areas, err := normalizeAreasForDraft(req.Areas, image.Width, image.Height)
 	if err != nil {
 		return nil, err
+	}
+
+	if image.Status == StatusPublished {
+		if err := validateAreasForPublish(image, areas); err != nil {
+			return nil, err
+		}
 	}
 
 	updatedAt, err := s.repo.ReplaceAreas(id, areas)

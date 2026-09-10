@@ -69,7 +69,13 @@ REFRESH_TOKEN_EXPIRATION=168h
 SERVER_MODE=release
 
 # Frontend Domain (URL Vercel kamu)
+# WAJIB benar: CORS dan handshake WebSocket memakai allowlist. Origin yang
+# tidak terdaftar akan diblokir browser, dan gejalanya mirip "backend mati".
 FRONTEND_URL=https://atlas-food.vercel.app
+
+# Origin tambahan (dipisah koma), mis. preview deployment Vercel atau
+# custom domain. Kosongkan kalau hanya ada satu domain frontend.
+CORS_ALLOWED_ORIGINS=
 
 # Groq AI
 GROQ_API_KEY=gsk_your_groq_api_key_here

@@ -5,6 +5,12 @@ import (
 	"time"
 )
 
+// RoomEmptyGrace - berapa lama room kosong dipertahankan sebelum dibuang.
+//
+// Selama jeda ini role peserta, history, dan coretan canvas tetap hidup, jadi
+// refresh halaman atau putus koneksi sesaat tidak mereset room.
+const RoomEmptyGrace = 10 * time.Minute
+
 // Room represents a WebSocket room where users collaborate
 type Room struct {
 	ID             string
@@ -18,7 +24,12 @@ type Room struct {
 	batchTicker    *time.Ticker
 	lastBatchSent  time.Time
 	stopCh         chan struct{}
+	stopOnce       sync.Once
 	mu             sync.RWMutex
+
+	// emptySince - kapan client terakhir keluar. Room baru benar-benar dibuang
+	// setelah kosong selama RoomEmptyGrace, bukan seketika. Dilindungi mu.
+	emptySince time.Time
 
 	// roles - room role yang sudah pernah diberikan ke sebuah user (key: userID).
 	// Wajib diingat server: kalau role hanya mengandalkan ?invite= di URL, seorang
@@ -232,5 +243,13 @@ func (r *Room) GetClientCount() int {
 
 // Stop stops the room
 func (r *Room) Stop() {
-	close(r.stopCh)
+	r.stop()
+}
+
+// stop - hentikan loop room; aman dipanggil berkali-kali dan dari goroutine
+// mana pun (ticker cleanup dan Hub.Stop dulu bisa menutup channel ini dua kali).
+func (r *Room) stop() {
+	r.stopOnce.Do(func() {
+		close(r.stopCh)
+	})
 }

@@ -136,7 +136,7 @@ func (r *foodRepository) ListFoodsFiltered(f ListFoodsFilter) ([]Food, int64, er
 		query = query.Where("photo_type = ?", f.PhotoType)
 	}
 	if s := strings.TrimSpace(f.Search); s != "" {
-		like := "%" + s + "%"
+		like := escapeLikePattern(s)
 		query = query.Where(
 			"(foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
 			like, like, like,
@@ -205,13 +205,22 @@ func (r *foodRepository) SearchFoods(query string, categoryID string, foodType s
 
 	trimmed := strings.TrimSpace(query)
 	if trimmed != "" {
-		likeQuery := "%" + trimmed + "%"
-		// FULLTEXT wildcard hanya di akhir kata (nasi*), plus fallback LIKE & pencarian kode
-		matchQuery := trimmed + "*"
-		q = q.Where(
-			"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
-			matchQuery, likeQuery, likeQuery, likeQuery,
-		)
+		likeQuery := escapeLikePattern(trimmed)
+		// FULLTEXT wildcard hanya di akhir kata (nasi*), plus fallback LIKE & pencarian kode.
+		// Operator BOOLEAN MODE dibuang dulu — lihat sanitizeFulltextQuery.
+		matchQuery := sanitizeFulltextQuery(trimmed)
+		if matchQuery != "" {
+			q = q.Where(
+				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				matchQuery, likeQuery, likeQuery, likeQuery,
+			)
+		} else {
+			// Kata kunci seluruhnya operator (mis. "+++") — sisakan LIKE saja.
+			q = q.Where(
+				"(foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				likeQuery, likeQuery, likeQuery,
+			)
+		}
 	}
 
 	err := q.Limit(limit).Find(&foods).Error
@@ -417,12 +426,19 @@ func (r *foodRepository) SearchFoodsPublic(query string, foodType string, limit 
 		// FULLTEXT sendirian gagal untuk pencarian parsial di tengah kata dan untuk
 		// token di bawah innodb_ft_min_token_size. Gabungkan dengan LIKE + kode agar
 		// hasil tetap muncul, mengikuti perilaku SearchFoods (authenticated).
-		likeQuery := "%" + trimmed + "%"
-		matchQuery := trimmed + "*"
-		q = q.Where(
-			"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
-			matchQuery, likeQuery, likeQuery, likeQuery,
-		)
+		likeQuery := escapeLikePattern(trimmed)
+		matchQuery := sanitizeFulltextQuery(trimmed)
+		if matchQuery != "" {
+			q = q.Where(
+				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				matchQuery, likeQuery, likeQuery, likeQuery,
+			)
+		} else {
+			q = q.Where(
+				"(foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				likeQuery, likeQuery, likeQuery,
+			)
+		}
 	}
 
 	err := q.Limit(limit).Find(&foods).Error

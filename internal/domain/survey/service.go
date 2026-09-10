@@ -15,6 +15,7 @@ import (
 type Service interface {
 	CreateSurvey(req CreateSurveyRequest, createdBy string) (*SurveyResponse, error)
 	GetSurveyByID(id string) (*SurveyResponse, error)
+	GetSurveyInfoForRespondent(id string) (*SurveyResponse, error)
 	ListSurveys(createdBy string, page, limit int) (*SurveyListResponse, error)
 	UpdateSurvey(id string, req UpdateSurveyRequest) (*SurveyResponse, error)
 	DeleteSurvey(id string) error
@@ -107,13 +108,26 @@ func (s *surveyService) CreateSurvey(req CreateSurveyRequest, createdBy string) 
 	return s.mapToResponse(survey), nil
 }
 
-// GetSurveyByID - ambil detail survey
+// GetSurveyByID - ambil detail survey lengkap (khusus admin, memuat access_token)
 func (s *surveyService) GetSurveyByID(id string) (*SurveyResponse, error) {
 	survey, err := s.repo.GetSurveyByID(id)
 	if err != nil {
 		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
 	}
 	return s.mapToResponse(survey), nil
+}
+
+// GetSurveyInfoForRespondent - detail survey untuk responden, TANPA kredensial.
+//
+// Endpoint /survey/:id/info dulu memakai GetSurveyByID apa adanya, sehingga
+// setiap responden yang login bisa membaca access_token & access_url survei
+// mana pun — tautan undangan yang semestinya hanya dipegang admin.
+func (s *surveyService) GetSurveyInfoForRespondent(id string) (*SurveyResponse, error) {
+	survey, err := s.repo.GetSurveyByID(id)
+	if err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+	return s.mapToPublicResponse(survey), nil
 }
 
 // ListSurveys - list survey dengan pagination
@@ -451,6 +465,19 @@ func (s *surveyService) GetAllLocales() ([]Locale, error) {
 }
 
 // Helper: map Survey ke SurveyResponse
+// mapToPublicResponse - varian mapToResponse tanpa kredensial.
+//
+// access_token adalah tautan undangan milik admin. ListActiveSurveys dulu
+// memakai mapToResponse apa adanya, sehingga setiap responden yang login bisa
+// memanen token undangan SEMUA survei aktif lewat satu request biasa.
+func (s *surveyService) mapToPublicResponse(survey *Survey) *SurveyResponse {
+	resp := s.mapToResponse(survey)
+	resp.AccessToken = ""
+	resp.AccessURL = ""
+	resp.CreatedBy = ""
+	return resp
+}
+
 func (s *surveyService) mapToResponse(survey *Survey) *SurveyResponse {
 	// Parse meals_config
 	var mealsConfig MealsConfig

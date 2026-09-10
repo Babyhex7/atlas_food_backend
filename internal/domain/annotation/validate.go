@@ -65,6 +65,20 @@ func normalizeAreasForDraft(areas []AreaInput, width, height int) ([]AreaInput, 
 
 // validateForPublish - aturan ketat sebelum anotasi boleh dibaca publik (§7.4)
 func validateForPublish(image *FoodImage) error {
+	incoming := make([]AreaInput, 0, len(image.Areas))
+	for _, area := range image.Areas {
+		incoming = append(incoming, AreaInput{Name: area.Name, Polygon: area.Polygon})
+	}
+	return validateAreasForPublish(image, incoming)
+}
+
+// validateAreasForPublish - aturan publish yang diterapkan ke kumpulan area
+// tertentu, bukan hanya ke area yang sudah tersimpan.
+//
+// Dipakai dua tempat: saat publish dari draft, dan saat autosave menimpa
+// gambar yang SUDAH published (perubahannya langsung tayang, jadi tidak boleh
+// lolos dengan standar draft yang longgar).
+func validateAreasForPublish(image *FoodImage, areas []AreaInput) error {
 	if strings.TrimSpace(image.ImageURL) == "" {
 		return utils.NewAppError(http.StatusUnprocessableEntity, "PUBLISH_INVALID",
 			"Gambar belum punya image_url")
@@ -75,14 +89,14 @@ func validateForPublish(image *FoodImage) error {
 			"Dimensi gambar tidak valid")
 	}
 
-	if len(image.Areas) == 0 {
+	if len(areas) == 0 {
 		return utils.NewAppError(http.StatusUnprocessableEntity, "PUBLISH_INVALID",
 			"Minimal 1 area harus dianotasi sebelum publish")
 	}
 
 	w, h := float64(image.Width), float64(image.Height)
 
-	for _, area := range image.Areas {
+	for _, area := range areas {
 		if strings.TrimSpace(area.Name) == "" {
 			return utils.NewAppError(http.StatusUnprocessableEntity, "PUBLISH_INVALID",
 				"Ada area tanpa nama")

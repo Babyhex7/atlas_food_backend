@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"atlas_food/internal/config"
 	"atlas_food/internal/pkg/utils"
 	"errors"
 	"fmt"
@@ -200,14 +201,31 @@ func (s *authService) UpdateProfile(userID string, req UpdateProfileRequest) (*P
 		birthDate = &parsed
 	}
 
-	user.Name = req.Name
-	user.Phone = req.Phone
-	if req.Gender != nil && *req.Gender == "" {
-		user.Gender = nil
-	} else {
-		user.Gender = req.Gender
+	// PATCH: field yang TIDAK dikirim harus dibiarkan apa adanya. Sebelumnya
+	// setiap field ditimpa tanpa syarat, jadi mengirim {"name": "..."} saja
+	// diam-diam menghapus phone, gender, dan tanggal lahir user.
+	if strings.TrimSpace(req.Name) != "" {
+		user.Name = req.Name
 	}
-	user.BirthDate = birthDate
+	if req.Phone != nil {
+		if strings.TrimSpace(*req.Phone) == "" {
+			user.Phone = nil // string kosong = permintaan eksplisit untuk mengosongkan
+		} else {
+			user.Phone = req.Phone
+		}
+	}
+	if req.Gender != nil {
+		if *req.Gender == "" {
+			user.Gender = nil
+		} else {
+			user.Gender = req.Gender
+		}
+	}
+	if req.BirthDate != nil {
+		// birthDate bernilai nil kalau klien mengirim string kosong — itu
+		// artinya "hapus tanggal lahir", bukan "jangan diubah".
+		user.BirthDate = birthDate
+	}
 
 	if err := s.repo.UpdateUser(user); err != nil {
 		return nil, errors.New("gagal menyimpan profil")
@@ -337,15 +355,21 @@ func (s *authService) generateTokens(user *User) (accessToken, refreshToken stri
 	tokenHash := utils.HashSHA256(refreshToken)
 
 	// Simpan refresh token ke database
+	cfg := config.Load()
+
 	rt := &RefreshToken{
 		UserID:    user.ID,
 		TokenHash: tokenHash,
-		ExpiresAt: time.Now().Add(7 * 24 * time.Hour), // 7 hari
+		ExpiresAt: time.Now().Add(cfg.RefreshTokenExpiration),
 	}
 
 	if err := s.repo.CreateRefreshToken(rt); err != nil {
 		return "", "", 0, errors.New("gagal simpan refresh token")
 	}
 
-	return accessToken, refreshToken, 86400, nil // 24 jam dalam detik
+	// expires_in HARUS mencerminkan umur JWT yang sebenarnya. Dulu dipaku 86400
+	// sementara TTL token diambil dari JWT_EXPIRATION — kalau nilainya diubah
+	// jadi 1 jam, frontend menyimpan cookie 24 jam berisi token yang sudah mati:
+	// middleware meloloskan user, lalu semua request-nya 401.
+	return accessToken, refreshToken, int64(cfg.JWTExpiration.Seconds()), nil
 }

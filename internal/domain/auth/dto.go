@@ -19,8 +19,10 @@ type RefreshTokenRequest struct {
 }
 
 // UpdateProfileRequest - DTO untuk request update profile
+// Semua field opsional: ini endpoint PATCH, field yang dihilangkan berarti
+// "jangan diubah". Name dibatasi panjangnya hanya kalau memang dikirim.
 type UpdateProfileRequest struct {
-	Name      string  `json:"name" binding:"required,min=2,max=100"`
+	Name      string  `json:"name" binding:"omitempty,min=2,max=100"`
 	Phone     *string `json:"phone"`
 	Gender    *string `json:"gender"`
 	BirthDate *string `json:"birth_date"` // format "2006-01-02"

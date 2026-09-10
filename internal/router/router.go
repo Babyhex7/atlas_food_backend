@@ -22,8 +22,19 @@ import (
 // cfg: konfigurasi aplikasi (dipakai antara lain untuk generate link survey)
 // hub: WebSocket hub untuk real-time collaboration
 func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
-	// Set mode Gin (debug/release)
-	gin.SetMode(gin.DebugMode)
+	// Set mode Gin dari konfigurasi. Dulu ini dipaku ke DebugMode sehingga
+	// produksi ikut menyemburkan stack trace dan log route ke stdout.
+	if cfg != nil && cfg.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	} else {
+		gin.SetMode(gin.DebugMode)
+	}
+
+	// Origin yang diizinkan dipakai bersama oleh CORS dan handshake WebSocket.
+	var allowedOrigins []string
+	if cfg != nil {
+		allowedOrigins = cfg.AllowedOrigins()
+	}
 
 	// Buat router baru
 	r := gin.New()
@@ -31,7 +42,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 	// Global middleware
 	r.Use(gin.Recovery())            // Recovery dari panic
 	r.Use(middleware.Logger())       // Log setiap request
-	r.Use(middleware.CORS())         // CORS handling
+	r.Use(middleware.CORS(allowedOrigins)) // CORS handling (allowlist, bukan wildcard)
 	r.Use(middleware.ErrorHandler()) // Global error handling
 
 	// Health check endpoint (tanpa auth)
@@ -115,7 +126,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
 		
 		// ======== WEBSOCKET COLLABORATION ROUTES ========
-		collabHandler := collab.NewHandler(hub)
+		collabHandler := collab.NewHandler(hub, allowedOrigins)
 		collabGroup := v1.Group("/collab")
 		collabGroup.Use(middleware.JWTAuth()) // WebSocket requires authentication
 		{

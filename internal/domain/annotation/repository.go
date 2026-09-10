@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // Repository - akses data untuk food_images dan food_areas
@@ -175,9 +176,14 @@ func (r *Repository) ReplaceAreas(imageID string, areas []AreaInput) (time.Time,
 	var updatedAt time.Time
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		// Kunci baris induk agar dua autosave bersamaan tidak saling menimpa
+		// Kunci baris induk agar dua autosave bersamaan tidak saling menimpa.
+		// clause.Locking WAJIB di sini: tx.First() biasa hanya membaca, tidak
+		// mengunci apa pun. Editor autosave tiap 1.5 detik, jadi dua tab admin
+		// bisa menjalankan delete+insert secara berselang dan saling menghapus
+		// area yang baru saja ditulis lawannya.
 		var image FoodImage
-		if err := tx.First(&image, "id = ?", imageID).Error; err != nil {
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).
+			First(&image, "id = ?", imageID).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return ErrNotFound
 			}

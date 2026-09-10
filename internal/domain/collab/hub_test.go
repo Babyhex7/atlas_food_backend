@@ -13,8 +13,9 @@ func newTestClient(hub *Hub, roomID, userID, username string) *Client {
 		RoomID:   roomID,
 		UserID:   userID,
 		Username: username,
-		Viewport: map[string]interface{}{},
+		viewport: map[string]interface{}{},
 		send:     make(chan *Message, sendBufferSize),
+		sendOpen: true,
 		stopCh:   make(chan struct{}),
 	}
 }
@@ -86,14 +87,14 @@ func TestFirstClientBecomesOwner(t *testing.T) {
 	first := newTestClient(hub, "room-3", "user-1", "Budi")
 	hub.registerClient(first)
 	second := newTestClient(hub, "room-3", "user-2", "Sari")
-	second.RoomRole = hub.ResolveRoomRole("room-3", "user-2", "")
+	second.SetRoomRole(hub.ResolveRoomRole("room-3", "user-2", ""))
 	hub.registerClient(second)
 
-	if first.RoomRole != RoomRoleOwner {
-		t.Fatalf("client pertama harus owner, dapat %q", first.RoomRole)
+	if first.RoomRole() != RoomRoleOwner {
+		t.Fatalf("client pertama harus owner, dapat %q", first.RoomRole())
 	}
-	if second.RoomRole != RoomRoleViewer {
-		t.Fatalf("client kedua tanpa undangan harus viewer, dapat %q", second.RoomRole)
+	if second.RoomRole() != RoomRoleViewer {
+		t.Fatalf("client kedua tanpa undangan harus viewer, dapat %q", second.RoomRole())
 	}
 }
 
@@ -107,12 +108,12 @@ func TestInviteEditorMemberiHakUbah(t *testing.T) {
 
 	inv := hub.Invites().Create("room-8", RoomRoleEditor, "user-owner", time.Hour)
 	editor := newTestClient(hub, "room-8", "user-editor", "Sari")
-	editor.RoomRole = hub.ResolveRoomRole("room-8", "user-editor", inv.Token)
+	editor.SetRoomRole(hub.ResolveRoomRole("room-8", "user-editor", inv.Token))
 	editor.RoleFromInvite = true
 	hub.registerClient(editor)
 
-	if editor.RoomRole != RoomRoleEditor {
-		t.Fatalf("penerima undangan editor harus editor, dapat %q", editor.RoomRole)
+	if editor.RoomRole() != RoomRoleEditor {
+		t.Fatalf("penerima undangan editor harus editor, dapat %q", editor.RoomRole())
 	}
 	if !editor.canEdit() {
 		t.Fatal("editor harus boleh mengubah data")
@@ -128,12 +129,12 @@ func TestUndanganViewerTidakNaikJadiOwnerDiRoomKosong(t *testing.T) {
 
 	inv := hub.Invites().Create("room-9", RoomRoleViewer, "user-owner", time.Hour)
 	viewer := newTestClient(hub, "room-9", "user-viewer", "Sari")
-	viewer.RoomRole = hub.ResolveRoomRole("room-9", "user-viewer", inv.Token)
+	viewer.SetRoomRole(hub.ResolveRoomRole("room-9", "user-viewer", inv.Token))
 	viewer.RoleFromInvite = true
 	hub.registerClient(viewer)
 
-	if viewer.RoomRole != RoomRoleViewer {
-		t.Fatalf("undangan viewer harus tetap viewer walau room kosong, dapat %q", viewer.RoomRole)
+	if viewer.RoomRole() != RoomRoleViewer {
+		t.Fatalf("undangan viewer harus tetap viewer walau room kosong, dapat %q", viewer.RoomRole())
 	}
 }
 
@@ -165,16 +166,16 @@ func TestSecondTabInheritsRoomRole(t *testing.T) {
 
 	tabA := newTestClient(hub, "room-4", "user-1", "Budi")
 	hub.registerClient(tabA)
-	if tabA.RoomRole != RoomRoleOwner {
-		t.Fatalf("tab pertama harus owner, dapat %q", tabA.RoomRole)
+	if tabA.RoomRole() != RoomRoleOwner {
+		t.Fatalf("tab pertama harus owner, dapat %q", tabA.RoomRole())
 	}
 
 	tabB := newTestClient(hub, "room-4", "user-1", "Budi")
-	tabB.RoomRole = hub.ResolveRoomRole("room-4", "user-1", "") // seperti koneksi sungguhan
+	tabB.SetRoomRole(hub.ResolveRoomRole("room-4", "user-1", "")) // seperti koneksi sungguhan
 	hub.registerClient(tabB)
 
-	if tabB.RoomRole != RoomRoleOwner {
-		t.Fatalf("tab kedua user yang sama harus mewarisi role owner, dapat %q", tabB.RoomRole)
+	if tabB.RoomRole() != RoomRoleOwner {
+		t.Fatalf("tab kedua user yang sama harus mewarisi role owner, dapat %q", tabB.RoomRole())
 	}
 }
 
@@ -191,20 +192,20 @@ func TestViewerTetapViewerSaatPindahHalaman(t *testing.T) {
 	// Viewer join lewat invite
 	inv := hub.Invites().Create("room-6", RoomRoleViewer, "user-owner", time.Hour)
 	viewer := newTestClient(hub, "room-6", "user-viewer", "Sari")
-	viewer.RoomRole = hub.ResolveRoomRole("room-6", "user-viewer", inv.Token)
+	viewer.SetRoomRole(hub.ResolveRoomRole("room-6", "user-viewer", inv.Token))
 	hub.registerClient(viewer)
-	if viewer.RoomRole != RoomRoleViewer {
-		t.Fatalf("viewer harus masuk sebagai viewer, dapat %q", viewer.RoomRole)
+	if viewer.RoomRole() != RoomRoleViewer {
+		t.Fatalf("viewer harus masuk sebagai viewer, dapat %q", viewer.RoomRole())
 	}
 
 	// Pindah halaman: socket lama tutup, socket baru konek TANPA invite token
 	hub.unregisterClient(viewer)
 	rejoin := newTestClient(hub, "room-6", "user-viewer", "Sari")
-	rejoin.RoomRole = hub.ResolveRoomRole("room-6", "user-viewer", "")
+	rejoin.SetRoomRole(hub.ResolveRoomRole("room-6", "user-viewer", ""))
 	hub.registerClient(rejoin)
 
-	if rejoin.RoomRole != RoomRoleViewer {
-		t.Fatalf("viewer naik jadi %q setelah pindah halaman — role harus tetap viewer", rejoin.RoomRole)
+	if rejoin.RoomRole() != RoomRoleViewer {
+		t.Fatalf("viewer naik jadi %q setelah pindah halaman — role harus tetap viewer", rejoin.RoomRole())
 	}
 	if rejoin.canEdit() {
 		t.Fatal("viewer lolos pengecekan canEdit setelah pindah halaman")
@@ -224,11 +225,11 @@ func TestOwnerTetapOwnerSaatPindahHalaman(t *testing.T) {
 
 	hub.unregisterClient(owner)
 	rejoin := newTestClient(hub, "room-7", "user-owner", "Budi")
-	rejoin.RoomRole = hub.ResolveRoomRole("room-7", "user-owner", "")
+	rejoin.SetRoomRole(hub.ResolveRoomRole("room-7", "user-owner", ""))
 	hub.registerClient(rejoin)
 
-	if rejoin.RoomRole != RoomRoleOwner {
-		t.Fatalf("owner turun jadi %q setelah pindah halaman", rejoin.RoomRole)
+	if rejoin.RoomRole() != RoomRoleOwner {
+		t.Fatalf("owner turun jadi %q setelah pindah halaman", rejoin.RoomRole())
 	}
 }
 

@@ -203,7 +203,8 @@ func (h *Handler) AccessSurvey(c *gin.Context) {
 func (h *Handler) GetSurveyInfo(c *gin.Context) {
 	id := c.Param("id")
 
-	response, err := h.service.GetSurveyByID(id)
+	// Varian tanpa access_token/access_url — lihat GetSurveyInfoForRespondent.
+	response, err := h.service.GetSurveyInfoForRespondent(id)
 	if err != nil {
 		if appErr, ok := err.(*utils.AppError); ok {
 			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
@@ -213,7 +214,6 @@ func (h *Handler) GetSurveyInfo(c *gin.Context) {
 		return
 	}
 
-	// Return limited info for respondent
 	utils.SuccessResponse(c, response)
 }
 

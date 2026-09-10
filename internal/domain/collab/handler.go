@@ -12,23 +12,43 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  4096,
-	WriteBufferSize: 4096,
-	CheckOrigin: func(r *http.Request) bool {
-		// Allow all origins for development — restrict in production
-		return true
-	},
+// newUpgrader - upgrader WebSocket dengan pemeriksaan Origin.
+//
+// Sebelumnya CheckOrigin selalu mengembalikan true, artinya halaman mana pun di
+// internet bisa membuka koneksi collab ke API ini. Sekarang memakai allowlist
+// yang sama dengan CORS.
+func newUpgrader(allowedOrigins []string) *websocket.Upgrader {
+	return &websocket.Upgrader{
+		ReadBufferSize:  4096,
+		WriteBufferSize: 4096,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := strings.TrimSpace(r.Header.Get("Origin"))
+			if origin == "" {
+				// Klien non-browser (test, CLI) tidak mengirim Origin — JWT tetap wajib.
+				return true
+			}
+			trimmed := strings.TrimRight(origin, "/")
+			for _, allowed := range allowedOrigins {
+				if strings.EqualFold(allowed, trimmed) {
+					return true
+				}
+			}
+			log.Printf("🚫 WebSocket ditolak dari origin tidak dikenal: %s", origin)
+			return false
+		},
+	}
 }
 
 // Handler handles WebSocket connections
 type Handler struct {
-	hub *Hub
+	hub      *Hub
+	upgrader *websocket.Upgrader
 }
 
-// NewHandler creates a new WebSocket handler
-func NewHandler(hub *Hub) *Handler {
-	return &Handler{hub: hub}
+// NewHandler creates a new WebSocket handler.
+// allowedOrigins membatasi situs mana yang boleh membuka koneksi collab.
+func NewHandler(hub *Hub, allowedOrigins []string) *Handler {
+	return &Handler{hub: hub, upgrader: newUpgrader(allowedOrigins)}
 }
 
 // HandleWebSocket upgrades HTTP to WebSocket for a collaboration room.
@@ -85,7 +105,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 
 	roomRole := h.hub.ResolveRoomRole(roomID, userID.(string), inviteTok)
 
-	conn, err := upgrader.Upgrade(c.Writer, c.Request, nil)
+	conn, err := h.upgrader.Upgrade(c.Writer, c.Request, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade connection: %v", err)
 		return

@@ -70,6 +70,32 @@ func (s *InviteStore) Revoke(token string) {
 	s.mu.Unlock()
 }
 
+// RevokeRoom - buang seluruh undangan milik sebuah room.
+//
+// Dipanggil saat room dibersihkan. Tanpa ini token kedaluwarsa menumpuk di
+// memori selamanya karena Get() hanya menolaknya, tidak pernah menghapusnya.
+func (s *InviteStore) RevokeRoom(roomID string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for token, inv := range s.byToken {
+		if inv.RoomID == roomID {
+			delete(s.byToken, token)
+		}
+	}
+}
+
+// SweepExpired - buang token yang sudah lewat masa berlaku
+func (s *InviteStore) SweepExpired() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	now := time.Now()
+	for token, inv := range s.byToken {
+		if now.After(inv.ExpiresAt) {
+			delete(s.byToken, token)
+		}
+	}
+}
+
 // randomToken - buat string hex acak sepanjang nBytes; fallback ke timestamp kalau crypto/rand gagal
 func randomToken(nBytes int) string {
 	b := make([]byte, nBytes)

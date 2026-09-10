@@ -11,7 +11,14 @@ import (
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/router"
+	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 // main - entry point aplikasi Atlas Food API
@@ -71,8 +78,32 @@ func main() {
 
 	// Jalankan server pada port yang dikonfigurasi
 	addr := ":" + cfg.ServerPort
-	log.Printf("Server berjalan pada http://localhost%s", addr)
-	if err := r.Run(addr); err != nil {
-		log.Fatalf("Gagal start server: %v", err)
+	srv := &http.Server{Addr: addr, Handler: r}
+
+	go func() {
+		log.Printf("Server berjalan pada http://localhost%s", addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("Gagal start server: %v", err)
+		}
+	}()
+
+	// Graceful shutdown: tanpa ini hub tidak pernah dihentikan dan koneksi
+	// WebSocket yang sedang aktif diputus mendadak saat proses dimatikan.
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+	log.Println("Sinyal shutdown diterima, menutup server...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Printf("Server dipaksa berhenti: %v", err)
 	}
+	hub.Stop()
+
+	if sqlDB, err := db.DB(); err == nil {
+		_ = sqlDB.Close()
+	}
+	log.Println("Server berhenti dengan bersih")
 }

@@ -3,6 +3,7 @@ package collab
 import (
 	"encoding/json"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -17,25 +18,41 @@ const (
 )
 
 // Client represents a WebSocket client
+//
+// KONKURENSI: satu Client disentuh tiga goroutine sekaligus — ReadPump-nya
+// sendiri, loop Hub, dan goroutine HTTP (mis. update role). Semua field yang
+// bisa berubah setelah registrasi karena itu dijaga `mu` dan hanya boleh
+// diakses lewat getter/setter di bawah. `mu` SELALU lock terdalam: jangan
+// pernah mengambil room.mu atau hub.mu sambil memegangnya.
 type Client struct {
 	conn     *websocket.Conn
 	hub      *Hub
 	RoomID   string
 	UserID   string
 	Username string
-	Role     string // JWT app role (admin/respondent)
-	RoomRole string // per-room: owner|editor|viewer
+	Role     string // JWT app role (admin/respondent) — immutable setelah dibuat
 	// RoleFromInvite menandai role yang berasal dari token undangan. Role
 	// semacam itu tidak boleh dinaikkan oleh aturan "orang pertama jadi owner":
 	// undangan viewer harus tetap viewer meski dia kebetulan masuk saat room
-	// sedang kosong.
-	RoleFromInvite  bool
-	FollowingUserID string // Figma-like follow target
-	Viewport        map[string]interface{}
-	ChatBubble      map[string]interface{} // cursor chat aktif client ini: {x, y, text}; nil kalau tidak ada
-	send            chan *Message
-	lastMessageTime time.Time
-	messageCount    int
+	// sedang kosong. Di-set sebelum client masuk hub, jadi immutable.
+	RoleFromInvite bool
+
+	mu              sync.RWMutex
+	roomRole        string                 // per-room: owner|editor|viewer
+	followingUserID string                 // Figma-like follow target
+	viewport        map[string]interface{} // viewport terakhir, dipush ke follower
+	chatBubble      map[string]interface{} // cursor chat aktif: {x, y, text}; nil kalau tidak ada
+
+	// sendMu menjaga `send` dari send-on-closed-channel. Channel ini ditutup
+	// hub saat unregister, sementara peserta lain bisa sedang mengirim pesan
+	// ke sini (follow/unfollow, update role) — tanpa gerbang ini prosesnya
+	// panic dan seluruh server ikut mati.
+	sendMu   sync.RWMutex
+	sendOpen bool
+	send     chan *Message
+
+	lastMessageTime time.Time // hanya disentuh ReadPump
+	messageCount    int       // hanya disentuh ReadPump
 	stopCh          chan struct{}
 }
 
@@ -52,24 +69,136 @@ func NewClient(conn *websocket.Conn, hub *Hub, roomID, userID, username, role, r
 		UserID:   userID,
 		Username: username,
 		Role:     role,
-		RoomRole: roomRole,
-		Viewport: map[string]interface{}{},
+		roomRole: roomRole,
+		viewport: map[string]interface{}{},
 		send:     make(chan *Message, sendBufferSize),
+		sendOpen: true,
 		stopCh:   make(chan struct{}),
+	}
+}
+
+// ─── Accessor aman-konkuren ──────────────────────────────────────────────────
+
+// RoomRole - role client di room saat ini (owner|editor|viewer)
+func (c *Client) RoomRole() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.roomRole
+}
+
+// SetRoomRole - ubah role client di room
+func (c *Client) SetRoomRole(role string) {
+	c.mu.Lock()
+	c.roomRole = role
+	c.mu.Unlock()
+}
+
+// FollowingUserID - user yang sedang diikuti client ini ("" kalau tidak ada)
+func (c *Client) FollowingUserID() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.followingUserID
+}
+
+// SetFollowingUserID - set/lepas target follow
+func (c *Client) SetFollowingUserID(userID string) {
+	c.mu.Lock()
+	c.followingUserID = userID
+	c.mu.Unlock()
+}
+
+// SetViewport - simpan viewport terakhir client
+func (c *Client) SetViewport(vp map[string]interface{}) {
+	c.mu.Lock()
+	c.viewport = vp
+	c.mu.Unlock()
+}
+
+// ViewportCopy - salinan viewport terakhir; aman dibaca goroutine lain
+func (c *Client) ViewportCopy() map[string]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if len(c.viewport) == 0 {
+		return nil
+	}
+	out := make(map[string]interface{}, len(c.viewport))
+	for k, v := range c.viewport {
+		out[k] = v
+	}
+	return out
+}
+
+// SetChatBubble - set/hapus bubble cursor chat client ini
+func (c *Client) SetChatBubble(bubble map[string]interface{}) {
+	c.mu.Lock()
+	c.chatBubble = bubble
+	c.mu.Unlock()
+}
+
+// ChatBubbleCopy - salinan bubble aktif; nil kalau tidak ada bubble terbuka
+func (c *Client) ChatBubbleCopy() map[string]interface{} {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.chatBubble == nil {
+		return nil
+	}
+	out := make(map[string]interface{}, len(c.chatBubble))
+	for k, v := range c.chatBubble {
+		out[k] = v
+	}
+	return out
+}
+
+// SetChatBubbleText - perbarui teks bubble yang sedang terbuka.
+// Mengembalikan false kalau tidak ada bubble aktif.
+func (c *Client) SetChatBubbleText(text string) bool {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if c.chatBubble == nil {
+		return false
+	}
+	c.chatBubble["text"] = text
+	return true
+}
+
+// closeSend - tutup channel kirim satu kali saja, aman dipanggil berulang.
+// Setelah ini semua sendQuiet/trySend jadi no-op, bukan panic.
+func (c *Client) closeSend() {
+	c.sendMu.Lock()
+	defer c.sendMu.Unlock()
+	if !c.sendOpen {
+		return
+	}
+	c.sendOpen = false
+	close(c.send)
+}
+
+// trySend - satu-satunya jalan menulis ke c.send.
+// Mengembalikan false kalau channel sudah ditutup atau buffer penuh.
+func (c *Client) trySend(msg *Message) bool {
+	c.sendMu.RLock()
+	defer c.sendMu.RUnlock()
+	if !c.sendOpen {
+		return false
+	}
+	select {
+	case c.send <- msg:
+		return true
+	default:
+		return false
 	}
 }
 
 // canEdit - cek apakah client boleh mengubah data (owner/editor). Viewer selalu false
 func (c *Client) canEdit() bool {
-	return c.RoomRole == RoomRoleOwner || c.RoomRole == RoomRoleEditor
+	role := c.RoomRole()
+	return role == RoomRoleOwner || role == RoomRoleEditor
 }
 
-// sendQuiet - kirim pesan ke channel client tanpa blocking; drop + log kalau buffer penuh
+// sendQuiet - kirim pesan ke channel client tanpa blocking; drop + log kalau buffer penuh atau sudah tertutup
 func (c *Client) sendQuiet(msg *Message) {
-	select {
-	case c.send <- msg:
-	default:
-		log.Printf("Failed to send to client %s", c.UserID)
+	if !c.trySend(msg) {
+		log.Printf("Failed to send to client %s (buffer penuh atau koneksi tertutup)", c.UserID)
 	}
 }
 
@@ -83,7 +212,12 @@ func (c *Client) sendError(code, message string) {
 
 // ReadPump pumps messages from the WebSocket connection to the hub
 func (c *Client) ReadPump() {
+	// Panic di goroutine ini TIDAK tertangkap gin.Recovery (goroutine terpisah),
+	// jadi tanpa recover satu bug di jalur pesan mematikan seluruh proses API.
 	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("PANIC di ReadPump client %s room %s: %v", c.UserID, c.RoomID, r)
+		}
 		c.hub.unregister <- c
 		c.conn.Close()
 	}()
@@ -131,6 +265,9 @@ func (c *Client) ReadPump() {
 func (c *Client) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("PANIC di WritePump client %s room %s: %v", c.UserID, c.RoomID, r)
+		}
 		ticker.Stop()
 		c.conn.Close()
 	}()
@@ -320,7 +457,7 @@ func (c *Client) handleCursorMove(msg *Message) {
 	}
 	payload["color"] = colorForUser(c.UserID)
 	payload["page"] = payloadString(payload, "page")
-	payload["room_role"] = c.RoomRole
+	payload["room_role"] = c.RoomRole()
 	update := newMessage(MsgCursorUpdate, c.RoomID, c.UserID, c.Username, payload)
 	room := c.hub.GetOrCreateRoom(c.RoomID)
 	room.AddMessage(update)
@@ -333,7 +470,7 @@ func (c *Client) handleViewportUpdate(msg *Message) {
 		payload = map[string]interface{}{}
 	}
 	// Simpan viewport leader untuk follower yang baru join follow
-	c.Viewport = map[string]interface{}{
+	c.SetViewport(map[string]interface{}{
 		"page":      payloadString(payload, "page"),
 		"scroll_x":  payload["scroll_x"],
 		"scroll_y":  payload["scroll_y"],
@@ -341,7 +478,7 @@ func (c *Client) handleViewportUpdate(msg *Message) {
 		"path":      payloadString(payload, "path"),
 		"zoom":      payload["zoom"],
 		"timestamp": time.Now().UnixMilli(),
-	}
+	})
 	payload["color"] = colorForUser(c.UserID)
 	payload["display_name"] = c.Username
 
@@ -365,7 +502,7 @@ func (c *Client) handleFollowUser(msg *Message) {
 		return
 	}
 
-	c.FollowingUserID = targetID
+	c.SetFollowingUserID(targetID)
 
 	started := newMessage(MsgFollowStarted, c.RoomID, c.UserID, c.Username, map[string]interface{}{
 		"follower_id":   c.UserID,
@@ -379,12 +516,10 @@ func (c *Client) handleFollowUser(msg *Message) {
 	target.sendQuiet(started)
 	c.hub.broadcastToRoom(room, c.hub.buildFollowState(room), nil)
 
-	// Push viewport leader saat ini agar follower langsung mirror
-	if len(target.Viewport) > 0 {
-		vp := map[string]interface{}{}
-		for k, v := range target.Viewport {
-			vp[k] = v
-		}
+	// Push viewport leader saat ini agar follower langsung mirror.
+	// ViewportCopy() menyalin di bawah lock — membaca map leader langsung
+	// dari goroutine ini adalah data race.
+	if vp := target.ViewportCopy(); vp != nil {
 		vp["color"] = colorForUser(targetID)
 		vp["display_name"] = target.Username
 		c.sendQuiet(newMessage(MsgViewportSync, c.RoomID, targetID, target.Username, vp))
@@ -398,11 +533,11 @@ func (c *Client) handleFollowUser(msg *Message) {
 
 // handleUnfollowUser - berhenti mengikuti leader dan beritahu room bahwa follow state berubah
 func (c *Client) handleUnfollowUser() {
-	if c.FollowingUserID == "" {
+	prev := c.FollowingUserID()
+	if prev == "" {
 		return
 	}
-	prev := c.FollowingUserID
-	c.FollowingUserID = ""
+	c.SetFollowingUserID("")
 
 	room := c.hub.GetOrCreateRoom(c.RoomID)
 	stopped := newMessage(MsgFollowStopped, c.RoomID, c.UserID, c.Username, map[string]interface{}{
@@ -426,12 +561,16 @@ func clampCursorChatText(raw string) string {
 
 // broadcastCursorChatState - siarkan state bubble client ini (posisi + teks tersimpan di c.ChatBubble)
 func (c *Client) broadcastCursorChatState() {
+	bubble := c.ChatBubbleCopy()
+	if bubble == nil {
+		return
+	}
 	payload := map[string]interface{}{
-		"x":         c.ChatBubble["x"],
-		"y":         c.ChatBubble["y"],
-		"text":      c.ChatBubble["text"],
+		"x":         bubble["x"],
+		"y":         bubble["y"],
+		"text":      bubble["text"],
 		"color":     colorForUser(c.UserID),
-		"room_role": c.RoomRole,
+		"room_role": c.RoomRole(),
 	}
 	c.hub.Publish(newMessage(MsgCursorChatUpdated, c.RoomID, c.UserID, c.Username, payload))
 }
@@ -439,29 +578,28 @@ func (c *Client) broadcastCursorChatState() {
 // handleCursorChatOpen - buka bubble chat baru di posisi kursor saat ini (dipicu tombol "/" di FE).
 // Posisi di-anchor sekali di sini dan tidak berubah lagi selama bubble ini terbuka.
 func (c *Client) handleCursorChatOpen(msg *Message) {
-	c.ChatBubble = map[string]interface{}{
+	c.SetChatBubble(map[string]interface{}{
 		"x":    msg.Payload["x"],
 		"y":    msg.Payload["y"],
 		"text": clampCursorChatText(payloadString(msg.Payload, "text")),
-	}
+	})
 	c.broadcastCursorChatState()
 }
 
 // handleCursorChatUpdate - perbarui teks bubble yang sedang terbuka; diabaikan kalau belum ada open
 func (c *Client) handleCursorChatUpdate(msg *Message) {
-	if c.ChatBubble == nil {
+	if !c.SetChatBubbleText(clampCursorChatText(payloadString(msg.Payload, "text"))) {
 		return
 	}
-	c.ChatBubble["text"] = clampCursorChatText(payloadString(msg.Payload, "text"))
 	c.broadcastCursorChatState()
 }
 
 // handleCursorChatClose - tutup bubble (Enter/Esc/timeout di FE) dan beritahu room agar bubble dihapus
 func (c *Client) handleCursorChatClose() {
-	if c.ChatBubble == nil {
+	if c.ChatBubbleCopy() == nil {
 		return
 	}
-	c.ChatBubble = nil
+	c.SetChatBubble(nil)
 	c.hub.Publish(newMessage(MsgCursorChatClosed, c.RoomID, c.UserID, c.Username, map[string]interface{}{}))
 }
 
@@ -527,7 +665,7 @@ func (c *Client) handleDBEditStart(msg *Message) {
 		return
 	}
 
-	lock, ok, existing := c.hub.Locks().TryLock(entityType, entityID, c.UserID, c.Username, version)
+	lock, ok, existing := c.hub.Locks().TryLock(c.RoomID, entityType, entityID, c.UserID, c.Username, version)
 	if !ok {
 		c.sendError("LOCKED", "Sedang diedit oleh "+existing.Username)
 		c.sendQuiet(newMessage(MsgDBLocked, c.RoomID, existing.LockedBy, existing.Username, map[string]interface{}{
@@ -558,7 +696,7 @@ func (c *Client) handleDBEditStart(msg *Message) {
 func (c *Client) handleDBEditField(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
-	lock := c.hub.Locks().Get(entityType, entityID)
+	lock := c.hub.Locks().Get(c.RoomID, entityType, entityID)
 	if lock == nil || lock.LockedBy != c.UserID {
 		c.sendError("NOT_LOCK_OWNER", "Anda tidak memegang lock entity ini")
 		return
@@ -572,7 +710,7 @@ func (c *Client) handleDBEditSave(msg *Message) {
 	entityID := payloadString(msg.Payload, "entity_id")
 	clientVersion := payloadInt(msg.Payload, "version")
 
-	lock := c.hub.Locks().Get(entityType, entityID)
+	lock := c.hub.Locks().Get(c.RoomID, entityType, entityID)
 	if lock == nil || lock.LockedBy != c.UserID {
 		c.sendError("NOT_LOCK_OWNER", "Anda tidak memegang lock entity ini")
 		return
@@ -582,13 +720,13 @@ func (c *Client) handleDBEditSave(msg *Message) {
 		return
 	}
 
-	bumped, ok := c.hub.Locks().BumpVersion(entityType, entityID, c.UserID)
+	bumped, ok := c.hub.Locks().BumpVersion(c.RoomID, entityType, entityID, c.UserID)
 	if !ok {
 		c.sendError("VERSION_CONFLICT", "Gagal menyimpan versi")
 		return
 	}
 
-	c.hub.Locks().Release(entityType, entityID, c.UserID)
+	c.hub.Locks().Release(c.RoomID, entityType, entityID, c.UserID)
 	c.hub.Publish(newMessage(MsgDBEditSaved, c.RoomID, c.UserID, c.Username, map[string]interface{}{
 		"entity_type": entityType,
 		"entity_id":   entityID,
@@ -609,7 +747,7 @@ func (c *Client) handleDBEditSave(msg *Message) {
 func (c *Client) handleDBEditCancel(msg *Message) {
 	entityType := payloadString(msg.Payload, "entity_type")
 	entityID := payloadString(msg.Payload, "entity_id")
-	if !c.hub.Locks().Release(entityType, entityID, c.UserID) {
+	if !c.hub.Locks().Release(c.RoomID, entityType, entityID, c.UserID) {
 		c.sendError("NOT_LOCK_OWNER", "Tidak bisa melepas lock")
 		return
 	}
@@ -783,7 +921,7 @@ func (c *Client) handleCanvasClear(msg *Message) {
 
 // handleUpdateUserRole - memproses permintaan update role dari owner room
 func (c *Client) handleUpdateUserRole(msg *Message) {
-	if c.RoomRole != RoomRoleOwner {
+	if c.RoomRole() != RoomRoleOwner {
 		c.sendError("FORBIDDEN", "Hanya owner room yang bisa mengubah role peserta")
 		return
 	}
