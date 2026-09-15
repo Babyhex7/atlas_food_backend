@@ -14,6 +14,7 @@ import (
 	"atlas_food/internal/pkg/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/penglongli/gin-metrics/ginmetrics"
 	"gorm.io/gorm"
 )
 
@@ -44,6 +45,13 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 	r.Use(middleware.Logger())       // Log setiap request
 	r.Use(middleware.CORS(allowedOrigins)) // CORS handling (allowlist, bukan wildcard)
 	r.Use(middleware.ErrorHandler()) // Global error handling
+
+	// Setup Prometheus metrics monitoring middleware (/metrics endpoint)
+	m := ginmetrics.GetMonitor()
+	m.SetMetricPath("/metrics")
+	m.SetSlowTime(10)
+	m.SetDuration([]float64{0.1, 0.3, 1.2, 5, 10})
+	m.Use(r)
 
 	// Health check endpoint (tanpa auth)
 	r.GET("/health", func(c *gin.Context) {

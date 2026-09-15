@@ -7,11 +7,22 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// safeFolderName - nama folder tujuan upload hanya boleh huruf/angka/strip.
+//
+// `folder` sebelumnya diambil mentah dari form field dan langsung dipakai di
+// filepath.Join(UploadPath, folder) — form field itu berasal dari body request,
+// jadi mengirim folder=../../../../etc atau path absolut menulis file KELUAR
+// dari direktori uploads. Endpoint ini memang di belakang AdminOnly, tapi path
+// traversal tetap path traversal: token admin yang bocor jadi berarti tulis
+// file sembarangan di server, bukan cuma di folder upload.
+var safeFolderName = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
 
 // Handler - HTTP handler untuk upload file
 type Handler struct {
@@ -50,7 +61,11 @@ func (h *Handler) UploadImage(c *gin.Context) {
 	}
 
 	// Generate nama file unik
-	folder := c.DefaultPostForm("folder", "others") // as-served, foods, others
+	folder := c.DefaultPostForm("folder", "others") // as-served, annotations, others
+	if !safeFolderName.MatchString(folder) {
+		utils.ValidationErrorResponse(c, "Nama folder tidak valid")
+		return
+	}
 	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
 	
 	// Simpan ke disk
