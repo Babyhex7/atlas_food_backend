@@ -1,4 +1,25 @@
 services:
+  # Go Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: atlas_backend
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # Override DB_HOST agar menunjuk ke nama container 'mysql' (bukan localhost)
+      - DB_HOST=mysql
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mysql
+    networks:
+      - atlas-network
+
   # MySQL Database
   mysql:
     image: mysql:8.0
@@ -13,6 +34,8 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
+    networks:
+      - atlas-network
 
   # Prometheus
   prometheus:
@@ -25,6 +48,8 @@ services:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - atlas-network
 
   # Grafana
   grafana:
@@ -39,6 +64,8 @@ services:
       - grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+    networks:
+      - atlas-network
 
   # phpMyAdmin Database GUI
   phpmyadmin:
@@ -53,7 +80,14 @@ services:
       MYSQL_ROOT_PASSWORD: rootpassword
     depends_on:
       - mysql
+    networks:
+      - atlas-network
 
 volumes:
   mysql-data:
   grafana-data:
+
+networks:
+  atlas-network:
+    name: atlas-network
+    driver: bridge
