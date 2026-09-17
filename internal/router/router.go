@@ -1,6 +1,8 @@
 package router
 
 import (
+	"time"
+
 	"atlas_food/internal/config"
 	"atlas_food/internal/domain/ai"
 	"atlas_food/internal/domain/annotation"
@@ -73,6 +75,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		publicAnnotationHandler := annotation.NewPublicHandler(annotationService)
 
 		publicGroup := v1.Group("/public")
+		publicGroup.Use(middleware.RateLimiter(120, time.Minute)) // 120 req/min per IP
 		{
 			// Food search & browse
 			publicGroup.GET("/foods/search", publicFoodHandler.SearchFoods)
@@ -91,6 +94,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		// Auth routes
 		authHandler := auth.NewHandler(db)
 		authGroup := v1.Group("/auth")
+		authGroup.Use(middleware.RateLimiter(30, time.Minute)) // 30 req/min per IP for Auth
 		{
 			authGroup.POST("/register", authHandler.Register)
 			authGroup.POST("/login", authHandler.Login)

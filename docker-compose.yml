@@ -13,10 +13,26 @@ services:
     environment:
       # Override DB_HOST agar menunjuk ke nama container 'mysql' (bukan localhost)
       - DB_HOST=mysql
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=atlasredis123
     volumes:
       - ./uploads:/app/uploads
     depends_on:
       - mysql
+      - redis
+    networks:
+      - atlas-network
+
+  # Redis Cache & Broker
+  redis:
+    image: redis:7.2-alpine
+    container_name: atlas_redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel notice --requirepass atlasredis123 --maxmemory 512mb --maxmemory-policy volatile-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
     networks:
       - atlas-network
 
@@ -85,6 +101,7 @@ services:
 
 volumes:
   mysql-data:
+  redis-data:
   grafana-data:
 
 networks:

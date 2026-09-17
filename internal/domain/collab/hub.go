@@ -1,13 +1,14 @@
 package collab
 
 import (
+	"context"
 	"errors"
 	"log"
 	"sync"
 	"time"
 )
 
-// Hub manages all WebSocket rooms and clients (in-memory; Redis deferred).
+// Hub manages all WebSocket rooms and clients (in-memory with Redis PubSub support).
 type Hub struct {
 	rooms      map[string]*Room
 	register   chan *Client
@@ -15,6 +16,7 @@ type Hub struct {
 	broadcast  chan *Message
 	locks      *LockManager
 	invites    *InviteStore
+	broker     *RedisPubSubBroker
 	mu         sync.RWMutex
 	stopCh     chan struct{}
 	stopOnce   sync.Once
@@ -22,7 +24,7 @@ type Hub struct {
 
 // NewHub creates a new Hub instance
 func NewHub() *Hub {
-	return &Hub{
+	h := &Hub{
 		rooms:      make(map[string]*Room),
 		register:   make(chan *Client, 256),
 		unregister: make(chan *Client, 256),
@@ -31,6 +33,8 @@ func NewHub() *Hub {
 		invites:    NewInviteStore(),
 		stopCh:     make(chan struct{}),
 	}
+	h.broker = NewRedisPubSubBroker(h)
+	return h
 }
 
 // Locks returns the in-memory lock manager.
@@ -45,6 +49,10 @@ func (h *Hub) Invites() *InviteStore {
 
 // Run starts the hub's main event loop
 func (h *Hub) Run() {
+	if h.broker != nil {
+		h.broker.Start(context.Background())
+	}
+
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
@@ -284,7 +292,7 @@ func (h *Hub) unregisterClient(client *Client) {
 	}
 }
 
-// broadcastMessage - simpan pesan ke history room lalu sebarkan ke semua anggota room
+// broadcastMessage - simpan pesan ke history room lalu sebarkan ke semua anggota room (lokal & Redis PubSub)
 func (h *Hub) broadcastMessage(message *Message) {
 	h.mu.RLock()
 	room, exists := h.rooms[message.RoomID]
@@ -295,6 +303,10 @@ func (h *Hub) broadcastMessage(message *Message) {
 
 	room.addToHistory(message)
 	h.broadcastToRoom(room, message, nil)
+
+	if h.broker != nil {
+		h.broker.Publish(context.Background(), message)
+	}
 }
 
 // BroadcastExcept sends to all clients in room except skip (nil = all including sender filtered by UserID skip logic below).

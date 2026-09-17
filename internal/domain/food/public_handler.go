@@ -1,11 +1,15 @@
 package food
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
+
+	redisInfra "atlas_food/internal/infra/redis"
 )
 
 // PublicHandler handles public (no-auth) food endpoints
@@ -41,7 +45,6 @@ func NewPublicHandler(repo Repository) *PublicHandler {
 // @Router /public/foods/search [get]
 func (h *PublicHandler) SearchFoods(c *gin.Context) {
 	query := c.DefaultQuery("q", "")
-	// foodType: "food" | "drink" | "" (kosong = semua)
 	foodType := c.Query("type")
 	limit := 20
 
@@ -51,39 +54,48 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 		}
 	}
 
-	foods, err := h.repo.SearchFoodsPublic(query, foodType, limit)
+	cacheKey := redisInfra.GenerateSearchCacheKey(query, foodType, limit)
+	cacheService := redisInfra.GetCacheService()
+
+	var results []SearchFoodResponse
+
+	err := cacheService.GetOrFetch(c.Request.Context(), cacheKey, 1*time.Hour, &results, func() (interface{}, error) {
+		foods, err := h.repo.SearchFoodsPublic(query, foodType, limit)
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]SearchFoodResponse, 0, len(foods))
+		for _, food := range foods {
+			item := SearchFoodResponse{
+				ID:        food.ID,
+				Code:      food.Code,
+				Name:      food.Name,
+				LocalName: food.LocalName,
+				PhotoType: food.PhotoType,
+				FoodType:  resolveFoodType(food.Category),
+			}
+
+			if food.Category != nil {
+				item.Category = &CategoryInfo{
+					ID:   food.Category.ID,
+					Code: food.Category.Code,
+					Name: food.Category.Name,
+					Icon: food.Category.Icon,
+				}
+			}
+
+			res = append(res, item)
+		}
+		return res, nil
+	})
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to search foods",
 		})
 		return
-	}
-
-	// Transform to response.
-	// Slice diinisialisasi non-nil supaya "data" selalu berupa array `[]` dan tidak
-	// pernah `null` — klien mengandalkan hasil ini untuk langsung di-map.
-	results := make([]SearchFoodResponse, 0, len(foods))
-	for _, food := range foods {
-		item := SearchFoodResponse{
-			ID:        food.ID,
-			Code:      food.Code,
-			Name:      food.Name,
-			LocalName: food.LocalName,
-			PhotoType: food.PhotoType,
-			FoodType:  resolveFoodType(food.Category),
-		}
-
-		if food.Category != nil {
-			item.Category = &CategoryInfo{
-				ID:   food.Category.ID,
-				Code: food.Category.Code,
-				Name: food.Category.Name,
-				Icon: food.Category.Icon,
-			}
-		}
-
-		results = append(results, item)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -93,125 +105,128 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 	})
 }
 
-// GetFoodDetail godoc
-// @Summary Get food detail with portion photos (Public)
-// @Description Get complete food information including nutrients and portion photos
-// @Tags public-food
-// @Accept json
-// @Produce json
-// @Param id path string true "Food ID"
-// @Success 200 {object} map[string]interface{}
-// @Router /public/foods/{id} [get]
 func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 	foodID := c.Param("id")
 
-	// Use channels for concurrent data fetching
-	type dataResult struct {
-		food          *Food
-		portionPhotos []AsServedImage
-		nutrients     []FoodNutrient
-		err           error
-		dataType      string
-	}
+	cacheKey := fmt.Sprintf("atlas:prod:cache:foods:detail:%s", foodID)
+	cacheService := redisInfra.GetCacheService()
 
-	resultChan := make(chan dataResult, 2)
+	var response FoodResponse
 
-	// Goroutine 1: Get food with portion photos
-	go func() {
-		food, photos, err := h.repo.GetFoodWithPortionPhotos(foodID)
-		resultChan <- dataResult{
-			food:          food,
-			portionPhotos: photos,
-			err:           err,
-			dataType:      "food",
+	err := cacheService.GetOrFetch(c.Request.Context(), cacheKey, 12*time.Hour, &response, func() (interface{}, error) {
+		// Use channels for concurrent data fetching
+		type dataResult struct {
+			food          *Food
+			portionPhotos []AsServedImage
+			nutrients     []FoodNutrient
+			err           error
+			dataType      string
 		}
-	}()
 
-	// Goroutine 2: Get nutrients
-	go func() {
-		nutrients, err := h.repo.GetFoodNutrients(foodID)
-		resultChan <- dataResult{
-			nutrients: nutrients,
-			err:       err,
-			dataType:  "nutrients",
-		}
-	}()
+		resultChan := make(chan dataResult, 2)
 
-	// Collect results
-	var food *Food
-	var portionPhotos []AsServedImage
-	var nutrients []FoodNutrient
-
-	for i := 0; i < 2; i++ {
-		res := <-resultChan
-		
-		switch res.dataType {
-		case "food":
-			if res.err != nil {
-				c.JSON(http.StatusNotFound, gin.H{
-					"status":  "error",
-					"message": "Food not found",
-				})
-				return
+		// Goroutine 1: Get food with portion photos
+		go func() {
+			food, photos, err := h.repo.GetFoodWithPortionPhotos(foodID)
+			resultChan <- dataResult{
+				food:          food,
+				portionPhotos: photos,
+				err:           err,
+				dataType:      "food",
 			}
-			food = res.food
-			portionPhotos = res.portionPhotos
-			
-		case "nutrients":
-			if res.err == nil {
-				nutrients = res.nutrients
+		}()
+
+		// Goroutine 2: Get nutrients
+		go func() {
+			nutrients, err := h.repo.GetFoodNutrients(foodID)
+			resultChan <- dataResult{
+				nutrients: nutrients,
+				err:       err,
+				dataType:  "nutrients",
 			}
-			// Don't fail if nutrients not found, just use empty array
-		}
-	}
+		}()
 
-	// Transform nutrients to map
-	nutrientMap := make(map[string]NutrientDetail)
-	for _, n := range nutrients {
-		nutrientMap[n.NutrientType.Code] = NutrientDetail{
-			Value: n.ValuePer100g,
-			Unit:  n.NutrientType.Unit.Symbol,
-		}
-	}
+		// Collect results
+		var food *Food
+		var portionPhotos []AsServedImage
+		var nutrients []FoodNutrient
 
-	// Transform portion photos — food_image_id untuk overlay anotasi responden
-	var portionPhotoList []PortionPhoto
-	for _, p := range portionPhotos {
-		desc := p.Description
-		foodImageID := ""
-		if strings.HasPrefix(desc, "food_image:") {
-			foodImageID = strings.TrimPrefix(desc, "food_image:")
-			desc = ""
+		for i := 0; i < 2; i++ {
+			res := <-resultChan
+
+			switch res.dataType {
+			case "food":
+				if res.err != nil {
+					return nil, res.err
+				}
+				food = res.food
+				portionPhotos = res.portionPhotos
+
+			case "nutrients":
+				if res.err == nil {
+					nutrients = res.nutrients
+				}
+			}
 		}
-		portionPhotoList = append(portionPhotoList, PortionPhoto{
-			ID:           p.ID,
-			Label:        p.Label,
-			ImageURL:     p.ImageURL,
-			ThumbnailURL: p.ThumbnailURL,
-			WeightGram:   p.WeightGram,
-			Description:  desc,
-			FoodImageID:  foodImageID,
+
+		// Transform nutrients to map
+		nutrientMap := make(map[string]NutrientDetail)
+		for _, n := range nutrients {
+			nutrientMap[n.NutrientType.Code] = NutrientDetail{
+				Value: n.ValuePer100g,
+				Unit:  n.NutrientType.Unit.Symbol,
+			}
+		}
+
+		// Transform portion photos
+		var portionPhotoList []PortionPhoto
+		for _, p := range portionPhotos {
+			desc := p.Description
+			foodImageID := ""
+			if strings.HasPrefix(desc, "food_image:") {
+				foodImageID = strings.TrimPrefix(desc, "food_image:")
+				desc = ""
+			}
+			portionPhotoList = append(portionPhotoList, PortionPhoto{
+				ID:           p.ID,
+				Label:        p.Label,
+				ImageURL:     p.ImageURL,
+				ThumbnailURL: p.ThumbnailURL,
+				WeightGram:   p.WeightGram,
+				Description:  desc,
+				FoodImageID:  foodImageID,
+			})
+		}
+
+		resp := FoodResponse{
+			ID:            food.ID,
+			Code:          food.Code,
+			Name:          food.Name,
+			LocalName:     food.LocalName,
+			Description:   food.Description,
+			PhotoType:     food.PhotoType,
+			Nutrients:     nutrientMap,
+			PortionPhotos: portionPhotoList,
+		}
+
+		if food.Category != nil {
+			resp.Category = &CategoryInfo{
+				ID:   food.Category.ID,
+				Code: food.Category.Code,
+				Name: food.Category.Name,
+				Icon: food.Category.Icon,
+			}
+		}
+
+		return resp, nil
+	})
+
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"status":  "error",
+			"message": "Food not found",
 		})
-	}
-
-	response := FoodResponse{
-		ID:            food.ID,
-		Code:          food.Code,
-		Name:          food.Name,
-		LocalName:     food.LocalName,
-		Description:   food.Description,
-		PhotoType:     food.PhotoType,
-		Nutrients:     nutrientMap,
-		PortionPhotos: portionPhotoList,
-	}
-
-	if food.Category != nil {
-		response.Category = &CategoryInfo{
-			ID:   food.Category.ID,
-			Code: food.Category.Code,
-			Name: food.Category.Name,
-			Icon: food.Category.Icon,
-		}
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -229,23 +244,35 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Router /public/categories [get]
 func (h *PublicHandler) GetCategories(c *gin.Context) {
-	categories, err := h.repo.GetAllCategories()
+	cacheKey := "atlas:prod:cache:categories:all"
+	cacheService := redisInfra.GetCacheService()
+
+	var results []CategoryInfo
+
+	err := cacheService.GetOrFetch(c.Request.Context(), cacheKey, 24*time.Hour, &results, func() (interface{}, error) {
+		categories, err := h.repo.GetAllCategories()
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]CategoryInfo, 0, len(categories))
+		for _, cat := range categories {
+			res = append(res, CategoryInfo{
+				ID:   cat.ID,
+				Code: cat.Code,
+				Name: cat.Name,
+				Icon: cat.Icon,
+			})
+		}
+		return res, nil
+	})
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to get categories",
 		})
 		return
-	}
-
-	var results []CategoryInfo
-	for _, cat := range categories {
-		results = append(results, CategoryInfo{
-			ID:   cat.ID,
-			Code: cat.Code,
-			Name: cat.Name,
-			Icon: cat.Icon,
-		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{
@@ -267,44 +294,55 @@ func (h *PublicHandler) GetCategories(c *gin.Context) {
 func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 	categoryCode := c.Param("code")
 	limit := 50
-	
+
 	if limitParam := c.Query("limit"); limitParam != "" {
 		if l, err := strconv.Atoi(limitParam); err == nil && l > 0 && l <= 200 {
 			limit = l
 		}
 	}
 
-	foods, err := h.repo.GetFoodsByCategory(categoryCode, limit)
+	cacheKey := fmt.Sprintf("atlas:prod:cache:categories:%s:foods:%d", categoryCode, limit)
+	cacheService := redisInfra.GetCacheService()
+
+	var results []SearchFoodResponse
+
+	err := cacheService.GetOrFetch(c.Request.Context(), cacheKey, 6*time.Hour, &results, func() (interface{}, error) {
+		foods, err := h.repo.GetFoodsByCategory(categoryCode, limit)
+		if err != nil {
+			return nil, err
+		}
+
+		res := make([]SearchFoodResponse, 0, len(foods))
+		for _, food := range foods {
+			item := SearchFoodResponse{
+				ID:        food.ID,
+				Code:      food.Code,
+				Name:      food.Name,
+				LocalName: food.LocalName,
+				PhotoType: food.PhotoType,
+				FoodType:  resolveFoodType(food.Category),
+			}
+
+			if food.Category != nil {
+				item.Category = &CategoryInfo{
+					ID:   food.Category.ID,
+					Code: food.Category.Code,
+					Name: food.Category.Name,
+					Icon: food.Category.Icon,
+				}
+			}
+
+			res = append(res, item)
+		}
+		return res, nil
+	})
+
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"status":  "error",
 			"message": "Failed to get foods",
 		})
 		return
-	}
-
-	// Transform to response. Non-nil supaya "data" selalu array, tidak pernah null.
-	results := make([]SearchFoodResponse, 0, len(foods))
-	for _, food := range foods {
-		item := SearchFoodResponse{
-			ID:        food.ID,
-			Code:      food.Code,
-			Name:      food.Name,
-			LocalName: food.LocalName,
-			PhotoType: food.PhotoType,
-			FoodType:  resolveFoodType(food.Category),
-		}
-
-		if food.Category != nil {
-			item.Category = &CategoryInfo{
-				ID:   food.Category.ID,
-				Code: food.Category.Code,
-				Name: food.Category.Name,
-				Icon: food.Category.Icon,
-			}
-		}
-
-		results = append(results, item)
 	}
 
 	c.JSON(http.StatusOK, gin.H{
