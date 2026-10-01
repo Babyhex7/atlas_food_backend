@@ -25,8 +25,9 @@ type AreaInput struct {
 	ID      *string `json:"id"`
 	Name    string  `json:"name" binding:"required,max=255"`
 	FoodID  *string `json:"food_id"`
-	Polygon Polygon `json:"polygon" binding:"required"`
-	ZIndex  int     `json:"z_index"`
+	Polygon    Polygon  `json:"polygon" binding:"required"`
+	ZIndex     int      `json:"z_index"`
+	WeightGram *float64 `json:"weight_gram"`
 }
 
 // ReplaceAreasRequest - body PUT /admin/food-images/:id/areas (dipakai autosave editor)

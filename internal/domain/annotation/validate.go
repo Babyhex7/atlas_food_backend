@@ -54,6 +54,11 @@ func normalizeAreasForDraft(areas []AreaInput, width, height int) ([]AreaInput, 
 			areas[i].FoodID = nil
 		}
 
+		if areas[i].WeightGram != nil && *areas[i].WeightGram < 0 {
+			zero := 0.0
+			areas[i].WeightGram = &zero
+		}
+
 		for j := range areas[i].Polygon {
 			areas[i].Polygon[j][0] = clamp(areas[i].Polygon[j][0], 0, w)
 			areas[i].Polygon[j][1] = clamp(areas[i].Polygon[j][1], 0, h)
