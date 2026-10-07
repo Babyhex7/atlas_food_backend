@@ -38,6 +38,24 @@ func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
 		}
 	}
 
+	// Seed sample respondent user jika belum ada
+	var respondentCnt int64
+	if err := db.Model(&auth.User{}).Where("email = ?", "user@mail.com").Count(&respondentCnt).Error; err == nil && respondentCnt == 0 {
+		hash, err := utils.HashPassword("Password123!")
+		if err == nil {
+			respondent := &auth.User{
+				Email:        "user@mail.com",
+				PasswordHash: hash,
+				Name:         "User Responden",
+				Role:         "respondent",
+				IsActive:     true,
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			}
+			_ = db.Create(respondent).Error
+		}
+	}
+
 	// Seed default locales jika tabel kosong
 	var localeCnt int64
 	if err := db.Model(&survey.Locale{}).Count(&localeCnt).Error; err != nil {

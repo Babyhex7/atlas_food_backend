@@ -100,6 +100,7 @@ type FoodArea struct {
 	FoodID      *string   `gorm:"type:char(36)" json:"food_id"`
 	Polygon     Polygon   `gorm:"type:json;not null" json:"polygon"`
 	ZIndex      int       `gorm:"not null;default:0" json:"z_index"`
+	WeightGram  *float64  `gorm:"type:decimal(10,2)" json:"weight_gram"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 }

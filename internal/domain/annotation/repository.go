@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -123,7 +124,7 @@ func (r *Repository) ListPublishedByFoodID(foodID string) ([]FoodImageSummary, e
 	err := r.db.Model(&FoodImage{}).
 		Select(`DISTINCT food_images.id, food_images.title, food_images.image_url,
 			food_images.thumbnail_url, food_images.width, food_images.height,
-			food_images.status, food_images.published_at, food_images.updated_at,
+			food_images.status, food_images.primary_food_id, food_images.published_at, food_images.updated_at,
 			(SELECT COUNT(*) FROM food_areas WHERE food_areas.food_image_id = food_images.id) AS areas_count`).
 		Joins("LEFT JOIN food_areas ON food_areas.food_image_id = food_images.id").
 		Where("food_images.status = ?", StatusPublished).
@@ -197,15 +198,24 @@ func (r *Repository) ReplaceAreas(imageID string, areas []AreaInput) (time.Time,
 		if len(areas) > 0 {
 			rows := make([]FoodArea, 0, len(areas))
 			for _, in := range areas {
+				var foodID *string
+				if in.FoodID != nil && strings.TrimSpace(*in.FoodID) != "" {
+					trimmed := strings.TrimSpace(*in.FoodID)
+					foodID = &trimmed
+				}
+
 				row := FoodArea{
 					FoodImageID: imageID,
 					Name:        in.Name,
-					FoodID:      in.FoodID,
+					FoodID:      foodID,
 					Polygon:     in.Polygon,
 					ZIndex:      in.ZIndex,
+					WeightGram:  in.WeightGram,
 				}
 				if in.ID != nil && strings.TrimSpace(*in.ID) != "" {
 					row.ID = *in.ID
+				} else {
+					row.ID = uuid.New().String()
 				}
 				rows = append(rows, row)
 			}

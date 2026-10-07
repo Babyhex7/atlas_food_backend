@@ -178,7 +178,17 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 			}
 		}
 
-		// Transform portion photos
+		// Transform portion photos — food_image_id untuk overlay anotasi responden
+		// Jika makanan sudah dikelola lewat CMS foto (memiliki penanda food_image:),
+		// utamakan foto CMS dan jangan sertakan foto seed dummy lama yang tidak tertaut.
+		hasCustomPhotos := false
+		for _, p := range portionPhotos {
+			if strings.HasPrefix(p.Description, "food_image:") {
+				hasCustomPhotos = true
+				break
+			}
+		}
+
 		var portionPhotoList []PortionPhoto
 		for _, p := range portionPhotos {
 			desc := p.Description
@@ -186,6 +196,9 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 			if strings.HasPrefix(desc, "food_image:") {
 				foodImageID = strings.TrimPrefix(desc, "food_image:")
 				desc = ""
+			} else if hasCustomPhotos {
+				// Lewati foto dummy seed legacy jika makanan sudah punya foto CMS
+				continue
 			}
 			portionPhotoList = append(portionPhotoList, PortionPhoto{
 				ID:           p.ID,
@@ -235,14 +248,6 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 	})
 }
 
-// GetCategories godoc
-// @Summary Get all categories (Public)
-// @Description Get list of all food categories
-// @Tags public-food
-// @Accept json
-// @Produce json
-// @Success 200 {object} map[string]interface{}
-// @Router /public/categories [get]
 func (h *PublicHandler) GetCategories(c *gin.Context) {
 	cacheKey := "atlas:prod:cache:categories:all"
 	cacheService := redisInfra.GetCacheService()
