@@ -4,6 +4,26 @@
 
 ---
 
+> ## ⚠ Status dokumen (diperbarui 6 Oktober 2026)
+>
+> Dokumen ini adalah **brief awal**. Implementasi saat ini (prompt `v2`) mengikuti alur dan prinsip di bawah — on-demand, cache per submission, domain terpisah, kunci API hanya di backend — tetapi berbeda pada beberapa hal berikut. Kontrak yang berlaku ada di `04-api-documentation.md`.
+>
+> | Brief awal | Implementasi sekarang | Alasan |
+> |---|---|---|
+> | LLM menentukan `overall_status` dan status tiap zat gizi | Dihitung server (`ai/assessment.go`); LLM hanya menulis narasi | LLM lemah dalam aritmetika dan hasilnya tidak dapat direproduksi |
+> | AKG tunggal (2150 kkal) | AKG 2019 per jenis kelamin dan usia dari profil; rujukan umum bila profil kosong (`ai/reference.go`) | Pembanding yang sesuai dengan responden |
+> | 3 item: Calories, Protein, Balance | 4 item tetap: energi, protein, karbohidrat, lemak, masing-masing dengan angka dan persen | Sesuai zat gizi yang benar-benar dihitung sistem |
+> | Teks bahasa Inggris | Bahasa Indonesia | Antarmuka berbahasa Indonesia |
+> | Input memuat serat, natrium, kalsium, dll. | Hanya 4 makronutrien + daftar makanan dan berat | Submission belum menyimpan mikronutrien |
+> | Cache selamanya | Cache + `force_refresh` (jeda 30 detik) | Analisis ulang yang sungguh-sungguh, untuk uji konsistensi |
+> | Satu endpoint POST | POST + `GET /ai/nutrition-analysis/:submission_id` | Menampilkan hasil lama tanpa memanggil LLM |
+> | 404 / 503 | Kode error terperinci (`AI_RATE_LIMITED`, `AI_TIMEOUT`, …) | Frontend menampilkan pesan dan aksi yang tepat |
+> | Model `llama3-8b-8192`, 512 token, 15 detik | Bawaan `llama-3.3-70b-versatile`, 2048 token, 45 detik | Nilai bawaan di `config.go`; keluaran lebih panjang membutuhkan batas token lebih besar |
+> | — | `submission_id` boleh berupa `local_id` | Laporan yang dikirim saat luring tetap bisa dianalisis |
+> | — | Nama/email responden tidak dikirim ke LLM | Privasi |
+
+---
+
 ## 📌 Gambaran Besar
 
 Setelah respondent menekan tombol **Submit Survey**, backend menghitung total nutrisi dan menyimpan submission. Halaman hasil langsung tampil dengan data nutrisi (kalori, protein, dll) **tanpa perlu menunggu AI**.

@@ -836,11 +836,11 @@ Response 201:
 
 ## AI Nutrition Analysis Endpoints
 
-### Get Nutrition Analysis (On-Demand)
+> **Pembagian peran.** Angka, persentase terhadap rujukan, dan status (`low`/`good`/`high`, `good`/`less`/`excess`) dihitung **server** secara deterministik. LLM (Groq) hanya menulis teks naratif. Nama, email, dan pengenal responden **tidak** dikirim ke LLM — hanya jenis kelamin dan usia.
+>
+> AI dipanggil **on-demand** ketika user menekan tombol analisis. Tidak dipanggil saat submission.
 
-> **PENTING:** AI dipanggil **on-demand** hanya ketika user klik tombol "AI Recommendation" di halaman hasil survey. Tidak dipanggil saat submission.
-
-#### Request AI Analysis
+### Analyze Nutrition (On-Demand)
 
 ```http
 POST /ai/nutrition-analysis
@@ -849,78 +849,90 @@ Content-Type: application/json
 
 Request:
 {
-  "submission_id": "uuid-submission"
+  "submission_id": "uuid-submission",   // id server ATAU local_id (kunci idempotensi klien)
+  "force_refresh": false                // opsional; true = minta analisis baru
 }
 
-Response 200 (Fresh from Groq):
+Response 200:
 {
   "status": "success",
-  "source": "groq",
+  "source": "groq",                     // "groq" = baru dibuat, "cache" = hasil tersimpan
   "data": {
-    "overall_status": "less",
-    "overall_message": "Your current nutrition is still below the recommended daily requirement. Additional balanced nutrients are needed.",
-
+    "overall_status": "less",           // good | less | excess — dihitung server
+    "overall_message": "Asupan energi Anda masih di bawah kebutuhan harian...",
     "nutritional_analysis": [
       {
-        "label": "Calories",
-        "status": "low",
-        "description": "Current calorie level is still relatively low for optimal daily energy needs."
-      },
-      {
-        "label": "Protein",
-        "status": "low",
-        "description": "Protein source is limited and should be increased to support body recovery and muscle maintenance."
-      },
-      {
-        "label": "Balance",
-        "status": "partial",
-        "description": "Your meal already contains sufficient carbohydrates, but fiber and micronutrient sources are still lacking."
+        "key": "energy",                // energy | protein | carbs | fat (selalu 4 item, urut)
+        "label": "Energi",
+        "status": "low",                // low | good | high — dihitung server
+        "description": "Energi masih jauh di bawah rujukan.",   // ditulis LLM
+        "unit": "kkal",
+        "intake": 900,
+        "reference": 2650,
+        "percent": 34
       }
     ],
-
-    "ai_recommendation": "To improve your nutritional balance, consider adding:\n- Grilled chicken or fish for additional protein\n- Vegetables such as broccoli or spinach for fiber and vitamins\n- Fruits like banana or apple for natural nutrients\n- More water intake to maintain hydration balance",
-
-    "recommended_foods": [
-      "Grilled Chicken", "Boiled Egg", "Broccoli",
-      "Spinach", "Banana", "Apple", "Greek Yogurt", "Mineral Water"
-    ],
-
-    "health_insight": {
-      "title": "Mild Nutritional Deficiency",
-      "description": "Your current meal composition is considered partially balanced, but additional protein, vegetables, and hydration are recommended to better fulfill daily nutritional needs."
+    "ai_recommendation": "Tambahkan lauk berprotein pada sarapan...",
+    "recommended_foods": ["Tempe", "Telur rebus", "Pisang"],
+    "health_insight": { "title": "...", "description": "..." },
+    "suggested_activities": ["Jalan kaki 30 menit", "Peregangan"],
+    "reference": {
+      "label": "AKG laki-laki 19–29 tahun",
+      "source": "Angka Kecukupan Gizi (Permenkes No. 28 Tahun 2019)",
+      "personalized": true,             // false = profil belum lengkap, rujukan umum dipakai
+      "energy_kcal": 2650, "protein_g": 65, "carbs_g": 430, "fat_g": 75
     },
-
-    "suggested_activities": ["Light Walking", "Yoga", "Stretching"]
+    "coverage": {
+      "meal_count": 1,
+      "food_count": 1,
+      "missing_food_count": 1,          // makanan catatan manual tanpa nilai gizi
+      "is_partial_day": true            // kurang dari 3 waktu makan
+    }
+  },
+  "meta": {
+    "model": "llama-3.3-70b-versatile",
+    "prompt_version": "v2",
+    "generated_at": "2026-10-06T07:53:40Z"
   }
-}
-
-Response 200 (From Cache):
-{
-  "status": "success",
-  "source": "cache",
-  "data": { ... }  // Same structure as above
-}
-
-Response 404 (Submission Not Found):
-{
-  "status": "error",
-  "message": "Submission not found or access denied"
-}
-
-Response 503 (Groq Service Error):
-{
-  "status": "error",
-  "message": "AI service temporarily unavailable, please try again"
 }
 ```
 
+### Get Stored Analysis
+
+Mengambil hasil yang sudah tersimpan. **Tidak pernah memanggil LLM** — dipakai frontend saat halaman dibuka.
+
+```http
+GET /ai/nutrition-analysis/{submission_id}
+Authorization: Bearer {access_token}
+
+Response 200: sama dengan POST, dengan "source": "cache"
+Response 404: { "status": "error", "error": { "code": "AI_NOT_ANALYZED", "message": "..." } }
+```
+
+### Error Codes
+
+Semua error memakai bentuk baku `{ "status": "error", "error": { "code", "message" } }`.
+
+| HTTP | `code` | Arti | Layak dicoba lagi oleh user |
+|---|---|---|---|
+| 404 | `NOT_FOUND` | Submission tidak ada atau bukan milik user (pesan seragam) | Tidak |
+| 404 | `AI_NOT_ANALYZED` | (GET saja) belum pernah dianalisis | — |
+| 422 | `AI_NO_NUTRITION_DATA` | Laporan tidak memuat makanan untuk dianalisis | Tidak |
+| 503 | `AI_NOT_CONFIGURED` | `GROQ_API_KEY` kosong, ditolak, atau model tidak tersedia | Tidak |
+| 429 | `AI_RATE_LIMITED` | Groq membalas 429 setelah percobaan ulang habis | Ya |
+| 504 | `AI_TIMEOUT` | Melewati `GROQ_TIMEOUT_SECONDS` | Ya |
+| 503 | `AI_UNAVAILABLE` | Gangguan jaringan atau Groq 5xx | Ya |
+| 502 | `AI_INVALID_RESPONSE` | Jawaban LLM tidak dapat diproses setelah 2 percobaan | Ya |
+
 **Notes:**
 
-- `source: "groq"` → Fresh analysis from Groq API
-- `source: "cache"` → Retrieved from database (already analyzed before)
-- Cache by `submission_id`: Same submission always returns same result
-- Ownership check: User can only analyze their own submissions
-- Groq API key never exposed to frontend
+- **Cache per submission.** Tanpa `force_refresh`, hasil tersimpan selalu dikembalikan. Dengan `force_refresh`, analisis baru dibuat dan **menimpa** baris lama, kecuali analisis terakhir berumur kurang dari 30 detik (dilayani dari simpanan).
+- **Satu analisis pada satu waktu.** Permintaan bersamaan untuk submission yang sama mengantre; yang kedua menerima hasil yang baru disimpan.
+- **Percobaan ulang ke Groq.** 429, 5xx, dan galat jaringan diulang hingga 3 kali di dalam batas waktu. Satu analisis dibatasi total 50 detik (di bawah batas waktu klien 60 detik), berapa pun `GROQ_TIMEOUT_SECONDS`.
+- **Rujukan.** AKG 2019 dipilih dari jenis kelamin dan tanggal lahir di profil; bila kosong dipakai rujukan umum (2150 kkal, protein 60 g, karbohidrat 320 g, lemak 65 g).
+- **Ambang status.** < 80% rujukan = `low`, 80–110% = `good`, > 110% = `high`. Status keseluruhan mengikuti energi; bila energi sesuai, baru bergeser kalau minimal dua makronutrien menyimpang searah.
+- **Kegagalan simpan** tidak menggagalkan response: hasil tetap dikirim.
+- Detail error dari Groq hanya dicatat di log server.
 
 ---
 

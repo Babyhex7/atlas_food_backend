@@ -1,20 +1,27 @@
 package ai
 
-import (
-	"atlas_food/internal/domain/submission"
-	"encoding/json"
-)
+import "time"
 
 // NutritionAnalysisRequest - request body endpoint AI
 type NutritionAnalysisRequest struct {
+	// SubmissionID boleh berisi id server maupun local_id (kunci idempotensi dari klien),
+	// sehingga laporan yang dikirim saat luring tetap bisa dianalisis setelah tersinkron.
 	SubmissionID string `json:"submission_id" binding:"required"`
+	// ForceRefresh meminta analisis baru meskipun hasil lama sudah tersimpan.
+	ForceRefresh bool `json:"force_refresh"`
 }
 
-// NutritionAnalysisItem - item analisis nutrisi
+// NutritionAnalysisItem - satu baris rincian gizi.
+// Angka dan status berasal dari perhitungan server; hanya Description yang ditulis LLM.
 type NutritionAnalysisItem struct {
-	Label       string `json:"label"`
-	Status      string `json:"status"`
-	Description string `json:"description"`
+	Key         string  `json:"key"`
+	Label       string  `json:"label"`
+	Status      string  `json:"status"`
+	Description string  `json:"description"`
+	Unit        string  `json:"unit"`
+	Intake      float64 `json:"intake"`
+	Reference   float64 `json:"reference"`
+	Percent     float64 `json:"percent"`
 }
 
 // HealthInsight - insight kesehatan
@@ -23,7 +30,16 @@ type HealthInsight struct {
 	Description string `json:"description"`
 }
 
-// NutritionAnalysisData - payload response AI
+// Coverage - seberapa lengkap laporan yang dianalisis.
+// Dipakai frontend untuk menampilkan peringatan bila hasil berpotensi terlalu rendah.
+type Coverage struct {
+	MealCount        int  `json:"meal_count"`
+	FoodCount        int  `json:"food_count"`
+	MissingFoodCount int  `json:"missing_food_count"`
+	IsPartialDay     bool `json:"is_partial_day"`
+}
+
+// NutritionAnalysisData - payload hasil analisis
 type NutritionAnalysisData struct {
 	OverallStatus       string                  `json:"overall_status"`
 	OverallMessage      string                  `json:"overall_message"`
@@ -32,29 +48,20 @@ type NutritionAnalysisData struct {
 	RecommendedFoods    []string                `json:"recommended_foods"`
 	HealthInsight       HealthInsight           `json:"health_insight"`
 	SuggestedActivities []string                `json:"suggested_activities"`
+	Reference           Reference               `json:"reference"`
+	Coverage            Coverage                `json:"coverage"`
 }
 
-// NutritionAnalysisResult - response endpoint AI
+// AnalysisMeta - jejak asal hasil analisis
+type AnalysisMeta struct {
+	Model         string    `json:"model"`
+	PromptVersion string    `json:"prompt_version"`
+	GeneratedAt   time.Time `json:"generated_at"`
+}
+
+// NutritionAnalysisResult - hasil endpoint AI
 type NutritionAnalysisResult struct {
-	Source string                `json:"source"`
+	Source string                `json:"source"` // groq|cache
 	Data   NutritionAnalysisData `json:"data"`
-}
-
-// GroqInput - input untuk Groq
-type GroqInput struct {
-	SubmissionID   string                `json:"submission_id"`
-	SurveyID       string                `json:"survey_id"`
-	RespondentName string                `json:"respondent_name"`
-	MealsData      json.RawMessage       `json:"meals_data"`
-	MissingFoods   json.RawMessage       `json:"missing_foods"`
-	DailyTotal     submission.DailyTotal `json:"daily_total"`
-}
-
-// GroqResult - hasil parse dari Groq
-type GroqResult struct {
-	Data        NutritionAnalysisData `json:"data"`
-	RawResponse json.RawMessage       `json:"raw_response"`
-	ModelUsed   string                `json:"model_used"`
-	TokenUsed   *int                  `json:"token_used,omitempty"`
-	LatencyMs   *int                  `json:"latency_ms,omitempty"`
+	Meta   AnalysisMeta          `json:"meta"`
 }
