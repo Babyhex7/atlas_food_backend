@@ -42,7 +42,7 @@ func main() {
 	}
 
 	fmt.Printf("📄 Reading data from: %s\n", jsonFilePath)
-	
+
 	// Seed data
 	if err := bootstrap.SeedFindYourFoodData(db, jsonFilePath); err != nil {
 		log.Fatalf("❌ Failed to seed data: %v", err)
@@ -52,17 +52,32 @@ func main() {
 	fmt.Println("✅ Seeding completed successfully!")
 	fmt.Println("")
 	fmt.Println("📊 Summary:")
-	
+
 	// Get counts
 	var foodCount, categoryCount, photoCount int64
 	db.Table("foods").Count(&foodCount)
 	db.Table("categories").Count(&categoryCount)
 	db.Table("as_served_images").Count(&photoCount)
-	
+
 	fmt.Printf("   - Categories: %d\n", categoryCount)
 	fmt.Printf("   - Foods: %d\n", foodCount)
 	fmt.Printf("   - Portion Photos: %d\n", photoCount)
-	
+
+	// Isi nilai gizi dari TKPI untuk makanan yang sudah dipetakan.
+	// Dilewati (bukan gagal) bila file TKPI belum ada.
+	tkpiOpts := bootstrap.DefaultTKPISeedOptions()
+	if _, err := os.Stat(tkpiOpts.TKPIPath); err == nil {
+		fmt.Println("")
+		fmt.Println("🧪 Seeding gizi TKPI...")
+		res, err := bootstrap.SeedTKPINutrients(db, tkpiOpts)
+		if err != nil {
+			log.Fatalf("❌ Failed to seed TKPI nutrients: %v", err)
+		}
+		bootstrap.PrintTKPISeedResult(res)
+	} else {
+		fmt.Printf("ℹ️  File TKPI tidak ditemukan (%s), gizi tidak diisi\n", tkpiOpts.TKPIPath)
+	}
+
 	fmt.Println("")
 	fmt.Println("🚀 You can now start the API server:")
 	fmt.Println("   go run cmd/api/main.go")

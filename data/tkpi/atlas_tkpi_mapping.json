@@ -1,0 +1,27 @@
+{
+ "meta": {
+  "deskripsi": "Pemetaan kode makanan Atlas Makananku (tabel foods.code) ke kode TKPI 2020. Nilai gizi makanan diambil dari entri TKPI yang dipetakan.",
+  "status": {
+   "cocok": "Nama & kondisi olahan sama persis dengan entri TKPI. Selalu dipakai seeder.",
+   "perlu_cek": "Paling mendekati, tapi bentuk/olahan berbeda. Hanya dipakai bila TKPI_INCLUDE_UNVERIFIED=true. Periksa dulu oleh ahli gizi, lalu ubah ke 'cocok' atau ganti kode TKPI-nya."
+  },
+  "catatan": "Baru mencakup makanan yang padanannya ada di potongan TKPI saat ini (kelompok serealia AR/AP). Tambahkan baris baru setelah file TKPI lengkap dipasang."
+ },
+ "mapping": [
+  {"atlas_kode": "MP-01", "atlas_nama": "Nasi", "tkpi_kode": "AP001", "status": "cocok"},
+  {"atlas_kode": "AP-01", "atlas_nama": "Nasi Ketan", "tkpi_kode": "AP017", "status": "cocok", "alasan": "TKPI: Ketan putih, matang"},
+  {"atlas_kode": "AP-29", "atlas_nama": "Gemblong", "tkpi_kode": "AP048", "status": "cocok"},
+  {"atlas_kode": "AP-34", "atlas_nama": "Bika Ambon", "tkpi_kode": "AP035", "status": "cocok"},
+  {"atlas_kode": "AP-58", "atlas_nama": "Klepon", "tkpi_kode": "AP058", "status": "cocok", "alasan": "TKPI: Kelepon, kue"},
+  {"atlas_kode": "AMK-13", "atlas_nama": "Biskuit", "tkpi_kode": "AP029", "status": "cocok"},
+
+  {"atlas_kode": "MP-06", "atlas_nama": "Nasi Jagung", "tkpi_kode": "AP009", "status": "perlu_cek", "alasan": "Kadar air TKPI hanya 11 g/100 g, tampaknya produk kering, bukan nasi jagung siap makan"},
+  {"atlas_kode": "MP-07", "atlas_nama": "Mie Basah Rebus", "tkpi_kode": "AP021", "status": "perlu_cek", "alasan": "TKPI: Mi basah (tanpa keterangan direbus)"},
+  {"atlas_kode": "MP-14", "atlas_nama": "Jagung Manis Rebus Bonggol", "tkpi_kode": "AP010", "status": "perlu_cek", "alasan": "TKPI: Jagung kuning muda, rebus — belum tentu varietas jagung manis"},
+  {"atlas_kode": "AS-32", "atlas_nama": "Jagung Manis Rebus Pipil", "tkpi_kode": "AP010", "status": "perlu_cek", "alasan": "TKPI: Jagung kuning muda, rebus — belum tentu varietas jagung manis"},
+  {"atlas_kode": "MP-23", "atlas_nama": "Aneka Roti Tawar/Gandum", "tkpi_kode": "AP024", "status": "perlu_cek", "alasan": "TKPI: Roti putih — tidak mewakili roti gandum"},
+  {"atlas_kode": "AP-06", "atlas_nama": "Bakwan Jagung", "tkpi_kode": "AP031", "status": "perlu_cek", "alasan": "TKPI: Bakwan (umum, tanpa varian isi)"},
+  {"atlas_kode": "AP-20", "atlas_nama": "Bakwan Sayuran", "tkpi_kode": "AP031", "status": "perlu_cek", "alasan": "TKPI: Bakwan (umum, tanpa varian isi)"},
+  {"atlas_kode": "AP-07", "atlas_nama": "Apem/Kue Mangkok", "tkpi_kode": "AP028", "status": "perlu_cek", "alasan": "TKPI: Apem, kue — kue mangkok resepnya berbeda"}
+ ]
+}

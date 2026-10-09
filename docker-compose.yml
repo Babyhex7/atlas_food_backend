@@ -11,10 +11,14 @@ services:
     env_file:
       - .env
     environment:
-      # Override DB_HOST agar menunjuk ke nama container 'mysql' (bukan localhost)
-      - DB_HOST=mysql
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=atlasredis123
+      - DB_HOST=${DB_HOST:-mysql}
+      - DB_PORT=${DB_PORT:-3306}
+      - DB_USER=${DB_USER:-atlasuser}
+      - DB_PASSWORD=${DB_PASSWORD:-atlaspassword}
+      - DB_NAME=${DB_NAME:-db_atlas_food}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-atlasredis123}
     volumes:
       - ./uploads:/app/uploads
     depends_on:
@@ -28,7 +32,7 @@ services:
     image: redis:7.2-alpine
     container_name: atlas_redis
     restart: always
-    command: redis-server --save 60 1 --loglevel notice --requirepass atlasredis123 --maxmemory 512mb --maxmemory-policy volatile-lru
+    command: redis-server --save 60 1 --loglevel notice --requirepass ${REDIS_PASSWORD:-atlasredis123} --maxmemory 512mb --maxmemory-policy volatile-lru
     ports:
       - "6379:6379"
     volumes:
@@ -42,10 +46,10 @@ services:
     container_name: atlas_mysql
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: atlas_food
-      MYSQL_USER: atlasuser
-      MYSQL_PASSWORD: atlaspassword
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${DB_NAME:-db_atlas_food}
+      MYSQL_USER: ${DB_USER:-atlasuser}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-atlaspassword}
     ports:
       - "3306:3306"
     volumes:
@@ -53,7 +57,7 @@ services:
     networks:
       - atlas-network
 
-  # Prometheus
+  # Prometheus (Monitoring)
   prometheus:
     image: prom/prometheus:latest
     container_name: atlas_prometheus
@@ -67,7 +71,7 @@ services:
     networks:
       - atlas-network
 
-  # Grafana
+  # Grafana (Metrics Dashboard)
   grafana:
     image: grafana/grafana:latest
     container_name: atlas_grafana
@@ -75,7 +79,7 @@ services:
     ports:
       - "3001:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
     volumes:
       - grafana-data:/var/lib/grafana
     depends_on:
@@ -93,7 +97,7 @@ services:
     environment:
       PMA_HOST: mysql
       PMA_PORT: "3306"
-      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword}
     depends_on:
       - mysql
     networks:
