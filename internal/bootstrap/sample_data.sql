@@ -29,11 +29,11 @@ INSERT INTO foods (id, code, name, local_name, description, photo_type, category
 ('uuid-susu', 'AMK-01', 'Susu UHT', 'UHT Milk', 'Susu UHT full cream', 'series', 'uuid-cat-4');
 
 INSERT INTO food_nutrients (food_id, nutrient_type_id, value_per_100g) VALUES
-('uuid-nasi', 1, 130.00),
-('uuid-nasi', 2, 2.70),
-('uuid-nasi', 3, 28.00),
+('uuid-nasi', 1, 180.00),
+('uuid-nasi', 2, 3.00),
+('uuid-nasi', 3, 39.80),
 ('uuid-nasi', 4, 0.30),
-('uuid-nasi', 5, 0.40),
+('uuid-nasi', 5, 0.20),
 ('uuid-ayam', 1, 290.00),
 ('uuid-ayam', 2, 18.00),
 ('uuid-ayam', 4, 19.00),
@@ -68,3 +68,12 @@ INSERT INTO food_portion_size_methods (food_id, method_type, label, description,
 ('uuid-nasi', 'as_served', 'G', 'Porsi sangat besar', '/uploads/nasi/nasi-G.jpg', '/uploads/nasi/nasi-G-thumb.jpg', '{"weight_gram": 270}', 7),
 ('uuid-nasi', 'as_served', 'H', 'Porsi ekstra besar', '/uploads/nasi/nasi-H.jpg', '/uploads/nasi/nasi-H-thumb.jpg', '{"weight_gram": 350}', 8),
 ('uuid-pisang', 'as_served', 'Sliced banana on plate', 'Choose portion and adjust quantity', '/banana/preview.jpg', NULL, '{"selectionType":"as_served_quantity","setCode":"banana-slices","thumbnailPosition":"bottom","maxQuantity":5,"allowFractions":true,"fractionOptions":[0,0.25,0.5,0.75],"defaultQuantity":1,"defaultFraction":0,"showCalculation":true}', 1);
+
+INSERT INTO associated_foods (food_id, associated_food_id, priority, is_default) VALUES
+('uuid-nasi', 'uuid-ayam', 1, 1),
+('1be26edb-a86b-11f1-91b4-0a0027000013', '1bc7bd37-a86b-11f1-91b4-0a0027000013', 1, 1),
+('1be26edb-a86b-11f1-91b4-0a0027000013', '1bd5d145-a86b-11f1-91b4-0a0027000013', 2, 1),
+('1be26edb-a86b-11f1-91b4-0a0027000013', '1b75c576-a86b-11f1-91b4-0a0027000013', 3, 0),
+('1be26edb-a86b-11f1-91b4-0a0027000013', '1b777b27-a86b-11f1-91b4-0a0027000013', 4, 0),
+('1bcebc54-a86b-11f1-91b4-0a0027000013', '1b77e55a-a86b-11f1-91b4-0a0027000013', 1, 1),
+('1bcebc54-a86b-11f1-91b4-0a0027000013', '1b777b27-a86b-11f1-91b4-0a0027000013', 2, 0);

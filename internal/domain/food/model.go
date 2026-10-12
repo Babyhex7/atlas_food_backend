@@ -72,7 +72,7 @@ type FoodNutrient struct {
 	FoodID         string       `gorm:"type:char(36);primaryKey" json:"food_id"`
 	NutrientTypeID int          `gorm:"primaryKey" json:"nutrient_type_id"`
 	NutrientType   NutrientType `gorm:"foreignKey:NutrientTypeID" json:"nutrient_type"`
-	ValuePer100g   float64      `gorm:"type:decimal(10,4);not null" json:"value_per_100g"`
+	ValuePer100g   float64      `gorm:"column:value_per_100g;type:decimal(10,4);not null" json:"value_per_100g"`
 }
 
 // TableName - nama tabel di database untuk model FoodNutrient

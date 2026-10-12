@@ -31,6 +31,12 @@ func main() {
 	db := config.InitDB(cfg)
 
 	// Auto Migration - buat tabel otomatis
+	// Harus sebelum AutoMigrate: kalau tidak, AutoMigrate menambah kolom
+	// value_per_100g baru dan nilai gizi lama tertinggal di value_per100g.
+	if err := bootstrap.NormalizeFoodNutrientColumn(db); err != nil {
+		log.Fatalf("Gagal menormalkan kolom food_nutrients: %v", err)
+	}
+
 	log.Println("Menjalankan Auto Migration...")
 	err := db.AutoMigrate(
 		&auth.User{},

@@ -152,11 +152,11 @@ INSERT INTO foods (id, code, name, local_name, description, photo_type, category
 ('uuid-susu', 'AMK-01', 'Susu UHT', 'UHT Milk', 'Susu UHT full cream', 'series', 'uuid-cat-4');
 
 INSERT INTO food_nutrients (food_id, nutrient_type_id, value_per_100g) VALUES
-('uuid-nasi', 1, 130.00),
-('uuid-nasi', 2, 2.70),
-('uuid-nasi', 3, 28.00),
+('uuid-nasi', 1, 180.00),
+('uuid-nasi', 2, 3.00),
+('uuid-nasi', 3, 39.80),
 ('uuid-nasi', 4, 0.30),
-('uuid-nasi', 5, 0.40),
+('uuid-nasi', 5, 0.20),
 ('uuid-ayam', 1, 290.00),
 ('uuid-ayam', 2, 18.00),
 ('uuid-ayam', 4, 19.00),

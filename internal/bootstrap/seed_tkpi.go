@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
+
+	"atlas_food/internal/domain/food"
 
 	"gorm.io/gorm"
 )
@@ -49,6 +52,7 @@ type TKPIMapping struct {
 	AtlasKode string `json:"atlas_kode"`
 	AtlasNama string `json:"atlas_nama"`
 	TKPIKode  string `json:"tkpi_kode"`
+	TKPINama  string `json:"tkpi_nama,omitempty"`
 	Status    string `json:"status"`
 	Alasan    string `json:"alasan,omitempty"`
 }
@@ -230,6 +234,9 @@ func PrintTKPISeedResult(res *TKPISeedResult) {
 	if len(res.MissingFoods) > 0 {
 		fmt.Printf("   ⚠️  Belum ada di tabel foods (seed Atlas dulu): %v\n", res.MissingFoods)
 	}
+	if len(res.NameMismatch) > 0 {
+		fmt.Printf("   ⚠️  Dilewati karena nama di DB berbeda dari Atlas: %v\n", res.NameMismatch)
+	}
 }
 
 // TKPISeedResult - ringkasan untuk ditampilkan di CLI.
@@ -237,6 +244,7 @@ type TKPISeedResult struct {
 	TKPIEntries    int
 	Applied        []string // atlas_kode yang gizinya diisi
 	MissingFoods   []string // atlas_kode di mapping yang belum ada di tabel foods
+	NameMismatch   []string // kode ada, tapi nama di DB bukan makanan Atlas yang dimaksud
 	NutrientsSaved int
 }
 
@@ -268,6 +276,14 @@ func SeedTKPINutrients(db *gorm.DB, opts TKPISeedOptions) (*TKPISeedResult, erro
 
 	result := &TKPISeedResult{TKPIEntries: len(tkpiFile.Data)}
 
+	if err := NormalizeFoodNutrientColumn(db); err != nil {
+		return nil, err
+	}
+
+	if err := db.AutoMigrate(&food.NutrientUnit{}, &food.NutrientType{}, &food.FoodNutrient{}); err != nil {
+		return nil, fmt.Errorf("gagal migrasi tabel gizi: %w", err)
+	}
+
 	err = db.Transaction(func(tx *gorm.DB) error {
 		typeIDs, err := ensureTKPINutrientTypes(tx)
 		if err != nil {
@@ -279,13 +295,24 @@ func SeedTKPINutrients(db *gorm.DB, opts TKPISeedOptions) (*TKPISeedResult, erro
 		}
 
 		for _, row := range mappings {
-			var food struct{ ID string }
-			res := tx.Table("foods").Select("id").Where("code = ?", row.AtlasKode).Limit(1).Find(&food)
+			var food struct {
+				ID   string
+				Name string
+			}
+			res := tx.Table("foods").Select("id, name").Where("code = ?", row.AtlasKode).Limit(1).Find(&food)
 			if res.Error != nil {
 				return fmt.Errorf("gagal mencari makanan %s: %w", row.AtlasKode, res.Error)
 			}
 			if res.RowsAffected == 0 {
 				result.MissingFoods = append(result.MissingFoods, row.AtlasKode)
+				continue
+			}
+			// Kode yang sama belum tentu makanan yang sama: data contoh lama memakai
+			// AB-01 untuk "Pisang", sedangkan di Atlas AB-01 adalah "Pepaya Segar".
+			// Tanpa penjaga ini gizi pepaya bisa masuk ke pisang.
+			if !strings.EqualFold(strings.TrimSpace(food.Name), strings.TrimSpace(row.AtlasNama)) {
+				result.NameMismatch = append(result.NameMismatch,
+					fmt.Sprintf("%s (DB: %q, mapping: %q)", row.AtlasKode, food.Name, row.AtlasNama))
 				continue
 			}
 
@@ -379,4 +406,39 @@ func findOrCreateID(tx *gorm.DB, table, code string, row map[string]interface{})
 		return 0, fmt.Errorf("baris %s.%s tidak ditemukan setelah dibuat", table, code)
 	}
 	return found.ID, nil
+}
+
+// NormalizeFoodNutrientColumn - samakan nama kolom nilai gizi menjadi value_per_100g.
+//
+// Migrasi SQL (003) dan data contoh memakai value_per_100g, tetapi GORM dulu
+// menurunkan nama kolom dari field ValuePer100g menjadi value_per100g. Database
+// yang tabelnya dibuat AutoMigrate versi lama jadi punya kolom bernama lain,
+// dan menambah kolom baru begitu saja akan meninggalkan nilai lama di kolom
+// yang tidak lagi dibaca. Fungsi ini memindahkan datanya, bukan menimpanya.
+//
+// Aman dipanggil berulang kali dan pada database yang sudah benar.
+func NormalizeFoodNutrientColumn(db *gorm.DB) error {
+	const table, oldCol, newCol = "food_nutrients", "value_per100g", "value_per_100g"
+
+	m := db.Migrator()
+	if !m.HasTable(table) || !m.HasColumn(table, oldCol) {
+		return nil
+	}
+
+	if !m.HasColumn(table, newCol) {
+		if err := db.Exec("ALTER TABLE food_nutrients CHANGE COLUMN value_per100g value_per_100g DECIMAL(10,4) NOT NULL").Error; err != nil {
+			return fmt.Errorf("gagal mengganti nama kolom %s: %w", oldCol, err)
+		}
+		return nil
+	}
+
+	// Kedua kolom ada: kolom baru ditambahkan belakangan dan berisi 0 untuk
+	// baris lama. Salin nilai lama ke baris yang belum terisi, lalu buang kolom lama.
+	if err := db.Exec("UPDATE food_nutrients SET value_per_100g = value_per100g WHERE value_per_100g = 0 AND value_per100g <> 0").Error; err != nil {
+		return fmt.Errorf("gagal menyalin nilai dari %s: %w", oldCol, err)
+	}
+	if err := db.Exec("ALTER TABLE food_nutrients DROP COLUMN value_per100g").Error; err != nil {
+		return fmt.Errorf("gagal menghapus kolom %s: %w", oldCol, err)
+	}
+	return nil
 }
