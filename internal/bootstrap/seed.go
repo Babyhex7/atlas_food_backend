@@ -1,6 +1,8 @@
 package bootstrap
 
 import (
+	"log"
+	"os"
 	"time"
 
 	"atlas_food/internal/config"
@@ -71,13 +73,43 @@ func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
 		}
 	}
 
-	// Seed sample data foods jika kosong
+	// Bersihkan data dummy lama (misal 'uuid-nasi') jika ada
+	var dummyCnt int64
+	db.Table("foods").Where("id LIKE 'uuid-%'").Count(&dummyCnt)
+	if dummyCnt > 0 {
+		log.Println("🧹 Menemukan data dummy lama di tabel foods, membersihkan...")
+		_ = CleanFoodData(db)
+	}
+
+	// Seed data foods jika kosong
 	var foodCnt int64
 	if err := db.Model(&food.Food{}).Count(&foodCnt).Error; err != nil {
 		return err
 	}
 	if foodCnt == 0 {
-		importSampleData(db)
+		jsonPath := os.Getenv("ATLAS_JSON_PATH")
+		if jsonPath == "" {
+			jsonPath = "Atlas_Makananku_FINAL.json"
+		}
+
+		if _, err := os.Stat(jsonPath); err == nil {
+			log.Printf("🌱 Seeding data Atlas Makananku dari %s...\n", jsonPath)
+			if err := SeedFindYourFoodData(db, jsonPath); err != nil {
+				log.Printf("⚠️ Gagal seeding Atlas Makananku: %v, fallback ke sample data\n", err)
+				importSampleData(db)
+			} else {
+				// Seed TKPI Nutrients
+				tkpiOpts := DefaultTKPISeedOptions()
+				if _, err := os.Stat(tkpiOpts.TKPIPath); err == nil {
+					log.Println("🧪 Mengisi nilai gizi dari TKPI 2020...")
+					if res, err := SeedTKPINutrients(db, tkpiOpts); err == nil {
+						PrintTKPISeedResult(res)
+					}
+				}
+			}
+		} else {
+			importSampleData(db)
+		}
 	}
 	// Seed default survey
 	var surveyCnt int64

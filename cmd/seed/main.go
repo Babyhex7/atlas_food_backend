@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -15,6 +16,9 @@ import (
 // main - CLI seeding data Find Your Food dari file Atlas_Makananku_FINAL.json ke database.
 // Path JSON bisa diatur lewat env ATLAS_JSON_PATH
 func main() {
+	cleanFlag := flag.Bool("clean", false, "Bersihkan tabel foods & portion lama sebelum seeding")
+	flag.Parse()
+
 	// Load .env file
 	if err := godotenv.Load(); err != nil {
 		log.Println("⚠️  No .env file found, using environment variables")
@@ -25,6 +29,14 @@ func main() {
 
 	// Initialize database
 	db := config.InitDB(cfg)
+
+	if *cleanFlag {
+		fmt.Println("🧹 Membersihkan data makanan & porsi lama di database...")
+		if err := bootstrap.CleanFoodData(db); err != nil {
+			log.Fatalf("❌ Gagal membersihkan data lama: %v", err)
+		}
+		fmt.Println("✅ Data makanan lama berhasil dibersihkan.")
+	}
 
 	fmt.Println("🌱 Starting Find Your Food data seeding...")
 	fmt.Println("============================================================")

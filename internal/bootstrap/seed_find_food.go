@@ -92,6 +92,31 @@ func SeedFindYourFoodData(db *gorm.DB, jsonFilePath string) error {
 	return nil
 }
 
+// CleanFoodData - mengosongkan seluruh tabel data makanan, porsi, dan gizi
+// agar bersih dari data dummy sebelum dilakukan seeding data resmi Atlas & TKPI.
+func CleanFoodData(db *gorm.DB) error {
+	tables := []string{
+		"food_nutrients",
+		"as_served_images",
+		"as_served_sets",
+		"food_portion_size_methods",
+		"associated_foods",
+		"foods",
+	}
+
+	return db.Transaction(func(tx *gorm.DB) error {
+		tx.Exec("SET FOREIGN_KEY_CHECKS = 0;")
+		for _, table := range tables {
+			if err := tx.Exec("DELETE FROM " + table).Error; err != nil {
+				tx.Exec("SET FOREIGN_KEY_CHECKS = 1;")
+				return fmt.Errorf("gagal menghapus data tabel %s: %w", table, err)
+			}
+		}
+		tx.Exec("SET FOREIGN_KEY_CHECKS = 1;")
+		return nil
+	})
+}
+
 // seedCategories - isi 13 kategori Atlas Makananku (MP, LH, LN, ...); kategori yang sudah ada dilewati
 func seedCategories(tx *gorm.DB) error {
 	categories := []map[string]interface{}{
