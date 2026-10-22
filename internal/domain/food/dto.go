@@ -5,7 +5,7 @@ import "encoding/json"
 // FoodNutrientRequest - DTO untuk input nutrisi makanan
 type FoodNutrientRequest struct {
 	TypeID       int     `json:"type_id" binding:"required"`
-	ValuePer100g float64 `json:"value_per_100g" binding:"required"`
+	ValuePer100g float64 `json:"value_per_100g"`
 }
 
 // CreateFoodRequest - DTO untuk create food
@@ -77,8 +77,9 @@ type PortionPhoto struct {
 
 // NutrientDetail - detail nutrisi untuk response
 type NutrientDetail struct {
-	Value float64 `json:"value"`
-	Unit  string  `json:"unit"`
+	TypeID int     `json:"type_id,omitempty"`
+	Value  float64 `json:"value"`
+	Unit   string  `json:"unit"`
 }
 
 // PortionMethodResponse - detail portion method untuk response

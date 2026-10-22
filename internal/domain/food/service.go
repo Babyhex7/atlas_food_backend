@@ -53,6 +53,10 @@ type Service interface {
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]SearchFoodResponse, error)
 	ListCategories() ([]Category, error)
 	ListFoodsByCategoryCode(categoryCode string, page, limit int) ([]Food, int64, error)
+
+	// Nutrient Types & Units
+	ListNutrientTypes() ([]NutrientType, error)
+	ListNutrientUnits() ([]NutrientUnit, error)
 }
 
 // foodService - implementasi Service; butuh repository food + service anotasi untuk fitur foto
@@ -118,8 +122,9 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 	nutrientMap := make(map[string]NutrientDetail)
 	for _, n := range nutrients {
 		nutrientMap[n.NutrientType.Code] = NutrientDetail{
-			Value: n.ValuePer100g,
-			Unit:  n.NutrientType.Unit.Symbol,
+			TypeID: n.NutrientTypeID,
+			Value:  n.ValuePer100g,
+			Unit:   n.NutrientType.Unit.Symbol,
 		}
 	}
 
@@ -360,4 +365,14 @@ func (s *foodService) ListFoodsByCategoryCode(categoryCode string, page, limit i
 		return nil, 0, utils.NewAppError(404, "NOT_FOUND", "Kategori tidak ditemukan")
 	}
 	return s.repo.ListActiveFoods(category.ID, page, limit)
+}
+
+// ListNutrientTypes - mengambil daftar semua tipe nutrisi
+func (s *foodService) ListNutrientTypes() ([]NutrientType, error) {
+	return s.repo.ListNutrientTypes()
+}
+
+// ListNutrientUnits - mengambil daftar semua unit satuan nutrisi
+func (s *foodService) ListNutrientUnits() ([]NutrientUnit, error) {
+	return s.repo.ListNutrientUnits()
 }

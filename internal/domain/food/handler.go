@@ -197,11 +197,38 @@ func (h *Handler) GetFoodsByCategory(c *gin.Context) {
 	})
 }
 
+// ListNutrientTypes - GET /nutrient-types atau /admin/nutrient-types — daftar semua jenis nutrisi
+func (h *Handler) ListNutrientTypes(c *gin.Context) {
+	types, err := h.service.ListNutrientTypes()
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, types)
+}
+
+// ListNutrientUnits - GET /nutrient-units atau /admin/nutrient-units — daftar semua satuan nutrisi
+func (h *Handler) ListNutrientUnits(c *gin.Context) {
+	units, err := h.service.ListNutrientUnits()
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+	utils.SuccessResponse(c, units)
+}
+
 // SetupRoutes - daftarkan seluruh route domain food (admin butuh auth + role admin; route publik diurus PublicHandler)
 func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
+	// Endpoint nutrisi dapat diakses melalui /api/v1/nutrient-types & /api/v1/nutrient-units
+	router.GET("/nutrient-types", h.ListNutrientTypes)
+	router.GET("/nutrient-units", h.ListNutrientUnits)
+
 	// Admin routes
 	admin := router.Group("/admin", authMiddleware, middleware.AdminOnly())
 	{
+		admin.GET("/nutrient-types", h.ListNutrientTypes)
+		admin.GET("/nutrient-units", h.ListNutrientUnits)
+
 		foods := admin.Group("/foods")
 		{
 			foods.POST("", h.CreateFood)

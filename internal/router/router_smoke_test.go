@@ -30,11 +30,13 @@ func TestSetupRegistersRoutesWithoutConflict(t *testing.T) {
 		t.Fatal("Setup mengembalikan engine nil")
 	}
 
-	// Pastikan endpoint kunci brief §7.4 dan §7.5 benar-benar terdaftar
-	want := map[string]string{
-		"PUT":  "/api/v1/admin/food-images/:id/areas",
-		"GET":  "/api/v1/public/food-images/:id",
-		"POST": "/api/v1/admin/categories",
+	// Pastikan endpoint kunci benar-benar terdaftar
+	want := []string{
+		"PUT /api/v1/admin/food-images/:id/areas",
+		"GET /api/v1/public/food-images/:id",
+		"POST /api/v1/admin/categories",
+		"GET /api/v1/nutrient-types",
+		"GET /api/v1/nutrient-units",
 	}
 
 	registered := map[string]bool{}
@@ -42,9 +44,9 @@ func TestSetupRegistersRoutesWithoutConflict(t *testing.T) {
 		registered[route.Method+" "+route.Path] = true
 	}
 
-	for method, path := range want {
-		if !registered[method+" "+path] {
-			t.Errorf("route %s %s tidak terdaftar", method, path)
+	for _, routeStr := range want {
+		if !registered[routeStr] {
+			t.Errorf("route %s tidak terdaftar", routeStr)
 		}
 	}
 }

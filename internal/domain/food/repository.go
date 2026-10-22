@@ -29,6 +29,8 @@ type Repository interface {
 	GetNutrientsByFoodID(foodID string) ([]FoodNutrient, error)
 	UpsertFoodNutrients(nutrients []FoodNutrient) error
 	GetNutrientTypeByID(id int) (*NutrientType, error)
+	ListNutrientTypes() ([]NutrientType, error)
+	ListNutrientUnits() ([]NutrientUnit, error)
 
 	// Category operations
 	ListCategories() ([]Category, error)
@@ -236,13 +238,19 @@ func (r *foodRepository) GetNutrientsByFoodID(foodID string) ([]FoodNutrient, er
 
 // UpsertFoodNutrients - simpan/perbarui banyak nilai gizi sekaligus dalam satu transaksi
 func (r *foodRepository) UpsertFoodNutrients(nutrients []FoodNutrient) error {
-	return r.db.Transaction(func(tx *gorm.DB) error {
-		for _, n := range nutrients {
-			if err := tx.Save(&n).Error; err != nil {
-				return err
-			}
-		}
+	if len(nutrients) == 0 {
 		return nil
+	}
+	foodID := nutrients[0].FoodID
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		typeIDs := make([]int, len(nutrients))
+		for i, n := range nutrients {
+			typeIDs[i] = n.NutrientTypeID
+		}
+		if err := tx.Where("food_id = ? AND nutrient_type_id IN ?", foodID, typeIDs).Delete(&FoodNutrient{}).Error; err != nil {
+			return err
+		}
+		return tx.Create(&nutrients).Error
 	})
 }
 
@@ -251,6 +259,20 @@ func (r *foodRepository) GetNutrientTypeByID(id int) (*NutrientType, error) {
 	var nt NutrientType
 	err := r.db.Preload("Unit").Where("id = ?", id).First(&nt).Error
 	return &nt, err
+}
+
+// ListNutrientTypes - ambil semua tipe nutrisi beserta satuannya, urut berdasarkan display_order
+func (r *foodRepository) ListNutrientTypes() ([]NutrientType, error) {
+	var types []NutrientType
+	err := r.db.Preload("Unit").Order("display_order ASC, id ASC").Find(&types).Error
+	return types, err
+}
+
+// ListNutrientUnits - ambil seluruh unit satuan nutrisi
+func (r *foodRepository) ListNutrientUnits() ([]NutrientUnit, error) {
+	var units []NutrientUnit
+	err := r.db.Order("id ASC").Find(&units).Error
+	return units, err
 }
 
 // ListCategories - ambil semua kategori, urut sesuai display_order
