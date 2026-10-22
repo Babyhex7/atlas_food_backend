@@ -51,6 +51,15 @@ type Config struct {
 	UploadPath    string
 	MaxUploadSize int64
 
+	// Storage (Local disk / Cloudflare R2 / S3)
+	StorageDriver      string
+	StorageBucket      string
+	StorageEndpoint    string
+	StorageAccessKeyID string
+	StorageSecretKey   string
+	StoragePublicURL   string
+	StorageUseSSL      bool
+
 	// Seed data
 	AdminSeedEmail    string
 	AdminSeedPassword string
@@ -117,6 +126,15 @@ func load() *Config {
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),
 		MaxUploadSize: parseInt64(getEnv("MAX_UPLOAD_SIZE", "10485760")),
+
+		// Storage config (Local disk / Cloudflare R2 / S3)
+		StorageDriver:      getEnv("STORAGE_DRIVER", "local"),
+		StorageBucket:      getEnv("STORAGE_BUCKET", getEnv("R2_BUCKET", "atlas-food")),
+		StorageEndpoint:    getEnv("STORAGE_ENDPOINT", getEnv("R2_ENDPOINT", "")),
+		StorageAccessKeyID: getEnv("STORAGE_ACCESS_KEY_ID", getEnv("R2_ACCESS_KEY_ID", "")),
+		StorageSecretKey:   getEnv("STORAGE_SECRET_KEY", getEnv("R2_SECRET_ACCESS_KEY", "")),
+		StoragePublicURL:   getEnv("STORAGE_PUBLIC_URL", getEnv("R2_PUBLIC_URL", "")),
+		StorageUseSSL:      parseBool(getEnv("STORAGE_USE_SSL", "true")),
 
 		// Seed data config
 		AdminSeedEmail:    getEnv("ADMIN_SEED_EMAIL", "admin@mail.com"),
@@ -255,6 +273,18 @@ func parseInt(s string) int {
 		return 0
 	}
 	return n
+}
+
+// parseBool - parse string ke boolean (default true jika string kosong atau "true")
+func parseBool(s string) bool {
+	if s == "" {
+		return true
+	}
+	b, err := strconv.ParseBool(s)
+	if err != nil {
+		return true
+	}
+	return b
 }
 
 // firstNonEmpty - mengembalikan argumen pertama yang tidak kosong

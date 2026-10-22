@@ -12,8 +12,10 @@ import (
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/domain/upload"
+	"atlas_food/internal/infra/storage"
 	"atlas_food/internal/pkg/groq"
 	"atlas_food/internal/pkg/middleware"
+	"log"
 
 	"github.com/gin-gonic/gin"
 	"github.com/penglongli/gin-metrics/ginmetrics"
@@ -133,8 +135,24 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		annotationHandler := annotation.NewHandler(annotationService)
 		annotationHandler.SetupRoutes(v1, middleware.JWTAuth())
 
-		// Upload domain
-		uploadHandler := upload.NewHandler("./uploads")
+		// Storage & Upload domain
+		storageSvc, err := storage.NewService(storage.Config{
+			Driver:      cfg.StorageDriver,
+			UploadPath:  cfg.UploadPath,
+			Bucket:      cfg.StorageBucket,
+			Endpoint:    cfg.StorageEndpoint,
+			AccessKeyID: cfg.StorageAccessKeyID,
+			SecretKey:   cfg.StorageSecretKey,
+			PublicURL:   cfg.StoragePublicURL,
+			UseSSL:      cfg.StorageUseSSL,
+		})
+		if err != nil {
+			log.Printf("Peringatan: Gagal inisialisasi storage driver %s (%v), fallback ke local storage", cfg.StorageDriver, err)
+			storageSvc = storage.NewLocalStorage(cfg.UploadPath)
+		}
+		log.Printf("Storage service aktif: driver=%s bucket=%s", storageSvc.Driver(), cfg.StorageBucket)
+
+		uploadHandler := upload.NewHandler(cfg.UploadPath, storageSvc)
 		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
 		
 		// ======== WEBSOCKET COLLABORATION ROUTES ========

@@ -1,11 +1,11 @@
 package upload
 
 import (
+	"atlas_food/internal/infra/storage"
 	"atlas_food/internal/pkg/middleware"
 	"atlas_food/internal/pkg/utils"
 	"fmt"
 	"net/http"
-	"os"
 	"path/filepath"
 	"regexp"
 	"time"
@@ -14,28 +14,23 @@ import (
 	"github.com/google/uuid"
 )
 
-// safeFolderName - nama folder tujuan upload hanya boleh huruf/angka/strip.
-//
-// `folder` sebelumnya diambil mentah dari form field dan langsung dipakai di
-// filepath.Join(UploadPath, folder) — form field itu berasal dari body request,
-// jadi mengirim folder=../../../../etc atau path absolut menulis file KELUAR
-// dari direktori uploads. Endpoint ini memang di belakang AdminOnly, tapi path
-// traversal tetap path traversal: token admin yang bocor jadi berarti tulis
-// file sembarangan di server, bukan cuma di folder upload.
 var safeFolderName = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
 
 // Handler - HTTP handler untuk upload file
 type Handler struct {
 	UploadPath string
+	Storage    storage.Service
 }
 
-// NewHandler - buat instance handler upload
-func NewHandler(uploadPath string) *Handler {
-	// Pastikan folder upload ada
-	if _, err := os.Stat(uploadPath); os.IsNotExist(err) {
-		os.MkdirAll(uploadPath, 0755)
+// NewHandler - buat instance handler upload dengan storage service
+func NewHandler(uploadPath string, storageSvc storage.Service) *Handler {
+	if storageSvc == nil {
+		storageSvc = storage.NewLocalStorage(uploadPath)
 	}
-	return &Handler{UploadPath: uploadPath}
+	return &Handler{
+		UploadPath: uploadPath,
+		Storage:    storageSvc,
+	}
 }
 
 // UploadImage - POST /api/v1/upload
@@ -67,27 +62,27 @@ func (h *Handler) UploadImage(c *gin.Context) {
 		return
 	}
 	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
-	
-	// Simpan ke disk
-	savePath := filepath.Join(h.UploadPath, folder)
-	if _, err := os.Stat(savePath); os.IsNotExist(err) {
-		os.MkdirAll(savePath, 0755)
-	}
 
-	fullPath := filepath.Join(savePath, filename)
-	if err := c.SaveUploadedFile(file, fullPath); err != nil {
-		utils.ErrorResponse(c, http.StatusInternalServerError, "UPLOAD_FAILED", "Gagal menyimpan file")
+	// Buka stream file
+	src, err := file.Open()
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "UPLOAD_FAILED", "Gagal membaca file")
+		return
+	}
+	defer src.Close()
+
+	// Simpan ke storage (Local disk atau Cloudflare R2)
+	fileURL, err := h.Storage.Upload(c.Request.Context(), folder, filename, src, file.Size, file.Header.Get("Content-Type"))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "UPLOAD_FAILED", "Gagal menyimpan file: "+err.Error())
 		return
 	}
 
-	// Response dengan URL file
-	// Note: In real production, this should be a full URL or relative path handled by static server
-	fileURL := fmt.Sprintf("/uploads/%s/%s", folder, filename)
-
 	utils.SuccessResponse(c, gin.H{
-		"url":       fileURL,
-		"filename":  filename,
-		"size":      file.Size,
+		"url":         fileURL,
+		"filename":    filename,
+		"size":        file.Size,
+		"driver":      h.Storage.Driver(),
 		"uploaded_at": time.Now().Format(time.RFC3339),
 	})
 }
