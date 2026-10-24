@@ -38,7 +38,11 @@ func (s *foodService) CreateCategory(req CreateCategoryRequest) (*Category, erro
 		return nil, err
 	}
 
+	// ID dibuat di aplikasi (bukan default UUID() MySQL): GORM tidak bisa membaca
+	// balik nilai default untuk primary key non-autoincrement, sehingga respons
+	// create dulu berisi "id": "" dan UI tidak bisa langsung membuka kategori baru.
 	category := &Category{
+		ID:           uuid.New().String(),
 		Code:         code,
 		Name:         strings.TrimSpace(req.Name),
 		Icon:         req.Icon,

@@ -86,6 +86,14 @@ func (s *surveyService) CreateSurvey(req CreateSurveyRequest, createdBy string) 
 		localeID = 1 // default Indonesia
 	}
 
+	// Hormati status pilihan admin (form punya dropdown Draft/Active/Closed dan
+	// DTO sudah memvalidasi nilainya). Dulu selalu "draft", sehingga survey yang
+	// dibuat sebagai Active diam-diam tidak muncul untuk responden.
+	status := req.Status
+	if status == "" {
+		status = "draft"
+	}
+
 	survey := &Survey{
 		ID:          uuid.New().String(),
 		Slug:        req.Slug,
@@ -96,7 +104,7 @@ func (s *surveyService) CreateSurvey(req CreateSurveyRequest, createdBy string) 
 		LocaleID:    localeID,
 		StartDate:   startDate,
 		EndDate:     endDate,
-		Status:      "draft",
+		Status:      status,
 		AccessToken: strings.ReplaceAll(uuid.New().String(), "-", ""),
 		CreatedBy:   createdBy,
 	}
@@ -130,14 +138,27 @@ func (s *surveyService) GetSurveyInfoForRespondent(id string) (*SurveyResponse, 
 	return s.mapToPublicResponse(survey), nil
 }
 
+// clampLimit - batasi ukuran halaman ke 1..100 (default 10).
+//
+// Nilai di atas batas DIPOTONG ke 100, bukan direset ke 10: frontend admin
+// meminta limit=200 untuk mengambil semua survey, dan reset ke 10 membuat
+// daftar diam-diam terpotong di survey ke-11.
+func clampLimit(limit int) int {
+	if limit < 1 {
+		return 10
+	}
+	if limit > 100 {
+		return 100
+	}
+	return limit
+}
+
 // ListSurveys - list survey dengan pagination
 func (s *surveyService) ListSurveys(createdBy string, page, limit int) (*SurveyListResponse, error) {
 	if page < 1 {
 		page = 1
 	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
+	limit = clampLimit(limit)
 
 	surveys, total, err := s.repo.ListSurveys(createdBy, page, limit)
 	if err != nil {
@@ -185,9 +206,7 @@ func (s *surveyService) ListActiveSurveys(page, limit int) (*SurveyListResponse,
 	if page < 1 {
 		page = 1
 	}
-	if limit < 1 || limit > 100 {
-		limit = 10
-	}
+	limit = clampLimit(limit)
 
 	surveys, total, err := s.repo.ListActiveSurveys(page, limit)
 	if err != nil {
@@ -279,6 +298,18 @@ func (s *surveyService) DeleteSurvey(id string) error {
 	_, err := s.repo.GetSurveyByID(id)
 	if err != nil {
 		return utils.NewAppError(404, "NOT_FOUND", "Survey tidak ditemukan")
+	}
+
+	// Survey yang sudah diikuti responden menyimpan data penelitian. Dulu DELETE
+	// langsung menabrak foreign key survey_participants → HTTP 500 dengan pesan
+	// SQL mentah bocor ke klien. Tolak secara eksplisit; admin cukup menutupnya.
+	participants, err := s.repo.CountParticipantsBySurvey(id)
+	if err != nil {
+		return errors.New("gagal memeriksa peserta survey")
+	}
+	if participants > 0 {
+		return utils.NewAppError(409, "SURVEY_HAS_PARTICIPANTS",
+			fmt.Sprintf("Survey sudah diikuti %d responden dan tidak bisa dihapus. Ubah status menjadi Closed untuk menutupnya.", participants))
 	}
 
 	return s.repo.DeleteSurvey(id)
