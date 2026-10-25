@@ -108,6 +108,9 @@ func (r *Room) AddMessage(msg *Message) {
 
 // shouldBatchMessage - true untuk pesan high-frequency (kursor/viewport/canvas laser/draw move) yang perlu di-batch dulu
 func (r *Room) shouldBatchMessage(msg *Message) bool {
+	if e2eNoBatch(r.ID) {
+		return false
+	}
 	return msg.Type == MsgCursorMove || msg.Type == MsgCursorUpdate ||
 		msg.Type == MsgViewportSync ||
 		msg.Type == MsgCanvasLaserMove || msg.Type == MsgCanvasLaserUpdated ||

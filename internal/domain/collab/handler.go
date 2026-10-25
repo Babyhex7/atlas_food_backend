@@ -113,6 +113,7 @@ func (h *Handler) HandleWebSocket(c *gin.Context) {
 
 	client := NewClient(conn, h.hub, roomID, userID.(string), username.(string), roleStr, roomRole)
 	client.RoleFromInvite = fromInvite
+	client.e2eNoServerAuthz = e2eMode && strings.Contains(c.Query("e2e_ablate"), "server")
 	h.hub.register <- client
 
 	go client.WritePump()

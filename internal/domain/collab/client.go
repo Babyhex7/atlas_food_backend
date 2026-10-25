@@ -37,6 +37,9 @@ type Client struct {
 	// sedang kosong. Di-set sebelum client masuk hub, jadi immutable.
 	RoleFromInvite bool
 
+	// e2eNoServerAuthz - hanya mode uji (COLLAB_E2E=1 + ?e2e_ablate=server).
+	e2eNoServerAuthz bool
+
 	mu              sync.RWMutex
 	roomRole        string                 // per-room: owner|editor|viewer
 	followingUserID string                 // Figma-like follow target
@@ -191,6 +194,9 @@ func (c *Client) trySend(msg *Message) bool {
 
 // canEdit - cek apakah client boleh mengubah data (owner/editor). Viewer selalu false
 func (c *Client) canEdit() bool {
+	if c.e2eNoServerAuthz { // saklar uji: lapis server dimatikan (E2)
+		return true
+	}
 	role := c.RoomRole()
 	return role == RoomRoleOwner || role == RoomRoleEditor
 }
