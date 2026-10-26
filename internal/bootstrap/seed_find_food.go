@@ -193,10 +193,15 @@ func processSingleFood(tx *gorm.DB, item AtlasFoodItem, categoryMap map[string]s
 
 	categoryID := categoryMap[categoryCode]
 
-	// Map photo type
+	// Map photo type: series, range, guide
 	photoType := "series"
-	if strings.ToLower(item.TipeFoto) == "range" {
+	switch strings.ToLower(strings.TrimSpace(item.TipeFoto)) {
+	case "guide", "alat ukur":
+		photoType = "guide"
+	case "range", "guide/range":
 		photoType = "range"
+	default:
+		photoType = "series"
 	}
 
 	// Check if food already exists

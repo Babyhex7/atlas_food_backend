@@ -17,7 +17,7 @@ type CreateFoodRequest struct {
 	// omitempty wajib: tanpa itu `oneof` menolak string kosong, sehingga
 	// create gagal total kalau klien tidak mengirim photo_type.
 	// Service sudah memberi default "series".
-	PhotoType  string                `json:"photo_type" binding:"omitempty,oneof=series range"`
+	PhotoType  string                `json:"photo_type" binding:"omitempty,oneof=series range guide"`
 	CategoryID string                `json:"category_id"`
 	Nutrients  []FoodNutrientRequest `json:"nutrients"`
 }
@@ -27,7 +27,7 @@ type UpdateFoodRequest struct {
 	Name        string `json:"name"`
 	LocalName   string `json:"local_name"`
 	Description string `json:"description"`
-	PhotoType   string `json:"photo_type" binding:"omitempty,oneof=series range"`
+	PhotoType   string `json:"photo_type" binding:"omitempty,oneof=series range guide"`
 	// Pointer agar admin bisa membedakan "tidak diubah" (field tidak dikirim)
 	// dari "lepaskan kategori" (dikirim null / string kosong). Dengan tipe
 	// string biasa, memilih "Tanpa kategori" di form diam-diam tidak berefek.
