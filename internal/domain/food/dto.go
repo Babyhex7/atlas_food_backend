@@ -131,3 +131,25 @@ type AsServedSetResponse struct {
 	Category   string `json:"category"`
 	ImageCount int    `json:"image_count"`
 }
+
+// AssociatedFoodItemResponse - DTO response makanan terkait
+type AssociatedFoodItemResponse struct {
+	ID               int                 `json:"id"`
+	FoodID           string              `json:"food_id"`
+	AssociatedFoodID string              `json:"associated_food_id"`
+	AssociatedFood   *SearchFoodResponse `json:"associated_food,omitempty"`
+	Priority         int                 `json:"priority"`
+	IsDefault        bool                `json:"is_default"`
+}
+
+// AssociatedFoodInput - item input saat menyimpan makanan terkait
+type AssociatedFoodInput struct {
+	AssociatedFoodID string `json:"associated_food_id" binding:"required"`
+	Priority         int    `json:"priority"`
+	IsDefault        bool   `json:"is_default"`
+}
+
+// SetAssociatedFoodsRequest - DTO request untuk mengganti daftar associated foods
+type SetAssociatedFoodsRequest struct {
+	Items []AssociatedFoodInput `json:"items"`
+}

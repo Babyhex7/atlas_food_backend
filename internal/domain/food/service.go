@@ -19,6 +19,10 @@ type Service interface {
 	UpdateFood(id string, req UpdateFoodRequest) (*FoodResponse, error)
 	DeleteFood(id string) error
 
+	// Admin Associated Foods
+	GetAssociatedFoods(foodID string) ([]AssociatedFoodItemResponse, error)
+	SetAssociatedFoods(foodID string, req SetAssociatedFoodsRequest) ([]AssociatedFoodItemResponse, error)
+
 	// Admin Food Photos (anotasi + gram terpadu)
 	ListFoodPhotos(foodID string) (*FoodPhotoListResponse, error)
 	CreateFoodPhoto(foodID, userID string, req CreateFoodPhotoRequest) (*FoodPhotoResponse, error)
@@ -375,4 +379,79 @@ func (s *foodService) ListNutrientTypes() ([]NutrientType, error) {
 // ListNutrientUnits - mengambil daftar semua unit satuan nutrisi
 func (s *foodService) ListNutrientUnits() ([]NutrientUnit, error) {
 	return s.repo.ListNutrientUnits()
+}
+
+// mapAssociatedFoodToResponse helper konversi model ke DTO
+func mapAssociatedFoodToResponse(af AssociatedFood) AssociatedFoodItemResponse {
+	resp := AssociatedFoodItemResponse{
+		ID:               af.ID,
+		FoodID:           af.FoodID,
+		AssociatedFoodID: af.AssociatedFoodID,
+		Priority:         af.Priority,
+		IsDefault:        af.IsDefault,
+	}
+
+	if af.AssociatedFood.ID != "" {
+		foodResp := &SearchFoodResponse{
+			ID:        af.AssociatedFood.ID,
+			Code:      af.AssociatedFood.Code,
+			Name:      af.AssociatedFood.Name,
+			LocalName: af.AssociatedFood.LocalName,
+			PhotoType: af.AssociatedFood.PhotoType,
+			FoodType:  resolveFoodType(af.AssociatedFood.Category),
+		}
+		if af.AssociatedFood.Category != nil {
+			foodResp.Category = &CategoryInfo{
+				ID:   af.AssociatedFood.Category.ID,
+				Code: af.AssociatedFood.Category.Code,
+				Name: af.AssociatedFood.Category.Name,
+				Icon: af.AssociatedFood.Category.Icon,
+			}
+		}
+		resp.AssociatedFood = foodResp
+	}
+
+	return resp
+}
+
+// GetAssociatedFoods - mengambil daftar associated foods untuk makanan
+func (s *foodService) GetAssociatedFoods(foodID string) ([]AssociatedFoodItemResponse, error) {
+	if _, err := s.repo.GetFoodByID(foodID); err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Makanan tidak ditemukan")
+	}
+
+	items, err := s.repo.GetAssociatedFoods(foodID)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]AssociatedFoodItemResponse, 0, len(items))
+	for _, item := range items {
+		responses = append(responses, mapAssociatedFoodToResponse(item))
+	}
+	return responses, nil
+}
+
+// SetAssociatedFoods - mengatur daftar associated foods untuk makanan
+func (s *foodService) SetAssociatedFoods(foodID string, req SetAssociatedFoodsRequest) ([]AssociatedFoodItemResponse, error) {
+	if _, err := s.repo.GetFoodByID(foodID); err != nil {
+		return nil, utils.NewAppError(404, "NOT_FOUND", "Makanan tidak ditemukan")
+	}
+
+	for _, item := range req.Items {
+		if item.AssociatedFoodID == foodID {
+			return nil, utils.NewAppError(400, "BAD_REQUEST", "Makanan tidak dapat dijadikan pelengkap untuk dirinya sendiri")
+		}
+	}
+
+	items, err := s.repo.SetAssociatedFoods(foodID, req.Items)
+	if err != nil {
+		return nil, err
+	}
+
+	responses := make([]AssociatedFoodItemResponse, 0, len(items))
+	for _, item := range items {
+		responses = append(responses, mapAssociatedFoodToResponse(item))
+	}
+	return responses, nil
 }

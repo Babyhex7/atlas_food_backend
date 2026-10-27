@@ -2,6 +2,7 @@ package food
 
 import (
 	"strings"
+	"time"
 
 	"gorm.io/gorm"
 )
@@ -17,6 +18,10 @@ type Repository interface {
 	UpdateFood(food *Food) error
 	DeleteFood(id string) error
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error)
+
+	// Associated Food operations
+	GetAssociatedFoods(foodID string) ([]AssociatedFood, error)
+	SetAssociatedFoods(foodID string, items []AssociatedFoodInput) ([]AssociatedFood, error)
 
 	// Public Food operations (Find Your Food)
 	SearchFoodsPublic(query string, foodType string, scope string, limit int) ([]Food, error)
@@ -504,4 +509,52 @@ func (r *foodRepository) GetFoodNutrients(foodID string) ([]FoodNutrient, error)
 		Where("food_id = ?", foodID).
 		Find(&nutrients).Error
 	return nutrients, err
+}
+
+// GetAssociatedFoods - ambil daftar associated foods untuk sebuah makanan
+func (r *foodRepository) GetAssociatedFoods(foodID string) ([]AssociatedFood, error) {
+	var list []AssociatedFood
+	err := r.db.
+		Preload("AssociatedFood.Category").
+		Where("food_id = ?", foodID).
+		Order("priority ASC, id ASC").
+		Find(&list).Error
+	return list, err
+}
+
+// SetAssociatedFoods - ganti seluruh daftar associated foods untuk sebuah makanan secara atomik
+func (r *foodRepository) SetAssociatedFoods(foodID string, items []AssociatedFoodInput) ([]AssociatedFood, error) {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// Hapus relasi lama
+		if err := tx.Where("food_id = ?", foodID).Delete(&AssociatedFood{}).Error; err != nil {
+			return err
+		}
+
+		if len(items) == 0 {
+			return nil
+		}
+
+		records := make([]AssociatedFood, 0, len(items))
+		for i, item := range items {
+			priority := item.Priority
+			if priority == 0 {
+				priority = i + 1
+			}
+			records = append(records, AssociatedFood{
+				FoodID:           foodID,
+				AssociatedFoodID: item.AssociatedFoodID,
+				Priority:         priority,
+				IsDefault:        item.IsDefault,
+				CreatedAt:        time.Now(),
+			})
+		}
+
+		return tx.Create(&records).Error
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return r.GetAssociatedFoods(foodID)
 }

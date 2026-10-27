@@ -357,3 +357,35 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 		"count":  len(results),
 	})
 }
+
+// GetAssociatedFoods - GET /public/foods/:id/associated
+func (h *PublicHandler) GetAssociatedFoods(c *gin.Context) {
+	foodID := c.Param("id")
+	if foodID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"status":  "error",
+			"message": "Food ID is required",
+		})
+		return
+	}
+
+	rawItems, err := h.repo.GetAssociatedFoods(foodID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"status":  "error",
+			"message": "Failed to get associated foods",
+		})
+		return
+	}
+
+	results := make([]AssociatedFoodItemResponse, 0, len(rawItems))
+	for _, af := range rawItems {
+		results = append(results, mapAssociatedFoodToResponse(af))
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   results,
+		"count":  len(results),
+	})
+}

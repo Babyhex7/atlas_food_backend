@@ -138,6 +138,46 @@ func (h *Handler) AddPortionMethod(c *gin.Context) {
 	utils.CreatedResponse(c, response)
 }
 
+// GetAssociatedFoods - GET /admin/foods/:id/associated — daftar makanan terkait
+func (h *Handler) GetAssociatedFoods(c *gin.Context) {
+	foodID := c.Param("id")
+	if foodID == "" {
+		utils.ValidationErrorResponse(c, "ID makanan wajib diisi")
+		return
+	}
+
+	items, err := h.service.GetAssociatedFoods(foodID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, items)
+}
+
+// SetAssociatedFoods - PUT /admin/foods/:id/associated — atur makanan terkait
+func (h *Handler) SetAssociatedFoods(c *gin.Context) {
+	foodID := c.Param("id")
+	if foodID == "" {
+		utils.ValidationErrorResponse(c, "ID makanan wajib diisi")
+		return
+	}
+
+	var req SetAssociatedFoodsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Format data tidak valid: "+err.Error())
+		return
+	}
+
+	items, err := h.service.SetAssociatedFoods(foodID, req)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, items)
+}
+
 // ============ PUBLIC ENDPOINTS ============
 
 // SearchFoods - GET pencarian makanan untuk responden; query minimal 3 karakter, bisa difilter kategori/tipe
@@ -238,6 +278,10 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 			foods.DELETE("/:id", h.DeleteFood)
 			foods.POST("/:id/portion-methods", h.AddPortionMethod)
 			foods.GET("/:id/portion-methods", h.ListPortionMethodsAdmin)
+
+			// Makanan terkait (associated foods)
+			foods.GET("/:id/associated", h.GetAssociatedFoods)
+			foods.PUT("/:id/associated", h.SetAssociatedFoods)
 
 			// Foto makanan terpadu: anotasi draft + gram porsi (series/range)
 			foods.GET("/:id/photos", h.ListFoodPhotos)

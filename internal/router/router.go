@@ -82,6 +82,7 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 			// Food search & browse
 			publicGroup.GET("/foods/search", publicFoodHandler.SearchFoods)
 			publicGroup.GET("/foods/:id", publicFoodHandler.GetFoodDetail)
+			publicGroup.GET("/foods/:id/associated", publicFoodHandler.GetAssociatedFoods)
 
 			// Categories
 			publicGroup.GET("/categories", publicFoodHandler.GetCategories)
