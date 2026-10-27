@@ -62,8 +62,9 @@ type DailyTotal struct {
 }
 
 // AdditionalItem - bahan tambahan/topping per makanan (Step 4: Additional Details)
-// Contoh: {"name": "Onion", "amount": "3g", "amount_value": 3, "unit": "g"}
+// Contoh: {"food_id": "uuid-sambal", "name": "Sambal Terasi", "amount": "15g", "amount_value": 15, "unit": "g"}
 type AdditionalItem struct {
+	FoodID      string  `json:"food_id,omitempty"`    // ID makanan dari master DB jika dipilih via search
 	Name        string  `json:"name" binding:"required"`
 	Amount      string  `json:"amount"`       // Display string, e.g. "3g", "10ml"
 	AmountValue float64 `json:"amount_value"` // Nilai numerik untuk kalkulasi

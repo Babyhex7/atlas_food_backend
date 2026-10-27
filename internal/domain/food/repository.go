@@ -19,7 +19,7 @@ type Repository interface {
 	SearchFoods(query string, categoryID string, foodType string, limit int) ([]Food, error)
 
 	// Public Food operations (Find Your Food)
-	SearchFoodsPublic(query string, foodType string, limit int) ([]Food, error)
+	SearchFoodsPublic(query string, foodType string, scope string, limit int) ([]Food, error)
 	GetFoodWithPortionPhotos(foodID string) (*Food, []AsServedImage, error)
 	GetFoodsByCategory(categoryCode string, limit int) ([]Food, error)
 	GetFoodNutrients(foodID string) ([]FoodNutrient, error)
@@ -424,7 +424,9 @@ func (r *foodRepository) GetFoodWithPortionPhotos(foodID string) (*Food, []AsSer
 //
 // foodType: "food" | "drink" | "" (kosong = semua). Filter mengikuti aturan yang
 // sama dengan SearchFoods (authenticated): drink = kategori 'drinks'.
-func (r *foodRepository) SearchFoodsPublic(query string, foodType string, limit int) ([]Food, error) {
+//
+// scope: "additional" | "" (jika "additional", mengecualikan makanan pokok, siap saji berat, alat ukur)
+func (r *foodRepository) SearchFoodsPublic(query string, foodType string, scope string, limit int) ([]Food, error) {
 	var foods []Food
 
 	// LEFT JOIN kategori supaya filter food_type bisa memakai categories.code.
@@ -441,6 +443,11 @@ func (r *foodRepository) SearchFoodsPublic(query string, foodType string, limit 
 		q = q.Where("c.code = ?", "drinks")
 	case "food":
 		q = q.Where("(c.code IS NULL OR c.code != ?)", "drinks")
+	}
+
+	// Filter scope=additional: mengecualikan makanan pokok & menu utama berat (MP, AK, AMK) serta alat makan (AH)
+	if strings.EqualFold(strings.TrimSpace(scope), "additional") {
+		q = q.Where("(c.code IS NULL OR c.code NOT IN ('MP', 'AK', 'AMK', 'AH', 'drinks'))")
 	}
 
 	trimmed := strings.TrimSpace(query)

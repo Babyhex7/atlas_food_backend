@@ -46,6 +46,7 @@ func NewPublicHandler(repo Repository) *PublicHandler {
 func (h *PublicHandler) SearchFoods(c *gin.Context) {
 	query := c.DefaultQuery("q", "")
 	foodType := c.Query("type")
+	scope := c.Query("scope") // "additional" | ""
 	limit := 20
 
 	if limitParam := c.Query("limit"); limitParam != "" {
@@ -54,13 +55,13 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 		}
 	}
 
-	cacheKey := redisInfra.GenerateSearchCacheKey(query, foodType, limit)
+	cacheKey := redisInfra.GenerateSearchCacheKey(query, foodType, scope, limit)
 	cacheService := redisInfra.GetCacheService()
 
 	var results []SearchFoodResponse
 
 	err := cacheService.GetOrFetch(c.Request.Context(), cacheKey, 1*time.Hour, &results, func() (interface{}, error) {
-		foods, err := h.repo.SearchFoodsPublic(query, foodType, limit)
+		foods, err := h.repo.SearchFoodsPublic(query, foodType, scope, limit)
 		if err != nil {
 			return nil, err
 		}
