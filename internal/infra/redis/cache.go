@@ -135,5 +135,5 @@ func convertValue(src interface{}, dest interface{}) error {
 func GenerateSearchCacheKey(query string, foodType string, scope string, limit int) string {
 	raw := fmt.Sprintf("q=%s&type=%s&scope=%s&limit=%d", query, foodType, scope, limit)
 	hash := md5.Sum([]byte(raw))
-	return fmt.Sprintf("atlas:prod:cache:foods:search:%s", hex.EncodeToString(hash[:]))
+	return fmt.Sprintf("atlas:prod:cache:foods:search:v2:%s", hex.EncodeToString(hash[:]))
 }

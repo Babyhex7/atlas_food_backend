@@ -101,8 +101,10 @@ type SearchFoodResponse struct {
 	PhotoType string        `json:"photo_type"`
 	// FoodType: "food" | "drink" — diturunkan dari kategori supaya klien tidak
 	// perlu menebak jenis item dari nama kategori.
-	FoodType string        `json:"food_type"`
-	Category *CategoryInfo `json:"category,omitempty"`
+	FoodType     string        `json:"food_type"`
+	ImageURL     string        `json:"image_url,omitempty"`
+	ThumbnailURL string        `json:"thumbnail_url,omitempty"`
+	Category     *CategoryInfo `json:"category,omitempty"`
 }
 
 // CreatePortionMethodRequest - DTO untuk tambah portion method

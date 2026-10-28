@@ -66,15 +66,23 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 			return nil, err
 		}
 
+		foodIDs := make([]string, len(foods))
+		for i, food := range foods {
+			foodIDs[i] = food.ID
+		}
+		imageMap, _ := h.repo.GetPrimaryImagesForFoods(foodIDs)
+
 		res := make([]SearchFoodResponse, 0, len(foods))
 		for _, food := range foods {
 			item := SearchFoodResponse{
-				ID:        food.ID,
-				Code:      food.Code,
-				Name:      food.Name,
-				LocalName: food.LocalName,
-				PhotoType: food.PhotoType,
-				FoodType:  resolveFoodType(food.Category),
+				ID:           food.ID,
+				Code:         food.Code,
+				Name:         food.Name,
+				LocalName:    food.LocalName,
+				PhotoType:    food.PhotoType,
+				FoodType:     resolveFoodType(food.Category),
+				ImageURL:     imageMap[food.ID],
+				ThumbnailURL: imageMap[food.ID],
 			}
 
 			if food.Category != nil {
@@ -307,7 +315,7 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 		}
 	}
 
-	cacheKey := fmt.Sprintf("atlas:prod:cache:categories:%s:foods:%d", categoryCode, limit)
+	cacheKey := fmt.Sprintf("atlas:prod:cache:categories:v2:%s:foods:%d", categoryCode, limit)
 	cacheService := redisInfra.GetCacheService()
 
 	var results []SearchFoodResponse
@@ -318,15 +326,23 @@ func (h *PublicHandler) GetFoodsByCategory(c *gin.Context) {
 			return nil, err
 		}
 
+		foodIDs := make([]string, len(foods))
+		for i, food := range foods {
+			foodIDs[i] = food.ID
+		}
+		imageMap, _ := h.repo.GetPrimaryImagesForFoods(foodIDs)
+
 		res := make([]SearchFoodResponse, 0, len(foods))
 		for _, food := range foods {
 			item := SearchFoodResponse{
-				ID:        food.ID,
-				Code:      food.Code,
-				Name:      food.Name,
-				LocalName: food.LocalName,
-				PhotoType: food.PhotoType,
-				FoodType:  resolveFoodType(food.Category),
+				ID:           food.ID,
+				Code:         food.Code,
+				Name:         food.Name,
+				LocalName:    food.LocalName,
+				PhotoType:    food.PhotoType,
+				FoodType:     resolveFoodType(food.Category),
+				ImageURL:     imageMap[food.ID],
+				ThumbnailURL: imageMap[food.ID],
 			}
 
 			if food.Category != nil {

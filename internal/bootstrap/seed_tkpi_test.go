@@ -11,7 +11,7 @@ import (
 var (
 	tkpiPath    = filepath.Join("..", "..", "data", "tkpi", "tkpi_2020.json")
 	mappingPath = filepath.Join("..", "..", "data", "tkpi", "atlas_tkpi_mapping.json")
-	atlasPath   = filepath.Join("..", "..", "Atlas_Makananku_FINAL.json")
+	atlasPath   = filepath.Join("..", "..", "data", "tkpi", "Atlas_Makananku_FINAL.json")
 )
 
 func f64(v float64) *float64 { return &v }

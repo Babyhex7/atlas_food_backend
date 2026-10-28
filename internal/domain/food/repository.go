@@ -29,6 +29,7 @@ type Repository interface {
 	GetFoodsByCategory(categoryCode string, limit int) ([]Food, error)
 	GetFoodNutrients(foodID string) ([]FoodNutrient, error)
 	GetAllCategories() ([]Category, error)
+	GetPrimaryImagesForFoods(foodIDs []string) (map[string]string, error)
 
 	// Nutrient operations
 	GetNutrientsByFoodID(foodID string) ([]FoodNutrient, error)
@@ -557,4 +558,74 @@ func (r *foodRepository) SetAssociatedFoods(foodID string, items []AssociatedFoo
 	}
 
 	return r.GetAssociatedFoods(foodID)
+}
+
+// GetPrimaryImagesForFoods - Ambil URL foto representatif (thumbnail / image_url) untuk daftar foodID
+func (r *foodRepository) GetPrimaryImagesForFoods(foodIDs []string) (map[string]string, error) {
+	if len(foodIDs) == 0 {
+		return map[string]string{}, nil
+	}
+
+	type Row struct {
+		FoodID       string `gorm:"column:food_id"`
+		ImageURL     string `gorm:"column:image_url"`
+		ThumbnailURL string `gorm:"column:thumbnail_url"`
+	}
+
+	var rows []Row
+	// Ambil dari as_served_images via as_served_sets
+	err := r.db.Table("as_served_sets ass").
+		Select("ass.food_id, asi.image_url, asi.thumbnail_url").
+		Joins("JOIN as_served_images asi ON asi.set_id = ass.id").
+		Where("ass.food_id IN (?)", foodIDs).
+		Order("asi.display_order ASC, asi.label ASC").
+		Scan(&rows).Error
+
+	result := make(map[string]string, len(foodIDs))
+	if err == nil {
+		for _, row := range rows {
+			if _, exists := result[row.FoodID]; !exists {
+				url := row.ThumbnailURL
+				if url == "" {
+					url = row.ImageURL
+				}
+				if url != "" {
+					result[row.FoodID] = url
+				}
+			}
+		}
+	}
+
+	// Fallback untuk makanan yang fotonya di food_images
+	var missing []string
+	for _, id := range foodIDs {
+		if _, ok := result[id]; !ok {
+			missing = append(missing, id)
+		}
+	}
+
+	if len(missing) > 0 {
+		var fiRows []struct {
+			PrimaryFoodID string `gorm:"column:primary_food_id"`
+			ImageURL      string `gorm:"column:image_url"`
+			ThumbnailURL  string `gorm:"column:thumbnail_url"`
+		}
+		_ = r.db.Table("food_images").
+			Select("primary_food_id, image_url, thumbnail_url").
+			Where("primary_food_id IN (?) AND status = 'published'", missing).
+			Scan(&fiRows)
+		for _, fi := range fiRows {
+			if _, exists := result[fi.PrimaryFoodID]; !exists {
+				url := fi.ThumbnailURL
+				if url == "" {
+					url = fi.ImageURL
+				}
+				if url != "" {
+					result[fi.PrimaryFoodID] = url
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
