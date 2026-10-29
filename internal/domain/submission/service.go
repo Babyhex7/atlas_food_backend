@@ -95,8 +95,8 @@ func (s *submissionService) SubmitSurvey(req SubmitSurveyRequest, userID string)
 		}
 		hasFood = true
 		for _, food := range meal.Foods {
-			if food.PortionGram <= 0 {
-				return nil, errors.New("semua makanan harus memiliki porsi valid")
+			if food.PortionGram <= 0 || food.PortionGram > 10000 {
+				return nil, errors.New("semua makanan harus memiliki porsi valid (antara 1 hingga 10.000 gram)")
 			}
 		}
 	}
