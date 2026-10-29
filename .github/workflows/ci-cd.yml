@@ -2,9 +2,9 @@ name: Backend CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master, improvement/v1-recall-latest ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master, improvement/v1-recall-latest ]
+    branches: [ main ]
 
 jobs:
   # ====================================================
@@ -42,7 +42,7 @@ jobs:
   deploy:
     name: 🚀 Deploy to VPS Server
     needs: test-and-build
-    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/improvement/v1-recall-latest') && github.event_name == 'push'
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
