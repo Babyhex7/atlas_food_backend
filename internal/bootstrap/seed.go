@@ -89,7 +89,11 @@ func SeedInitialData(db *gorm.DB, cfg *config.Config) error {
 	if foodCnt == 0 {
 		jsonPath := os.Getenv("ATLAS_JSON_PATH")
 		if jsonPath == "" {
-			jsonPath = "Atlas_Makananku_FINAL.json"
+			if _, err := os.Stat("data/tkpi/Atlas_Makananku_FINAL.json"); err == nil {
+				jsonPath = "data/tkpi/Atlas_Makananku_FINAL.json"
+			} else {
+				jsonPath = "Atlas_Makananku_FINAL.json"
+			}
 		}
 
 		if _, err := os.Stat(jsonPath); err == nil {

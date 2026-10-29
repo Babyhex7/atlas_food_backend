@@ -20,7 +20,8 @@ WORKDIR /app
 RUN apk add --no-cache ca-certificates tzdata
 
 COPY --from=builder /app/server ./server
-COPY --from=builder /app/Atlas_Makananku_FINAL.json ./Atlas_Makananku_FINAL.json
+COPY --from=builder /app/data ./data
+COPY --from=builder /app/data/tkpi/Atlas_Makananku_FINAL.json ./Atlas_Makananku_FINAL.json
 
 RUN mkdir -p uploads
 
