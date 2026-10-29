@@ -25,6 +25,7 @@ type Repository interface {
 
 	// Public Food operations (Find Your Food)
 	SearchFoodsPublic(query string, foodType string, scope string, limit int) ([]Food, error)
+	GetFeaturedFoodSuggestions() ([]string, error)
 	GetFoodWithPortionPhotos(foodID string) (*Food, []AsServedImage, error)
 	GetFoodsByCategory(categoryCode string, limit int) ([]Food, error)
 	GetFoodNutrients(foodID string) ([]FoodNutrient, error)
@@ -493,6 +494,29 @@ func (r *foodRepository) SearchFoodsPublic(query string, foodType string, scope 
 
 	err := q.Limit(limit).Find(&foods).Error
 	return foods, err
+}
+
+// GetFeaturedFoodSuggestions - ambil daftar nama makanan aktif dari database sebagai rekomendasi pencarian
+func (r *foodRepository) GetFeaturedFoodSuggestions() ([]string, error) {
+	var names []string
+	// Ambil perwakilan makanan aktif dari kategori utama
+	err := r.db.Table("foods f").
+		Joins("JOIN categories c ON c.id = f.category_id").
+		Where("f.is_active = ?", true).
+		Where("c.code IN ('MP', 'LH', 'LN', 'AS', 'AB', 'AP', 'AMK')").
+		Where("f.code NOT LIKE 'AH%' AND f.code NOT LIKE 'drinks%'").
+		Order("c.display_order ASC, f.name ASC").
+		Limit(8).
+		Pluck("f.name", &names).Error
+
+	if err != nil || len(names) == 0 {
+		err = r.db.Table("foods").
+			Where("is_active = ?", true).
+			Order("name ASC").
+			Limit(8).
+			Pluck("name", &names).Error
+	}
+	return names, err
 }
 
 // GetFoodsByCategory - Get all foods in a category (Public)

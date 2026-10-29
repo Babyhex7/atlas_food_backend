@@ -1,6 +1,7 @@
 package food
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -107,11 +108,97 @@ func (h *PublicHandler) SearchFoods(c *gin.Context) {
 		return
 	}
 
+	// Catat pencarian ke Redis trending ZSET secara asinkron (non-blocking)
+	if qClean := strings.TrimSpace(query); len(qClean) >= 2 && len(qClean) <= 40 && len(results) > 0 {
+		go func(term string) {
+			defer func() {
+				_ = recover()
+			}()
+			rc := redisInfra.GetInstance()
+			if !rc.IsAvailable() {
+				return
+			}
+			norm := strings.ToLower(term)
+			tCtx, tCancel := context.WithTimeout(context.Background(), 2*time.Second)
+			defer tCancel()
+			_ = rc.RawClient().ZIncrBy(tCtx, "food_search_trending", 1, norm).Err()
+		}(qClean)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"status": "success",
 		"data":   results,
 		"count":  len(results),
 	})
+}
+
+// GetFoodSuggestions godoc
+// @Summary Ambil rekomendasi pencarian makanan (trending dari Redis + database fallback)
+// @Description Mengembalikan daftar kata kunci pencarian populer / rekomendasi secara dinamis
+// @Tags public-food
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Router /public/foods/suggestions [get]
+func (h *PublicHandler) GetFoodSuggestions(c *gin.Context) {
+	redisClient := redisInfra.GetInstance()
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 3*time.Second)
+	defer cancel()
+
+	var suggestions []string
+
+	// 1. Ambil dari Redis trending ZSET jika tersedia
+	if redisClient.IsAvailable() {
+		trending, err := redisClient.RawClient().ZRevRange(ctx, "food_search_trending", 0, 7).Result()
+		if err == nil && len(trending) > 0 {
+			for _, item := range trending {
+				cleaned := strings.TrimSpace(item)
+				if cleaned != "" {
+					suggestions = append(suggestions, titleCase(cleaned))
+				}
+			}
+		}
+	}
+
+	// 2. Jika saran dari trending masih kurang dari 6, lengkapi dari database aktif
+	if len(suggestions) < 6 {
+		dbSuggestions, err := h.repo.GetFeaturedFoodSuggestions()
+		if err == nil && len(dbSuggestions) > 0 {
+			seen := make(map[string]bool)
+			for _, s := range suggestions {
+				seen[strings.ToLower(s)] = true
+			}
+			for _, s := range dbSuggestions {
+				lower := strings.ToLower(s)
+				if !seen[lower] {
+					seen[lower] = true
+					suggestions = append(suggestions, s)
+					if len(suggestions) >= 8 {
+						break
+					}
+				}
+			}
+		}
+	}
+
+	// 3. Fallback aman jika database belum siap
+	if len(suggestions) == 0 {
+		suggestions = []string{"Nasi", "Buncis Tumis", "Ayam Goreng", "Tempe Goreng", "Telur Dadar", "Sayur Sop"}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   suggestions,
+	})
+}
+
+func titleCase(s string) string {
+	words := strings.Fields(s)
+	for i, w := range words {
+		if len(w) > 0 {
+			words[i] = strings.ToUpper(w[:1]) + strings.ToLower(w[1:])
+		}
+	}
+	return strings.Join(words, " ")
 }
 
 func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
