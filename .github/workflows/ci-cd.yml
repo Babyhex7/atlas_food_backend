@@ -2,9 +2,9 @@ name: Backend CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, improvement/v1-recall-latest ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, improvement/v1-recall-latest ]
 
 jobs:
   # ====================================================
@@ -22,7 +22,8 @@ jobs:
       - name: ⚙️ Setup Go Environment
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: '1.23'
+          check-latest: true
           cache: true
 
       - name: 📦 Install Dependencies
@@ -41,17 +42,15 @@ jobs:
   deploy:
     name: 🚀 Deploy to VPS Server
     needs: test-and-build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.ref == 'refs/heads/improvement/v1-recall-latest') && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
-      - name: 🔑 SSH to VPS and Deploy (nanti ketika ada vps ini dipake bre)
+      - name: 🔑 SSH to VPS and Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            cd /var/www/atlas_food_backend
-            git pull origin main
-            docker compose up -d --build
+            /root/apps/atlas_food/deploy.sh be ${{ github.ref_name }}
