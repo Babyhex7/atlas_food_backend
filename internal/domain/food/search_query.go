@@ -14,6 +14,58 @@ const maxSearchTermLen = 64
 // gagal, termasuk cabang LIKE-nya, dan pencarian makanan balas 500.
 const booleanModeOperators = `+-><()~*:"&|@`
 
+// indonesianFoodSynonyms - pemetaan ejaan lokal/kolokial dan typo umum pada makanan Indonesia
+var indonesianFoodSynonyms = map[string]string{
+	"buncic":   "buncis",
+	"telor":    "telur",
+	"sambel":   "sambal",
+	"cabe":     "cabai",
+	"duren":    "durian",
+	"krupuk":   "kerupuk",
+	"indomie":  "mie",
+	"popmie":   "mie",
+	"tempeh":   "tempe",
+	"semangko": "semangka",
+	"semangke": "semangka",
+}
+
+// normalizeFoodSearchTerm - periksa kata terhadap kamus variasi dan typo umum
+func normalizeFoodSearchTerm(w string) string {
+	lower := strings.ToLower(w)
+	if repl, exists := indonesianFoodSynonyms[lower]; exists {
+		return repl
+	}
+	// Typo umum akhiran 'c' untuk kata berakhiran 's' seperti buncic -> buncis
+	if strings.HasSuffix(lower, "c") && len(lower) >= 4 {
+		candidate := lower[:len(lower)-1] + "s"
+		if candidate == "buncis" {
+			return candidate
+		}
+	}
+	return lower
+}
+
+// normalizeSearchQuery - normalisasi kata-kata dalam query pencarian user
+func normalizeSearchQuery(raw string) string {
+	words := strings.Fields(raw)
+	if len(words) == 0 {
+		return ""
+	}
+	changed := false
+	result := make([]string, len(words))
+	for i, w := range words {
+		norm := normalizeFoodSearchTerm(w)
+		if norm != strings.ToLower(w) {
+			changed = true
+		}
+		result[i] = norm
+	}
+	if !changed {
+		return raw
+	}
+	return strings.Join(result, " ")
+}
+
 // sanitizeFulltextQuery - bersihkan input user menjadi ekspresi BOOLEAN MODE
 // yang aman.
 //

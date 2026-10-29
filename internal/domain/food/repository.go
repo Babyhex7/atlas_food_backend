@@ -213,11 +213,19 @@ func (r *foodRepository) SearchFoods(query string, categoryID string, foodType s
 
 	trimmed := strings.TrimSpace(query)
 	if trimmed != "" {
+		normalized := strings.TrimSpace(normalizeSearchQuery(trimmed))
 		likeQuery := escapeLikePattern(trimmed)
-		// FULLTEXT wildcard hanya di akhir kata (nasi*), plus fallback LIKE & pencarian kode.
-		// Operator BOOLEAN MODE dibuang dulu — lihat sanitizeFulltextQuery.
 		matchQuery := sanitizeFulltextQuery(trimmed)
-		if matchQuery != "" {
+
+		if normalized != "" && !strings.EqualFold(normalized, trimmed) {
+			normLikeQuery := escapeLikePattern(normalized)
+			normMatchQuery := sanitizeFulltextQuery(normalized)
+
+			q = q.Where(
+				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				matchQuery, normMatchQuery, likeQuery, normLikeQuery, likeQuery, normLikeQuery, likeQuery,
+			)
+		} else if matchQuery != "" {
 			q = q.Where(
 				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
 				matchQuery, likeQuery, likeQuery, likeQuery,
@@ -458,12 +466,19 @@ func (r *foodRepository) SearchFoodsPublic(query string, foodType string, scope 
 
 	trimmed := strings.TrimSpace(query)
 	if trimmed != "" {
-		// FULLTEXT sendirian gagal untuk pencarian parsial di tengah kata dan untuk
-		// token di bawah innodb_ft_min_token_size. Gabungkan dengan LIKE + kode agar
-		// hasil tetap muncul, mengikuti perilaku SearchFoods (authenticated).
+		normalized := strings.TrimSpace(normalizeSearchQuery(trimmed))
 		likeQuery := escapeLikePattern(trimmed)
 		matchQuery := sanitizeFulltextQuery(trimmed)
-		if matchQuery != "" {
+
+		if normalized != "" && !strings.EqualFold(normalized, trimmed) {
+			normLikeQuery := escapeLikePattern(normalized)
+			normMatchQuery := sanitizeFulltextQuery(normalized)
+
+			q = q.Where(
+				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
+				matchQuery, normMatchQuery, likeQuery, normLikeQuery, likeQuery, normLikeQuery, likeQuery,
+			)
+		} else if matchQuery != "" {
 			q = q.Where(
 				"(MATCH(foods.name, foods.local_name) AGAINST(? IN BOOLEAN MODE) OR foods.name LIKE ? OR foods.local_name LIKE ? OR foods.code LIKE ?)",
 				matchQuery, likeQuery, likeQuery, likeQuery,

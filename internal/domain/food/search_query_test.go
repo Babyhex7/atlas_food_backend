@@ -41,3 +41,26 @@ func TestEscapeLikePattern(t *testing.T) {
 		t.Errorf("escapeLikePattern(nasi) = %q", got)
 	}
 }
+
+// TestNormalizeSearchQuery - typo akhiran dan ejaan umum harus dinormalisasi
+func TestNormalizeSearchQuery(t *testing.T) {
+	cases := []struct {
+		in   string
+		want string
+	}{
+		{"buncic", "buncis"},
+		{"sayur buncic", "sayur buncis"},
+		{"telor", "telur"},
+		{"telor dadar", "telur dadar"},
+		{"sambel", "sambal"},
+		{"sambel terasi", "sambal terasi"},
+		{"duren", "durian"},
+		{"nasi putih", "nasi putih"},
+	}
+
+	for _, c := range cases {
+		if got := normalizeSearchQuery(c.in); got != c.want {
+			t.Errorf("normalizeSearchQuery(%q) = %q, mau %q", c.in, got, c.want)
+		}
+	}
+}
