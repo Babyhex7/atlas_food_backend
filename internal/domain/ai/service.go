@@ -4,16 +4,19 @@ import (
 	"atlas_food/internal/domain/submission"
 	"atlas_food/internal/pkg/groq"
 	"atlas_food/internal/pkg/utils"
+	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/google/uuid"
 )
 
-// Service - business logic AI analysis
+// Service - business logic AI analysis & interactive assistant
 type Service interface {
 	AnalyzeNutrition(userID string, req NutritionAnalysisRequest) (*NutritionAnalysisResult, error)
+	AskAssistant(ctx context.Context, req AssistantRequest) (*AssistantResponse, error)
 }
 
 type service struct {
@@ -108,4 +111,42 @@ Analisis daily_total terhadap angka rujukan, lalu perhatikan pola meals_data
 	}
 
 	return &NutritionAnalysisResult{Source: "groq", Data: analysisData}, nil
+}
+
+// AskAssistant - merespons pertanyaan responden per-step dengan panduan URT dan ekstraksi makanan
+func (s *service) AskAssistant(ctx context.Context, req AssistantRequest) (*AssistantResponse, error) {
+	if req.UserQuery == "" {
+		return nil, utils.NewAppError(http.StatusBadRequest, "VALIDATION_ERROR", "user_query wajib diisi")
+	}
+	if req.Step == "" {
+		req.Step = AssistantStepPortion
+	}
+
+	systemPrompt := buildAssistantSystemPrompt(req.Step)
+	userPrompt := buildAssistantUserPrompt(req)
+
+	// Jika client Groq tidak terkonfigurasi, langsung gunakan heuristic fallback
+	if s.groq == nil {
+		log.Println("⚠️ Groq client nil, menggunakan heuristic fallback untuk AI Assistant")
+		return fallbackHeuristicAssistant(req), nil
+	}
+
+	res, err := s.groq.Complete(ctx, systemPrompt, userPrompt, 0.3, true)
+	if err != nil {
+		log.Printf("⚠️ Gagal memanggil Groq LLM (%v), menggunakan heuristic fallback untuk AI Assistant", err)
+		return fallbackHeuristicAssistant(req), nil
+	}
+
+	parsed, err := parseAssistantResponse(res.Content)
+	if err != nil {
+		log.Printf("⚠️ Gagal parse JSON Groq (%v), respon mentah: %s. Fallback ke heuristic", err, res.Content)
+		return fallbackHeuristicAssistant(req), nil
+	}
+
+	// Normalisasi: jika response tidak ada penjelasan, isi fallback
+	if parsed.Explanation == "" {
+		parsed.Explanation = fallbackHeuristicAssistant(req).Explanation
+	}
+
+	return parsed, nil
 }

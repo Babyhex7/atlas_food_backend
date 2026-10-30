@@ -81,8 +81,8 @@ type groqResponse struct {
 	} `json:"usage"`
 }
 
-// Analyze - panggil Groq dengan prompt siap pakai
-func (c *Client) Analyze(systemPrompt, userPrompt string) (*Result, error) {
+// Complete - kirim prompt ke Groq dengan opsi custom dan context timeout.
+func (c *Client) Complete(ctx context.Context, systemPrompt, userPrompt string, temperature float64, jsonMode bool) (*Result, error) {
 	if c.apiKey == "" {
 		return nil, utils.NewAppError(http.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "GROQ_API_KEY belum dikonfigurasi")
 	}
@@ -90,44 +90,18 @@ func (c *Client) Analyze(systemPrompt, userPrompt string) (*Result, error) {
 	systemPrompt = strings.TrimSpace(systemPrompt)
 	userPrompt = strings.TrimSpace(userPrompt)
 
-	fullSystemPrompt := `You are a nutrition analyst reviewing 24-hour food recall data from Indonesia.
-
-OUTPUT LANGUAGE: every human-readable string you produce (overall_message, description,
-ai_recommendation, recommended_foods, health_insight, suggested_activities) MUST be written
-in Bahasa Indonesia. Only the enum values below stay in English.
-
-REFERENCE (Angka Kecukupan Gizi, rata-rata dewasa Indonesia, per hari):
-energi 2150 kkal, protein 60 g, karbohidrat 320 g, lemak 65 g.
-Bandingkan daily_total terhadap angka ini. Toleransi +/-10% dihitung "good";
-di bawahnya "low"/"less", di atasnya "high"/"excess".
-
-Return ONLY valid JSON matching this schema:
-{
-  "overall_status": "good|less|excess",
-  "overall_message": "string",
-  "nutritional_analysis": [{"label":"Energi|Protein|Karbohidrat|Lemak","status":"low|partial|good|high","description":"string"}],
-  "ai_recommendation": "string",
-  "recommended_foods": ["string"],
-  "health_insight": {"title":"string","description":"string"},
-  "suggested_activities": ["string"]
-}
-
-RULES:
-- nutritional_analysis harus berisi tepat 4 item, satu untuk tiap label di atas, urut sesuai daftar.
-- recommended_foods: 3-5 nama makanan Indonesia yang benar-benar mudah didapat.
-- suggested_activities: 2-4 aktivitas fisik yang realistis.
-- Setiap description maksimal 2 kalimat. Jangan mengarang angka yang tidak ada di input.
-- Jangan menambahkan pagar markdown atau teks apa pun di luar objek JSON.`
-
 	reqBody := groqRequest{
 		Model: c.model,
 		Messages: []groqMessage{
-			{Role: "system", Content: fullSystemPrompt + "\n\n" + systemPrompt},
+			{Role: "system", Content: systemPrompt},
 			{Role: "user", Content: userPrompt},
 		},
-		Temperature:    0.2,
-		MaxTokens:      c.maxTokens,
-		ResponseFormat: map[string]string{"type": "json_object"},
+		Temperature: temperature,
+		MaxTokens:   c.maxTokens,
+	}
+
+	if jsonMode {
+		reqBody.ResponseFormat = map[string]string{"type": "json_object"}
 	}
 
 	body, err := json.Marshal(reqBody)
@@ -135,8 +109,11 @@ RULES:
 		return nil, err
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), c.timeout)
-	defer cancel()
+	if ctx == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), c.timeout)
+		defer cancel()
+	}
 
 	started := time.Now()
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/chat/completions", bytes.NewReader(body))
@@ -181,6 +158,40 @@ RULES:
 		TokenUsed:   &tokens,
 		LatencyMs:   &latency,
 	}, nil
+}
+
+// Analyze - panggil Groq dengan prompt analisis gizi siap pakai
+func (c *Client) Analyze(systemPrompt, userPrompt string) (*Result, error) {
+	fullSystemPrompt := `You are a nutrition analyst reviewing 24-hour food recall data from Indonesia.
+
+OUTPUT LANGUAGE: every human-readable string you produce (overall_message, description,
+ai_recommendation, recommended_foods, health_insight, suggested_activities) MUST be written
+in Bahasa Indonesia. Only the enum values below stay in English.
+
+REFERENCE (Angka Kecukupan Gizi, rata-rata dewasa Indonesia, per hari):
+energi 2150 kkal, protein 60 g, karbohidrat 320 g, lemak 65 g.
+Bandingkan daily_total terhadap angka ini. Toleransi +/-10% dihitung "good";
+di bawahnya "low"/"less", di atasnya "high"/"excess".
+
+Return ONLY valid JSON matching this schema:
+{
+  "overall_status": "good|less|excess",
+  "overall_message": "string",
+  "nutritional_analysis": [{"label":"Energi|Protein|Karbohidrat|Lemak","status":"low|partial|good|high","description":"string"}],
+  "ai_recommendation": "string",
+  "recommended_foods": ["string"],
+  "health_insight": {"title":"string","description":"string"},
+  "suggested_activities": ["string"]
+}
+
+RULES:
+- nutritional_analysis harus berisi tepat 4 item, satu untuk tiap label di atas, urut sesuai daftar.
+- recommended_foods: 3-5 nama makanan Indonesia yang benar-benar mudah didapat.
+- suggested_activities: 2-4 aktivitas fisik yang realistis.
+- Setiap description maksimal 2 kalimat. Jangan mengarang angka yang tidak ada di input.
+- Jangan menambahkan pagar markdown atau teks apa pun di luar objek JSON.`
+
+	return c.Complete(nil, fullSystemPrompt+"\n\n"+systemPrompt, userPrompt, 0.2, true)
 }
 
 // trimCodeFence - buang pembungkus markdown ```json ... ``` dari jawaban LLM supaya bisa di-parse sebagai JSON
