@@ -11,12 +11,16 @@ import (
 
 // Handler - HTTP handler AI
 type Handler struct {
-	service Service
+	service   Service
+	generator GeneratorService
 }
 
 // NewHandler - factory handler AI
-func NewHandler(service Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service Service, generator GeneratorService) *Handler {
+	return &Handler{
+		service:   service,
+		generator: generator,
+	}
 }
 
 // AskAssistant - POST /api/v1/ai/assistant
@@ -75,6 +79,72 @@ func (h *Handler) AnalyzeNutrition(c *gin.Context) {
 	})
 }
 
+// GetMissingFoods - GET /api/v1/admin/ai/missing-foods
+func (h *Handler) GetMissingFoods(c *gin.Context) {
+	result, err := h.generator.GetMissingFoodsSummary(c.Request.Context())
+	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   result,
+	})
+}
+
+// GenerateFoodAI - POST /api/v1/admin/ai/generate-food
+func (h *Handler) GenerateFoodAI(c *gin.Context) {
+	var req GenerateFoodAIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Data tidak valid: "+err.Error())
+		return
+	}
+
+	result, err := h.generator.GenerateFoodAI(c.Request.Context(), req)
+	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   result,
+	})
+}
+
+// PublishFoodAI - POST /api/v1/admin/ai/publish-food
+func (h *Handler) PublishFoodAI(c *gin.Context) {
+	var req PublishFoodAIRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, "Data tidak valid: "+err.Error())
+		return
+	}
+
+	result, err := h.generator.PublishFoodAI(c.Request.Context(), req)
+	if err != nil {
+		if appErr, ok := err.(*utils.AppError); ok {
+			utils.ErrorResponse(c, appErr.StatusCode, appErr.Code, appErr.Message)
+			return
+		}
+		utils.ErrorResponse(c, http.StatusInternalServerError, "INTERNAL_ERROR", err.Error())
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status": "success",
+		"data":   result,
+	})
+}
+
 // SetupRoutes - daftarkan route AI
 func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.HandlerFunc) {
 	aiGroup := router.Group("/ai")
@@ -84,5 +154,14 @@ func (h *Handler) SetupRoutes(router *gin.RouterGroup, authMiddleware gin.Handle
 
 		// Analisis gizi pasca-recall (harus login respondent)
 		aiGroup.POST("/nutrition-analysis", authMiddleware, middleware.RespondentOnly(), h.AnalyzeNutrition)
+	}
+
+	// Admin AI Endpoints (dilindungi auth + AdminOnly)
+	adminAI := router.Group("/admin/ai")
+	adminAI.Use(authMiddleware, middleware.AdminOnly())
+	{
+		adminAI.GET("/missing-foods", h.GetMissingFoods)
+		adminAI.POST("/generate-food", h.GenerateFoodAI)
+		adminAI.POST("/publish-food", h.PublishFoodAI)
 	}
 }

@@ -35,6 +35,11 @@ type Config struct {
 	GroqTimeoutSecs int
 	GroqMaxTokens   int
 
+	// Google Gemini & Imagen AI
+	GeminiAPIKey string
+	GeminiModel  string
+	ImagenModel  string
+
 	// JWT
 	JWTSecret              string
 	JWTExpiration          time.Duration
@@ -122,6 +127,11 @@ func load() *Config {
 		GroqBaseURL:     getEnv("GROQ_BASE_URL", "https://api.groq.com/openai/v1"),
 		GroqTimeoutSecs: parseInt(getEnv("GROQ_TIMEOUT_SECONDS", "45")),
 		GroqMaxTokens:   parseInt(getEnv("GROQ_MAX_TOKENS", "2048")),
+
+		// Gemini AI config
+		GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
+		GeminiModel:  getEnv("GEMINI_MODEL", "gemini-2.0-flash"),
+		ImagenModel:  getEnv("IMAGEN_MODEL", "imagen-3.0-generate-002"),
 
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),

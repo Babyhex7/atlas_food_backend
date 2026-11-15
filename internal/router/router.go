@@ -13,6 +13,7 @@ import (
 	"atlas_food/internal/domain/survey"
 	"atlas_food/internal/domain/upload"
 	"atlas_food/internal/infra/storage"
+	"atlas_food/internal/pkg/gemini"
 	"atlas_food/internal/pkg/groq"
 	"atlas_food/internal/pkg/middleware"
 	"log"
@@ -129,8 +130,10 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		// AI domain
 		aiRepo := ai.NewRepository(db)
 		groqClient := groq.NewClient(cfg.GroqAPIKey, cfg.GroqModel, cfg.GroqBaseURL, cfg.GroqTimeoutSecs, cfg.GroqMaxTokens)
+		geminiClient := gemini.NewClient(cfg.GeminiAPIKey, cfg.GeminiModel, cfg.ImagenModel)
 		aiService := ai.NewService(aiRepo, groqClient)
-		aiHandler := ai.NewHandler(aiService)
+		aiGeneratorSvc := ai.NewGeneratorService(db, geminiClient)
+		aiHandler := ai.NewHandler(aiService, aiGeneratorSvc)
 		aiHandler.SetupRoutes(v1, middleware.JWTAuth())
 
 		// Annotation domain (admin CMS)

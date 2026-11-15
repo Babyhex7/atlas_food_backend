@@ -29,8 +29,9 @@ type Food struct {
 	PhotoType   string    `gorm:"type:enum('series','range','guide');default:'series'" json:"photo_type"`
 	CategoryID  *string   `gorm:"type:char(36)" json:"category_id"`
 	Category    *Category `gorm:"foreignKey:CategoryID" json:"category,omitempty"`
-	IsActive    bool      `gorm:"default:true" json:"is_active"`
-	CreatedAt   time.Time `json:"created_at"`
+	IsActive      bool      `gorm:"default:true" json:"is_active"`
+	IsAiGenerated bool      `gorm:"default:false" json:"is_ai_generated"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // TableName - nama tabel di database untuk model Food
@@ -140,9 +141,10 @@ type AsServedImage struct {
 	ImageURL     string    `gorm:"type:varchar(500);not null" json:"image_url"`
 	ThumbnailURL string    `gorm:"type:varchar(500)" json:"thumbnail_url"`
 	WeightGram   float64   `gorm:"type:decimal(10,2);not null" json:"weight_gram"`
-	Description  string    `gorm:"type:varchar(255)" json:"description"`
-	DisplayOrder int       `gorm:"default:0" json:"display_order"`
-	CreatedAt    time.Time `json:"created_at"`
+	Description   string    `gorm:"type:varchar(255)" json:"description"`
+	DisplayOrder  int       `gorm:"default:0" json:"display_order"`
+	IsAiGenerated bool      `gorm:"default:false" json:"is_ai_generated"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // TableName - nama tabel di database untuk model AsServedImage

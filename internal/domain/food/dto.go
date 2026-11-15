@@ -59,6 +59,7 @@ type FoodResponse struct {
 	CategoryID    *string                   `json:"category_id"`
 	Category      *CategoryInfo             `json:"category,omitempty"`
 	IsActive      bool                      `json:"is_active"`
+	IsAiGenerated bool                      `json:"is_ai_generated"`
 	Nutrients     map[string]NutrientDetail `json:"nutrients"`
 	PortionPhotos []PortionPhoto            `json:"portion_photos,omitempty"`
 }
