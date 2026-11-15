@@ -3,7 +3,13 @@ global:
   evaluation_interval: 15s
 
 scrape_configs:
-  - job_name: 'atlas_food_backend'
+  # 1. Metrik Go Backend (Latency, Status Code, Goroutines, Memory)
+  - job_name: 'atlas_backend'
     metrics_path: '/metrics'
     static_configs:
-      - targets: ['backend:8080', 'host.docker.internal:8080']
+      - targets: ['backend:8080']
+
+  # 2. Metrik Server VPS (CPU, RAM, Disk, Network)
+  - job_name: 'vps_system'
+    static_configs:
+      - targets: ['node-exporter:9100']

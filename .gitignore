@@ -46,3 +46,8 @@
 # OS
 .DS_Store
 Thumbs.db
+
+# AI Agent Instructions
+agent.md
+AGENTS.md
+
