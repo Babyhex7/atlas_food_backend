@@ -297,13 +297,14 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 				continue
 			}
 			portionPhotoList = append(portionPhotoList, PortionPhoto{
-				ID:           p.ID,
-				Label:        p.Label,
-				ImageURL:     p.ImageURL,
-				ThumbnailURL: p.ThumbnailURL,
-				WeightGram:   p.WeightGram,
-				Description:  desc,
-				FoodImageID:  foodImageID,
+				ID:            p.ID,
+				Label:         p.Label,
+				ImageURL:      p.ImageURL,
+				ThumbnailURL:  p.ThumbnailURL,
+				WeightGram:    p.WeightGram,
+				Description:   desc,
+				IsAiGenerated: p.IsAiGenerated,
+				FoodImageID:   foodImageID,
 			})
 		}
 
@@ -314,6 +315,8 @@ func (h *PublicHandler) GetFoodDetail(c *gin.Context) {
 			LocalName:     food.LocalName,
 			Description:   food.Description,
 			PhotoType:     food.PhotoType,
+			IsActive:      food.IsActive,
+			IsAiGenerated: food.IsAiGenerated,
 			Nutrients:     nutrientMap,
 			PortionPhotos: portionPhotoList,
 		}

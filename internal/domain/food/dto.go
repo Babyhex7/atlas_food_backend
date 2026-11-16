@@ -66,12 +66,13 @@ type FoodResponse struct {
 
 // PortionPhoto - detail foto porsi untuk response public
 type PortionPhoto struct {
-	ID           string  `json:"id"`
-	Label        string  `json:"label"`
-	ImageURL     string  `json:"image_url"`
-	ThumbnailURL string  `json:"thumbnail_url"`
-	WeightGram   float64 `json:"weight_gram"`
-	Description  string  `json:"description"`
+	ID            string  `json:"id"`
+	Label         string  `json:"label"`
+	ImageURL      string  `json:"image_url"`
+	ThumbnailURL  string  `json:"thumbnail_url"`
+	WeightGram    float64 `json:"weight_gram"`
+	Description   string  `json:"description"`
+	IsAiGenerated bool    `json:"is_ai_generated"`
 	// FoodImageID - tautan ke food_images (anotasi published) bila ada
 	FoodImageID string `json:"food_image_id,omitempty"`
 }

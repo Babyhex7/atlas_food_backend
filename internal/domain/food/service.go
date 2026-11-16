@@ -156,12 +156,13 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 							thumbURL = img.ImageURL
 						}
 						portionPhotos = append(portionPhotos, PortionPhoto{
-							ID:           img.ID,
-							Label:        img.Label,
-							ImageURL:     img.ImageURL,
-							ThumbnailURL: thumbURL,
-							WeightGram:   img.WeightGram,
-							Description:  img.Description,
+							ID:            img.ID,
+							Label:         img.Label,
+							ImageURL:      img.ImageURL,
+							ThumbnailURL:  thumbURL,
+							WeightGram:    img.WeightGram,
+							Description:   img.Description,
+							IsAiGenerated: img.IsAiGenerated,
 						})
 					}
 					continue
@@ -205,6 +206,7 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 		CategoryID:    food.CategoryID,
 		Category:      categoryInfo,
 		IsActive:      food.IsActive,
+		IsAiGenerated: food.IsAiGenerated,
 		Nutrients:     nutrientMap,
 		PortionPhotos: portionPhotos,
 	}, nil
