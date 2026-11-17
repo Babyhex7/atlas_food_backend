@@ -599,7 +599,8 @@ func (r *foodRepository) SetAssociatedFoods(foodID string, items []AssociatedFoo
 	return r.GetAssociatedFoods(foodID)
 }
 
-// GetPrimaryImagesForFoods - Ambil URL foto representatif (thumbnail / image_url) untuk daftar foodID
+// GetPrimaryImagesForFoods - Ambil URL foto representatif (thumbnail / image_url) untuk daftar foodID.
+// Mengutamakan foto dengan porsi maksimal/penuh (display_order DESC, label DESC) agar thumbnail menampilkan makanan dengan piring penuh.
 func (r *foodRepository) GetPrimaryImagesForFoods(foodIDs []string) (map[string]string, error) {
 	if len(foodIDs) == 0 {
 		return map[string]string{}, nil
@@ -613,20 +614,21 @@ func (r *foodRepository) GetPrimaryImagesForFoods(foodIDs []string) (map[string]
 
 	var rows []Row
 	// Ambil dari as_served_images via as_served_sets
+	// Urutkan display_order DESC dan label DESC agar memilih foto porsi penuh (Porsi H/terbesar)
 	err := r.db.Table("as_served_sets ass").
 		Select("ass.food_id, asi.image_url, asi.thumbnail_url").
 		Joins("JOIN as_served_images asi ON asi.set_id = ass.id").
 		Where("ass.food_id IN (?)", foodIDs).
-		Order("asi.display_order ASC, asi.label ASC").
+		Order("asi.display_order DESC, asi.label DESC").
 		Scan(&rows).Error
 
 	result := make(map[string]string, len(foodIDs))
 	if err == nil {
 		for _, row := range rows {
 			if _, exists := result[row.FoodID]; !exists {
-				url := row.ThumbnailURL
+				url := row.ImageURL
 				if url == "" {
-					url = row.ImageURL
+					url = row.ThumbnailURL
 				}
 				if url != "" {
 					result[row.FoodID] = url
@@ -652,12 +654,13 @@ func (r *foodRepository) GetPrimaryImagesForFoods(foodIDs []string) (map[string]
 		_ = r.db.Table("food_images").
 			Select("primary_food_id, image_url, thumbnail_url").
 			Where("primary_food_id IN (?) AND status = 'published'", missing).
+			Order("created_at DESC").
 			Scan(&fiRows)
 		for _, fi := range fiRows {
 			if _, exists := result[fi.PrimaryFoodID]; !exists {
-				url := fi.ThumbnailURL
+				url := fi.ImageURL
 				if url == "" {
-					url = fi.ImageURL
+					url = fi.ThumbnailURL
 				}
 				if url != "" {
 					result[fi.PrimaryFoodID] = url

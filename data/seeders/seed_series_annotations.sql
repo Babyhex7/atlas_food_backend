@@ -1,528 +1,249 @@
-DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_A.jpg';
+-- Migration 014: Re-annotate series portion photos to plate polygon
+SET FOREIGN_KEY_CHECKS = 0;
 
+DELETE FROM food_areas WHERE food_image_id IN (SELECT id FROM food_images WHERE image_url LIKE '/uploads/atlas/%_%.jpg');
+DELETE FROM food_images WHERE image_url LIKE '/uploads/atlas/%_%.jpg';
+
+DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_A.jpg';
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7ac26b60-6c19-4651-8383-996e7c58b83d', 'Kacang Tanah Goreng - Porsi A (5g)', '/uploads/atlas/LN/LN-01_A.jpg', '/uploads/atlas/LN/LN-01_A.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('6cbf8e0f-0024-44e5-a6f4-98a3f281ebe2', '7ac26b60-6c19-4651-8383-996e7c58b83d', 'Kacang Tanah Goreng Porsi A', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 5, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('667185a2-cd9d-4877-9f0e-010178da1f60', 'Kacang Tanah Goreng - Porsi B (10g)', '/uploads/atlas/LN/LN-01_B.jpg', '/uploads/atlas/LN/LN-01_B.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('eed301ce-494f-48d1-9efb-a03769efba94', '667185a2-cd9d-4877-9f0e-010178da1f60', 'Kacang Tanah Goreng Porsi B', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 10, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('5a90100a-2663-4702-ad90-2aba2e838056', 'Kacang Tanah Goreng - Porsi C (30g)', '/uploads/atlas/LN/LN-01_C.jpg', '/uploads/atlas/LN/LN-01_C.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('1c13ea2e-cee6-448c-aa5c-89b8134cf985', '5a90100a-2663-4702-ad90-2aba2e838056', 'Kacang Tanah Goreng Porsi C', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 30, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('40f2b699-e868-42a4-803e-d662c3165df3', 'Kacang Tanah Goreng - Porsi D (50g)', '/uploads/atlas/LN/LN-01_D.jpg', '/uploads/atlas/LN/LN-01_D.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('5126e83d-0125-497f-9dea-2f454f12682d', '40f2b699-e868-42a4-803e-d662c3165df3', 'Kacang Tanah Goreng Porsi D', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 50, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('bf37b94d-534f-4cb6-b661-237f363cb350', 'Kacang Tanah Goreng - Porsi E (80g)', '/uploads/atlas/LN/LN-01_E.jpg', '/uploads/atlas/LN/LN-01_E.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('ce6895ab-0d6b-4e2e-8655-a4d17132a5f5', 'bf37b94d-534f-4cb6-b661-237f363cb350', 'Kacang Tanah Goreng Porsi E', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 80, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('a3e13176-bb11-4b3d-a277-77435a1c0b05', 'Kacang Tanah Goreng - Porsi F (100g)', '/uploads/atlas/LN/LN-01_F.jpg', '/uploads/atlas/LN/LN-01_F.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('70f2716b-0251-4b5c-b841-1cb65685cc0a', 'a3e13176-bb11-4b3d-a277-77435a1c0b05', 'Kacang Tanah Goreng Porsi F', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 100, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('3eab4072-05ea-4608-a444-c8d21dad348b', 'Kacang Tanah Goreng - Porsi G (110g)', '/uploads/atlas/LN/LN-01_G.jpg', '/uploads/atlas/LN/LN-01_G.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('db5c4b4f-1f12-4b63-ad2b-38116653cb0d', '3eab4072-05ea-4608-a444-c8d21dad348b', 'Kacang Tanah Goreng Porsi G', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 110, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('2218355d-223a-488f-9eb1-02584455128d', 'Kacang Tanah Goreng - Porsi H (140g)', '/uploads/atlas/LN/LN-01_H.jpg', '/uploads/atlas/LN/LN-01_H.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('da631a4c-9eb9-4fd8-b803-43533d6a3f80', '2218355d-223a-488f-9eb1-02584455128d', 'Kacang Tanah Goreng Porsi H', '47bc9580-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 140, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_A.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('64130d83-dff8-473a-b202-27638fc14bdb', 'Buncis Rebus - Porsi A (10g)', '/uploads/atlas/AS/AS-02_A.jpg', '/uploads/atlas/AS/AS-02_A.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('2d202ea8-8773-45be-a616-92a53b304ba1', '64130d83-dff8-473a-b202-27638fc14bdb', 'Buncis Rebus Porsi A', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 10, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7278647b-f53f-4a20-a093-6c613991cc13', 'Buncis Rebus - Porsi B (30g)', '/uploads/atlas/AS/AS-02_B.jpg', '/uploads/atlas/AS/AS-02_B.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('2cf27b20-0b75-4b7c-8961-8c0a623d3013', '7278647b-f53f-4a20-a093-6c613991cc13', 'Buncis Rebus Porsi B', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 30, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('78fc8003-7b57-4cd0-a307-1543cd6ff275', 'Buncis Rebus - Porsi C (40g)', '/uploads/atlas/AS/AS-02_C.jpg', '/uploads/atlas/AS/AS-02_C.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('313ac499-eb77-41ee-8c29-5e1cd875c788', '78fc8003-7b57-4cd0-a307-1543cd6ff275', 'Buncis Rebus Porsi C', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 40, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('a9e3973c-ca83-42ae-8b5a-950ffef74636', 'Buncis Rebus - Porsi D (50g)', '/uploads/atlas/AS/AS-02_D.jpg', '/uploads/atlas/AS/AS-02_D.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('c380625d-75cb-47ed-b010-31f98f554112', 'a9e3973c-ca83-42ae-8b5a-950ffef74636', 'Buncis Rebus Porsi D', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 50, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('c5e1d333-4f83-4755-9b42-db074da1c83b', 'Buncis Rebus - Porsi E (60g)', '/uploads/atlas/AS/AS-02_E.jpg', '/uploads/atlas/AS/AS-02_E.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('b761f2cc-56f6-4e2e-a3ee-2478b0057b02', 'c5e1d333-4f83-4755-9b42-db074da1c83b', 'Buncis Rebus Porsi E', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 60, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('5348acdc-2dc4-497d-adc2-38bf554a97cb', 'Buncis Rebus - Porsi F (80g)', '/uploads/atlas/AS/AS-02_F.jpg', '/uploads/atlas/AS/AS-02_F.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('893f6496-e2b5-4d23-b355-aa6cde418cd3', '5348acdc-2dc4-497d-adc2-38bf554a97cb', 'Buncis Rebus Porsi F', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 80, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7495880f-865c-4463-b4f1-3a650e232cf4', 'Buncis Rebus - Porsi G (100g)', '/uploads/atlas/AS/AS-02_G.jpg', '/uploads/atlas/AS/AS-02_G.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('9a41a5d0-dd7e-48e6-abae-8d87905908af', '7495880f-865c-4463-b4f1-3a650e232cf4', 'Buncis Rebus Porsi G', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 100, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-02_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('2b78bfdc-0bc8-40e8-bf7e-679468ecb603', 'Buncis Rebus - Porsi H (130g)', '/uploads/atlas/AS/AS-02_H.jpg', '/uploads/atlas/AS/AS-02_H.jpg', 1600, 900, 'published', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('4c4ff8d9-4e4c-4020-800f-0b50b3ffab4e', '2b78bfdc-0bc8-40e8-bf7e-679468ecb603', 'Buncis Rebus Porsi H', '47ad2a14-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 130, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_A.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('3d4bccb4-f565-4b31-b644-5aacd7da6b99', 'Kacang Panjang Rebus - Porsi A (10g)', '/uploads/atlas/AS/AS-04_A.jpg', '/uploads/atlas/AS/AS-04_A.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('c770d612-6cc2-4d42-a662-866a246d4c7c', '3d4bccb4-f565-4b31-b644-5aacd7da6b99', 'Kacang Panjang Rebus Porsi A', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 10, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('d17959f3-7403-400d-84d6-7444526abe77', 'Kacang Panjang Rebus - Porsi B (30g)', '/uploads/atlas/AS/AS-04_B.jpg', '/uploads/atlas/AS/AS-04_B.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('eafc4cf5-d089-4825-b428-d2bb6d9cb4ae', 'd17959f3-7403-400d-84d6-7444526abe77', 'Kacang Panjang Rebus Porsi B', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 30, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('2fec0e0f-394b-4718-94e7-703d408f14c9', 'Kacang Panjang Rebus - Porsi C (50g)', '/uploads/atlas/AS/AS-04_C.jpg', '/uploads/atlas/AS/AS-04_C.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('f05ad40c-b142-4c66-ac27-1689e7f06103', '2fec0e0f-394b-4718-94e7-703d408f14c9', 'Kacang Panjang Rebus Porsi C', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 50, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('104b7476-f479-4213-bd79-b4dfe661e52f', 'Kacang Panjang Rebus - Porsi D (70g)', '/uploads/atlas/AS/AS-04_D.jpg', '/uploads/atlas/AS/AS-04_D.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('a55e3b5c-5366-44ab-a6b6-e45b168f7ba2', '104b7476-f479-4213-bd79-b4dfe661e52f', 'Kacang Panjang Rebus Porsi D', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 70, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('91d72b92-3e37-410e-8527-661fc36d1c6c', 'Kacang Panjang Rebus - Porsi E (90g)', '/uploads/atlas/AS/AS-04_E.jpg', '/uploads/atlas/AS/AS-04_E.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('07cf6c15-4dd7-4e9b-92e1-fde7afb3fbf3', '91d72b92-3e37-410e-8527-661fc36d1c6c', 'Kacang Panjang Rebus Porsi E', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 90, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('95d11baa-ae8c-42e7-97b6-8068731a8f8c', 'Kacang Panjang Rebus - Porsi F (110g)', '/uploads/atlas/AS/AS-04_F.jpg', '/uploads/atlas/AS/AS-04_F.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('9f6b64e9-6bfa-4cf0-9e8d-408f17d9b4ce', '95d11baa-ae8c-42e7-97b6-8068731a8f8c', 'Kacang Panjang Rebus Porsi F', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 110, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('ef1b58d5-4b2a-4ab3-8f7a-c766c020fa6b', 'Kacang Panjang Rebus - Porsi G (130g)', '/uploads/atlas/AS/AS-04_G.jpg', '/uploads/atlas/AS/AS-04_G.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('d5143f83-137c-471f-833f-694f09b168d5', 'ef1b58d5-4b2a-4ab3-8f7a-c766c020fa6b', 'Kacang Panjang Rebus Porsi G', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 130, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-04_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('b7699961-885a-4dc6-a4a2-38cac821e538', 'Kacang Panjang Rebus - Porsi H (190g)', '/uploads/atlas/AS/AS-04_H.jpg', '/uploads/atlas/AS/AS-04_H.jpg', 1600, 900, 'published', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('0167084c-75b0-4544-b0a3-6c7deb92dffd', 'b7699961-885a-4dc6-a4a2-38cac821e538', 'Kacang Panjang Rebus Porsi H', '47ad7abe-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 190, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_A.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('8cc7cde5-4af9-4ca1-88da-8d939639b71d', 'Daun Singkong Rebus - Porsi A (20g)', '/uploads/atlas/AS/AS-05_A.jpg', '/uploads/atlas/AS/AS-05_A.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('fbfcbcc9-11b0-4fe4-a438-892ed7c99831', '8cc7cde5-4af9-4ca1-88da-8d939639b71d', 'Daun Singkong Rebus Porsi A', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 20, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7e1cbafa-8717-485c-94b6-0a9a4bbf1762', 'Daun Singkong Rebus - Porsi B (30g)', '/uploads/atlas/AS/AS-05_B.jpg', '/uploads/atlas/AS/AS-05_B.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('69510507-ac20-4c58-8c4c-83324c01ada4', '7e1cbafa-8717-485c-94b6-0a9a4bbf1762', 'Daun Singkong Rebus Porsi B', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 30, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('6d813152-0a38-47a0-9ac9-8c84db44063f', 'Daun Singkong Rebus - Porsi C (40g)', '/uploads/atlas/AS/AS-05_C.jpg', '/uploads/atlas/AS/AS-05_C.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('e89c7463-ae45-44a5-8df1-958c80efecea', '6d813152-0a38-47a0-9ac9-8c84db44063f', 'Daun Singkong Rebus Porsi C', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 40, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('f30a60b9-6dda-47ca-a64a-76df8c86524c', 'Daun Singkong Rebus - Porsi D (50g)', '/uploads/atlas/AS/AS-05_D.jpg', '/uploads/atlas/AS/AS-05_D.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('61648a1b-f592-451a-8dcc-26917d16f272', 'f30a60b9-6dda-47ca-a64a-76df8c86524c', 'Daun Singkong Rebus Porsi D', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 50, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('c47b8766-d170-488a-92c9-f346c7be8b50', 'Daun Singkong Rebus - Porsi E (60g)', '/uploads/atlas/AS/AS-05_E.jpg', '/uploads/atlas/AS/AS-05_E.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('1f54f592-99af-453b-a69a-2f309c0d678c', 'c47b8766-d170-488a-92c9-f346c7be8b50', 'Daun Singkong Rebus Porsi E', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 60, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('fc1a2996-979f-4545-9942-8b96638b386e', 'Daun Singkong Rebus - Porsi F (70g)', '/uploads/atlas/AS/AS-05_F.jpg', '/uploads/atlas/AS/AS-05_F.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('302ec486-1f86-4ccb-8bb5-659f96e3f638', 'fc1a2996-979f-4545-9942-8b96638b386e', 'Daun Singkong Rebus Porsi F', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 70, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('c0b6b471-2f80-4c9b-85c6-5b61184c1f2a', 'Daun Singkong Rebus - Porsi G (80g)', '/uploads/atlas/AS/AS-05_G.jpg', '/uploads/atlas/AS/AS-05_G.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('214d5efe-87ee-40be-afce-5b75aadb91af', 'c0b6b471-2f80-4c9b-85c6-5b61184c1f2a', 'Daun Singkong Rebus Porsi G', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 80, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-05_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('6e27a1de-7cc7-4cfc-a036-c72497bb0581', 'Daun Singkong Rebus - Porsi H (90g)', '/uploads/atlas/AS/AS-05_H.jpg', '/uploads/atlas/AS/AS-05_H.jpg', 1600, 900, 'published', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('7911421d-dae5-4aac-b610-c2176fe5746d', '6e27a1de-7cc7-4cfc-a036-c72497bb0581', 'Daun Singkong Rebus Porsi H', '47ad9b5c-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 90, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_A.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('47eb70bc-be9b-4de8-8930-59ab0c3f556a', 'Kangkung Rebus - Porsi A (10g)', '/uploads/atlas/AS/AS-07_A.jpg', '/uploads/atlas/AS/AS-07_A.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('e85eab2e-42c5-452c-8553-33dd21fd344c', '47eb70bc-be9b-4de8-8930-59ab0c3f556a', 'Kangkung Rebus Porsi A', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 10, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('e2455ad1-2a16-4033-bbc0-f60d94120419', 'Kangkung Rebus - Porsi B (30g)', '/uploads/atlas/AS/AS-07_B.jpg', '/uploads/atlas/AS/AS-07_B.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('b3704024-cb43-4abb-a2a6-89c2cc204d07', 'e2455ad1-2a16-4033-bbc0-f60d94120419', 'Kangkung Rebus Porsi B', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 30, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('71836d4a-a6bd-48e8-9f79-0317fa724644', 'Kangkung Rebus - Porsi C (40g)', '/uploads/atlas/AS/AS-07_C.jpg', '/uploads/atlas/AS/AS-07_C.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('4f6d9962-5f06-4800-8d01-38a9d5a61c13', '71836d4a-a6bd-48e8-9f79-0317fa724644', 'Kangkung Rebus Porsi C', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 40, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('0eff86bd-2a8a-4294-aa02-b9c4b14028ba', 'Kangkung Rebus - Porsi D (60g)', '/uploads/atlas/AS/AS-07_D.jpg', '/uploads/atlas/AS/AS-07_D.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('584184b2-bdd4-4e27-b5c0-778e37d0738c', '0eff86bd-2a8a-4294-aa02-b9c4b14028ba', 'Kangkung Rebus Porsi D', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 60, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('a3560a7b-0e8f-4ebb-b9a6-20a2b221cc58', 'Kangkung Rebus - Porsi E (80g)', '/uploads/atlas/AS/AS-07_E.jpg', '/uploads/atlas/AS/AS-07_E.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('fea921c9-eb89-450a-b0c5-cd4d83a4c74a', 'a3560a7b-0e8f-4ebb-b9a6-20a2b221cc58', 'Kangkung Rebus Porsi E', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 80, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('3c745fae-9bd5-48d5-8abf-8c80d69986d1', 'Kangkung Rebus - Porsi F (90g)', '/uploads/atlas/AS/AS-07_F.jpg', '/uploads/atlas/AS/AS-07_F.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('df59c9ab-61fb-4b27-81d9-3eefe34824d2', '3c745fae-9bd5-48d5-8abf-8c80d69986d1', 'Kangkung Rebus Porsi F', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 90, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('5bac74b8-8ba2-448a-87a5-1714ae44a12c', 'Kangkung Rebus - Porsi G (100g)', '/uploads/atlas/AS/AS-07_G.jpg', '/uploads/atlas/AS/AS-07_G.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('2da4b95b-411a-44b0-9b0d-13e780ec125c', '5bac74b8-8ba2-448a-87a5-1714ae44a12c', 'Kangkung Rebus Porsi G', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 100, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-07_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('fe76ecfe-5f75-4e5a-9826-2e262c75d84e', 'Kangkung Rebus - Porsi H (140g)', '/uploads/atlas/AS/AS-07_H.jpg', '/uploads/atlas/AS/AS-07_H.jpg', 1600, 900, 'published', '47addb3a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('ca87594a-e3e2-46b4-8263-f8b83b269390', 'fe76ecfe-5f75-4e5a-9826-2e262c75d84e', 'Kangkung Rebus Porsi H', '47addb3a-cfaf-11f1-ab66-664527f556d1', '[[1045, 516], [1037, 577], [1013, 636], [973, 690], [921, 738], [856, 777], [783, 806], [703, 824], [620, 830], [537, 824], [457, 806], [384, 777], [319, 738], [267, 690], [227, 636], [203, 577], [195, 516], [203, 455], [227, 396], [267, 342], [319, 294], [384, 255], [457, 226], [537, 208], [620, 202], [703, 208], [783, 226], [856, 255], [921, 294], [973, 342], [1013, 396], [1037, 455]]', 1, 140, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_A.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7aa97984-46e6-4723-ab34-604b4a6250a7', 'Wortel Rebus - Porsi A (10g)', '/uploads/atlas/AS/AS-35_A.jpg', '/uploads/atlas/AS/AS-35_A.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('26ff0c8d-4897-4785-a1ce-6f0502b6f2f3', '7aa97984-46e6-4723-ab34-604b4a6250a7', 'Wortel Rebus Porsi A', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 10, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_B.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('b84327d1-6e77-4d21-bbb3-31c46f3b9383', 'Wortel Rebus - Porsi B (20g)', '/uploads/atlas/AS/AS-35_B.jpg', '/uploads/atlas/AS/AS-35_B.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('03f2c909-778e-436f-aaf0-10c9d9d54393', 'b84327d1-6e77-4d21-bbb3-31c46f3b9383', 'Wortel Rebus Porsi B', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 20, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_C.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('c6fae6b5-1627-4ba5-b8ad-7f9721128170', 'Wortel Rebus - Porsi C (40g)', '/uploads/atlas/AS/AS-35_C.jpg', '/uploads/atlas/AS/AS-35_C.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('572ad914-2a0c-442d-b8b5-3375dedbf835', 'c6fae6b5-1627-4ba5-b8ad-7f9721128170', 'Wortel Rebus Porsi C', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 40, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_D.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('3ce625b2-2bf5-46fa-9191-9e5a1562c5c8', 'Wortel Rebus - Porsi D (50g)', '/uploads/atlas/AS/AS-35_D.jpg', '/uploads/atlas/AS/AS-35_D.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('ef4fe6d8-56a7-4e58-b934-acf65b69e6e0', '3ce625b2-2bf5-46fa-9191-9e5a1562c5c8', 'Wortel Rebus Porsi D', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 50, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_E.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('6b9e2b35-6204-442f-acc1-61d39a7da942', 'Wortel Rebus - Porsi E (70g)', '/uploads/atlas/AS/AS-35_E.jpg', '/uploads/atlas/AS/AS-35_E.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('d7669516-510d-4612-9ca8-78b020c77a6c', '6b9e2b35-6204-442f-acc1-61d39a7da942', 'Wortel Rebus Porsi E', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 70, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_F.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('f76a304d-aec9-413b-84d7-ae30a7df0ccf', 'Wortel Rebus - Porsi F (80g)', '/uploads/atlas/AS/AS-35_F.jpg', '/uploads/atlas/AS/AS-35_F.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('032f25e8-e04d-4a10-a0b6-4a8f6b2d90b6', 'f76a304d-aec9-413b-84d7-ae30a7df0ccf', 'Wortel Rebus Porsi F', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 80, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_G.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('45a2dc8c-6b95-464b-bb75-99b41f590102', 'Wortel Rebus - Porsi G (100g)', '/uploads/atlas/AS/AS-35_G.jpg', '/uploads/atlas/AS/AS-35_G.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('492e7792-aa03-4225-a88c-415c2e97dfcc', '45a2dc8c-6b95-464b-bb75-99b41f590102', 'Wortel Rebus Porsi G', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 100, NOW(), NOW());
-      
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_H.jpg';
-
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('a0e6294c-6fa4-458f-85a6-653f8d77f0fe', 'Wortel Rebus - Porsi H (120g)', '/uploads/atlas/AS/AS-35_H.jpg', '/uploads/atlas/AS/AS-35_H.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
-      
-
-      
-
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('8e5d082b-1b93-4b09-b8ca-2d672409b9e9', 'a0e6294c-6fa4-458f-85a6-653f8d77f0fe', 'Wortel Rebus Porsi H', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 120, NOW(), NOW());
-      
+
+SET FOREIGN_KEY_CHECKS = 1;
+

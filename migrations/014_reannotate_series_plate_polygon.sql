@@ -1,4 +1,9 @@
 -- Migration 014: Re-annotate series portion photos to plate polygon
+SET FOREIGN_KEY_CHECKS = 0;
+
+DELETE FROM food_areas WHERE food_image_id IN (SELECT id FROM food_images WHERE image_url LIKE '/uploads/atlas/%_%.jpg');
+DELETE FROM food_images WHERE image_url LIKE '/uploads/atlas/%_%.jpg';
+
 DELETE FROM food_images WHERE image_url = '/uploads/atlas/LN/LN-01_A.jpg';
         INSERT INTO food_images (id, title, image_url, thumbnail_url, width, height, status, primary_food_id, created_by, published_at, created_at, updated_at)
         VALUES ('7ac26b60-6c19-4651-8383-996e7c58b83d', 'Kacang Tanah Goreng - Porsi A (5g)', '/uploads/atlas/LN/LN-01_A.jpg', '/uploads/atlas/LN/LN-01_A.jpg', 1600, 900, 'published', '47bc9580-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
@@ -239,3 +244,6 @@ DELETE FROM food_images WHERE image_url = '/uploads/atlas/AS/AS-35_H.jpg';
         VALUES ('a0e6294c-6fa4-458f-85a6-653f8d77f0fe', 'Wortel Rebus - Porsi H (120g)', '/uploads/atlas/AS/AS-35_H.jpg', '/uploads/atlas/AS/AS-35_H.jpg', 1600, 900, 'published', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '7ff4eb2c-1a20-4e8c-9542-43c1b204f91d', NOW(), NOW(), NOW());
         INSERT INTO food_areas (id, food_image_id, name, food_id, polygon, z_index, weight_gram, created_at, updated_at)
         VALUES ('8e5d082b-1b93-4b09-b8ca-2d672409b9e9', 'a0e6294c-6fa4-458f-85a6-653f8d77f0fe', 'Wortel Rebus Porsi H', '47b1f44a-cfaf-11f1-ab66-664527f556d1', '[[1130, 492], [1123, 547], [1101, 600], [1066, 649], [1019, 691], [961, 726], [895, 753], [824, 769], [750, 774], [676, 769], [605, 753], [539, 726], [481, 691], [434, 649], [399, 600], [377, 547], [370, 492], [377, 437], [399, 384], [434, 335], [481, 293], [539, 258], [605, 231], [676, 215], [750, 210], [824, 215], [895, 231], [961, 258], [1019, 293], [1066, 335], [1101, 384], [1123, 437]]', 1, 120, NOW(), NOW());
+
+SET FOREIGN_KEY_CHECKS = 1;
+
