@@ -1,6 +1,8 @@
 package survey
 
 import (
+	"time"
+
 	"gorm.io/gorm"
 )
 
@@ -97,12 +99,19 @@ func (r *surveyRepository) ListSurveys(createdBy string, page, limit int) ([]Sur
 	return surveys, total, err
 }
 
-// ListActiveSurveys - list surveys dengan status active
+// ListActiveSurveys - list surveys dengan status active dan dalam rentang waktu yang valid
 func (r *surveyRepository) ListActiveSurveys(page, limit int) ([]Survey, int64, error) {
 	var surveys []Survey
 	var total int64
 
-	query := r.db.Model(&Survey{}).Where("status = ?", "active")
+	now := time.Now()
+	todayStart := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	todayEnd := time.Date(now.Year(), now.Month(), now.Day(), 23, 59, 59, 999999999, now.Location())
+
+	query := r.db.Model(&Survey{}).
+		Where("status = ?", "active").
+		Where("start_date IS NULL OR start_date <= ?", todayEnd).
+		Where("end_date IS NULL OR end_date >= ?", todayStart)
 
 	// Hitung total
 	query.Count(&total)

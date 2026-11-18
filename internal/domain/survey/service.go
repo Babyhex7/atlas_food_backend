@@ -442,11 +442,17 @@ func (s *surveyService) AccessSurvey(req AccessSurveyRequest, userID *string) (*
 
 	// Cek tanggal
 	now := time.Now()
-	if survey.StartDate != nil && now.Before(*survey.StartDate) {
-		return nil, utils.NewAppError(403, "SURVEY_NOT_STARTED", "Survey belum dimulai")
+	if survey.StartDate != nil {
+		startDate := time.Date(survey.StartDate.Year(), survey.StartDate.Month(), survey.StartDate.Day(), 0, 0, 0, 0, now.Location())
+		if now.Before(startDate) {
+			return nil, utils.NewAppError(403, "SURVEY_NOT_STARTED", "Survey belum dimulai")
+		}
 	}
-	if survey.EndDate != nil && now.After(*survey.EndDate) {
-		return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
+	if survey.EndDate != nil {
+		endDate := time.Date(survey.EndDate.Year(), survey.EndDate.Month(), survey.EndDate.Day(), 23, 59, 59, 999999999, now.Location())
+		if now.After(endDate) {
+			return nil, utils.NewAppError(403, "SURVEY_ENDED", "Survey sudah berakhir")
+		}
 	}
 
 	// Alias dari profil / request — semua responden join survey yang sama
