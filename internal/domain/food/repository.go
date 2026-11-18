@@ -619,7 +619,7 @@ func (r *foodRepository) GetPrimaryImagesForFoods(foodIDs []string) (map[string]
 		Select("ass.food_id, asi.image_url, asi.thumbnail_url").
 		Joins("JOIN as_served_images asi ON asi.set_id = ass.id").
 		Where("ass.food_id IN (?)", foodIDs).
-		Order("asi.display_order DESC, asi.label DESC").
+		Order("asi.weight_gram DESC, asi.display_order DESC, asi.label DESC").
 		Scan(&rows).Error
 
 	result := make(map[string]string, len(foodIDs))
