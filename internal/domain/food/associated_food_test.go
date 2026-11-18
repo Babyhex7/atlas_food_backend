@@ -10,11 +10,12 @@ import (
 
 func TestAssociatedFoodRepositoryAndService(t *testing.T) {
 	cfg := config.Load()
-	db := config.InitDB(cfg)
-	if db == nil {
+	db, err := config.InitDBWithError(cfg)
+	if err != nil || db == nil {
 		t.Skip("MySQL database tidak tersedia, lewati integrasi DB test")
 		return
 	}
+	_ = db.AutoMigrate(&Food{}, &AssociatedFood{})
 
 	repo := NewRepository(db)
 	svc := NewService(repo, nil)

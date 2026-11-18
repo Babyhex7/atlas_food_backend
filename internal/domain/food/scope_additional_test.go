@@ -25,8 +25,8 @@ func TestGenerateSearchCacheKeyScope(t *testing.T) {
 // TestSearchFoodsPublicScopeAdditional - verifikasi database: scope additional mengecualikan MP, AK, AMK, AH
 func TestSearchFoodsPublicScopeAdditional(t *testing.T) {
 	cfg := config.Load()
-	db := config.InitDB(cfg)
-	if db == nil {
+	db, err := config.InitDBWithError(cfg)
+	if err != nil || db == nil {
 		t.Skip("MySQL database tidak tersedia, lewati integrasi DB test")
 		return
 	}

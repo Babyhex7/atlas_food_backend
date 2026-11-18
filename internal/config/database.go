@@ -9,9 +9,9 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// InitDB - inisialisasi koneksi ke database MySQL
-// Mengembalikan pointer ke gorm.DB untuk digunakan di seluruh aplikasi
-func InitDB(cfg *Config) *gorm.DB {
+// InitDBWithError - inisialisasi koneksi ke database MySQL tanpa log.Fatalf,
+// aman digunakan di unit test yang berjalan di environment tanpa instance MySQL.
+func InitDBWithError(cfg *Config) (*gorm.DB, error) {
 	// Buat database otomatis jika belum ada (berguna saat first deploy di Railway/Cloud)
 	dsnRoot := fmt.Sprintf("%s:%s@tcp(%s:%s)/?charset=utf8mb4&parseTime=True&loc=Local&multiStatements=true",
 		cfg.DBUser,
@@ -43,13 +43,13 @@ func InitDB(cfg *Config) *gorm.DB {
 	// Buka koneksi database
 	db, err := gorm.Open(mysql.Open(dsn), gormConfig)
 	if err != nil {
-		log.Fatalf("Gagal koneksi ke database: %v", err)
+		return nil, fmt.Errorf("gagal koneksi ke database: %w", err)
 	}
 
 	// Test koneksi dengan mengambil SQL DB instance
 	sqlDB, err := db.DB()
 	if err != nil {
-		log.Fatalf("Gagal ambil SQL DB: %v", err)
+		return nil, fmt.Errorf("gagal ambil SQL DB: %w", err)
 	}
 
 	// Set connection pool settings
@@ -57,5 +57,15 @@ func InitDB(cfg *Config) *gorm.DB {
 	sqlDB.SetMaxOpenConns(100)
 
 	log.Println("Database berhasil terkoneksi")
+	return db, nil
+}
+
+// InitDB - inisialisasi koneksi ke database MySQL
+// Mengembalikan pointer ke gorm.DB untuk digunakan di seluruh aplikasi
+func InitDB(cfg *Config) *gorm.DB {
+	db, err := InitDBWithError(cfg)
+	if err != nil {
+		log.Fatalf("%v", err)
+	}
 	return db
 }
