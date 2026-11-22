@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"atlas_food/internal/infra/storage"
 	"atlas_food/internal/pkg/utils"
 	"net/http"
 
@@ -15,9 +16,9 @@ type Handler struct {
 
 // NewHandler - factory function untuk membuat handler
 // db: koneksi database GORM
-func NewHandler(db *gorm.DB) *Handler {
+func NewHandler(db *gorm.DB, storageSvc ...storage.Service) *Handler {
 	repo := NewRepository(db)
-	service := NewService(repo)
+	service := NewService(repo, storageSvc...)
 	return &Handler{service: service}
 }
 

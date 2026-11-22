@@ -2,7 +2,9 @@ package auth
 
 import (
 	"atlas_food/internal/config"
+	"atlas_food/internal/infra/storage"
 	"atlas_food/internal/pkg/utils"
+	"context"
 	"errors"
 	"fmt"
 	"mime/multipart"
@@ -27,12 +29,17 @@ type Service interface {
 
 // authService - implementasi Service
 type authService struct {
-	repo Repository
+	repo    Repository
+	storage storage.Service
 }
 
 // NewService - factory function untuk membuat service
-func NewService(repo Repository) Service {
-	return &authService{repo: repo}
+func NewService(repo Repository, storageSvc ...storage.Service) Service {
+	var s storage.Service
+	if len(storageSvc) > 0 {
+		s = storageSvc[0]
+	}
+	return &authService{repo: repo, storage: s}
 }
 
 // Register - daftarkan user baru
@@ -272,17 +279,11 @@ func (s *authService) UpdatePhoto(userID string, file *multipart.FileHeader) (*P
 	if ext != ".jpg" && ext != ".jpeg" && ext != ".png" && ext != ".webp" {
 		return nil, errors.New("format file tidak didukung (gunakan jpg, png, webp)")
 	}
-	if file.Size > 5*1024*1024 {
-		return nil, errors.New("ukuran file terlalu besar (max 5MB)")
-	}
-
-	uploadDir := filepath.Join("uploads", "profile")
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.MkdirAll(uploadDir, 0755)
+	if file.Size > 10*1024*1024 {
+		return nil, errors.New("ukuran file terlalu besar (max 10MB)")
 	}
 
 	filename := fmt.Sprintf("%s%s", uuid.New().String(), ext)
-	fullPath := filepath.Join(uploadDir, filename)
 
 	src, err := file.Open()
 	if err != nil {
@@ -290,25 +291,43 @@ func (s *authService) UpdatePhoto(userID string, file *multipart.FileHeader) (*P
 	}
 	defer src.Close()
 
-	dst, err := os.Create(fullPath)
-	if err != nil {
-		return nil, errors.New("gagal menyimpan file")
-	}
-	defer dst.Close()
+	var photoURL string
+	if s.storage != nil {
+		uploadedURL, err := s.storage.Upload(context.Background(), "uploads/profile", filename, src, file.Size, file.Header.Get("Content-Type"))
+		if err != nil {
+			return nil, fmt.Errorf("gagal menyimpan file ke storage: %w", err)
+		}
+		photoURL = uploadedURL
+	} else {
+		uploadDir := filepath.Join("uploads", "profile")
+		if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
+			os.MkdirAll(uploadDir, 0755)
+		}
+		fullPath := filepath.Join(uploadDir, filename)
+		dst, err := os.Create(fullPath)
+		if err != nil {
+			return nil, errors.New("gagal menyimpan file")
+		}
+		defer dst.Close()
 
-	if _, err := dst.ReadFrom(src); err != nil {
-		return nil, errors.New("gagal menyimpan file")
+		if _, err := dst.ReadFrom(src); err != nil {
+			return nil, errors.New("gagal menyimpan file")
+		}
+		photoURL = fmt.Sprintf("/uploads/profile/%s", filename)
 	}
 
 	// Hapus foto lama kalau ada
 	if user.PhotoURL != nil && *user.PhotoURL != "" {
-		oldPath := filepath.Join(".", *user.PhotoURL)
-		if _, statErr := os.Stat(oldPath); statErr == nil {
-			os.Remove(oldPath)
+		if s.storage != nil {
+			_ = s.storage.Delete(context.Background(), *user.PhotoURL)
+		} else {
+			oldPath := filepath.Join(".", *user.PhotoURL)
+			if _, statErr := os.Stat(oldPath); statErr == nil {
+				os.Remove(oldPath)
+			}
 		}
 	}
 
-	photoURL := fmt.Sprintf("/uploads/profile/%s", filename)
 	user.PhotoURL = &photoURL
 
 	if err := s.repo.UpdateUser(user); err != nil {

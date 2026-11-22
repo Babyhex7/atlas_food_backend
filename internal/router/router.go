@@ -96,8 +96,25 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		
 		// ======== AUTHENTICATED ROUTES ========
 		
+		// Storage & Upload domain
+		storageSvc, err := storage.NewService(storage.Config{
+			Driver:      cfg.StorageDriver,
+			UploadPath:  cfg.UploadPath,
+			Bucket:      cfg.StorageBucket,
+			Endpoint:    cfg.StorageEndpoint,
+			AccessKeyID: cfg.StorageAccessKeyID,
+			SecretKey:   cfg.StorageSecretKey,
+			PublicURL:   cfg.StoragePublicURL,
+			UseSSL:      cfg.StorageUseSSL,
+		})
+		if err != nil {
+			log.Printf("Peringatan: Gagal inisialisasi storage driver %s (%v), fallback ke local storage", cfg.StorageDriver, err)
+			storageSvc = storage.NewLocalStorage(cfg.UploadPath)
+		}
+		log.Printf("Storage service aktif: driver=%s bucket=%s", storageSvc.Driver(), cfg.StorageBucket)
+
 		// Auth routes
-		authHandler := auth.NewHandler(db)
+		authHandler := auth.NewHandler(db, storageSvc)
 		authGroup := v1.Group("/auth")
 		authGroup.Use(middleware.RateLimiter(30, time.Minute)) // 30 req/min per IP for Auth
 		{
@@ -139,23 +156,6 @@ func Setup(db *gorm.DB, cfg *config.Config, hub *collab.Hub) *gin.Engine {
 		// Annotation domain (admin CMS)
 		annotationHandler := annotation.NewHandler(annotationService)
 		annotationHandler.SetupRoutes(v1, middleware.JWTAuth())
-
-		// Storage & Upload domain
-		storageSvc, err := storage.NewService(storage.Config{
-			Driver:      cfg.StorageDriver,
-			UploadPath:  cfg.UploadPath,
-			Bucket:      cfg.StorageBucket,
-			Endpoint:    cfg.StorageEndpoint,
-			AccessKeyID: cfg.StorageAccessKeyID,
-			SecretKey:   cfg.StorageSecretKey,
-			PublicURL:   cfg.StoragePublicURL,
-			UseSSL:      cfg.StorageUseSSL,
-		})
-		if err != nil {
-			log.Printf("Peringatan: Gagal inisialisasi storage driver %s (%v), fallback ke local storage", cfg.StorageDriver, err)
-			storageSvc = storage.NewLocalStorage(cfg.UploadPath)
-		}
-		log.Printf("Storage service aktif: driver=%s bucket=%s", storageSvc.Driver(), cfg.StorageBucket)
 
 		uploadHandler := upload.NewHandler(cfg.UploadPath, storageSvc)
 		uploadHandler.SetupRoutes(v1, middleware.JWTAuth())
