@@ -111,6 +111,68 @@ func (s *foodService) ListFoodPhotos(foodID string) (*FoodPhotoListResponse, err
 		items = append(items, resp)
 	}
 
+	// Cek apakah ada foto as_served_images yang belum tercakup di items (self-healing / auto-bridge)
+	seenImageIDs := make(map[string]bool)
+	seenURLs := make(map[string]bool)
+	for _, it := range items {
+		seenImageIDs[it.ID] = true
+		if it.ImageURL != "" {
+			seenURLs[it.ImageURL] = true
+		}
+		if it.AsServedImageID != "" {
+			seenImageIDs[it.AsServedImageID] = true
+		}
+	}
+
+	if set != nil && set.ID != "" {
+		images, imgErr := s.repo.GetAsServedImagesBySetID(set.ID)
+		if imgErr == nil {
+			for _, img := range images {
+				if seenImageIDs[img.ID] || seenURLs[img.ImageURL] {
+					continue
+				}
+				fid := food.ID
+				title := fmt.Sprintf("%s - Porsi %s (%.1fg)", food.Name, img.Label, img.WeightGram)
+				thumb := img.ThumbnailURL
+				if thumb == "" {
+					thumb = img.ImageURL
+				}
+				authorID := "7d376cd7-d20c-11f1-b499-e2699381f9eb"
+				created, cErr := s.ann.Create(annotation.CreateFoodImageRequest{
+					Title:         title,
+					ImageURL:      img.ImageURL,
+					ThumbnailURL:  thumb,
+					Width:         1064,
+					Height:        598,
+					PrimaryFoodID: &fid,
+				}, authorID)
+				if cErr == nil && created != nil {
+					link := foodImageLink(created.ID)
+					_, _ = s.UpdateAsServedImage(img.ID, UpdateAsServedImageRequest{Description: &link})
+					seenImageIDs[created.ID] = true
+					seenURLs[img.ImageURL] = true
+
+					resp := FoodPhotoResponse{
+						ID:              created.ID,
+						Title:           created.Title,
+						Label:           img.Label,
+						ImageURL:        created.ImageURL,
+						ThumbnailURL:    created.ThumbnailURL,
+						Width:           created.Width,
+						Height:          created.Height,
+						Status:          created.Status,
+						AreasCount:      len(created.Areas),
+						WeightGram:      img.WeightGram,
+						AsServedImageID: img.ID,
+						DisplayOrder:    img.DisplayOrder,
+						UpdatedAt:       created.UpdatedAt.Format(time.RFC3339),
+					}
+					items = append(items, resp)
+				}
+			}
+		}
+	}
+
 	photoType := food.PhotoType
 	if photoType == "" {
 		photoType = "series"
