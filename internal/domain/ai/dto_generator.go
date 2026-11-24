@@ -36,6 +36,7 @@ type GenerateFoodAIResponse struct {
 	Description     string                 `json:"description"`
 	CategoryID      *string                `json:"category_id,omitempty"`
 	CategoryName    string                 `json:"category_name"`
+	PhotoType       string                 `json:"photo_type"` // series, range, guide
 	CaloriesPer100g float64                `json:"calories_per_100g"`
 	ProteinPer100g  float64                `json:"protein_per_100g"`
 	FatPer100g      float64                `json:"fat_per_100g"`
@@ -49,6 +50,7 @@ type PublishFoodAIRequest struct {
 	LocalName       string                 `json:"local_name"`
 	Description     string                 `json:"description"`
 	CategoryID      *string                `json:"category_id,omitempty"`
+	PhotoType       string                 `json:"photo_type"` // series, range, guide (default: series)
 	CaloriesPer100g float64                `json:"calories_per_100g"`
 	ProteinPer100g  float64                `json:"protein_per_100g"`
 	FatPer100g      float64                `json:"fat_per_100g"`

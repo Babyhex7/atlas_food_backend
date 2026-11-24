@@ -27,6 +27,7 @@ type FoodAIAnalysis struct {
 	LocalName       string           `json:"local_name"`
 	Description     string           `json:"description"`
 	CategoryName    string           `json:"category_name"`
+	PhotoType       string           `json:"photo_type"` // series, range, guide
 	CaloriesPer100g float64          `json:"calories_per_100g"`
 	ProteinPer100g  float64          `json:"protein_per_100g"`
 	FatPer100g      float64          `json:"fat_per_100g"`
@@ -86,12 +87,18 @@ Aturan Porsi:
 - Porsi C: Besar (mengisi ~75% piring 23cm)
 - Porsi D: Sangat Besar / Jumbo (mengisi ~95% piring 23cm membukit)
 
+Aturan Tipe Foto (photo_type):
+- "series": makanan olahan campur, hidangan berkuah, butiran, atau makanan yang disajikan dengan sendok/centong (contoh: nasi goreng, capcay, seblak, kolak, bubur, sup).
+- "range": bahan tunggal alami atau makanan satuan yang disajikan utuh dan memiliki variasi ukuran fisik kecil/sedang/besar (contoh: ikan kembung/lele ekoran, pisang, paha ayam, tempe/tahu satuan).
+- "guide": makanan yang memiliki beragam variasi bentuk potongan geometris (dadu, kipas, balok) atau aneka varian berbeda dalam 1 kategori (contoh: pepaya potong aneka bentuk, aneka kerupuk, aneka biskuit).
+
 Format Output WAJIB JSON persis seperti ini tanpa markdown tambahan:
 {
   "food_name": "Nama Baku",
   "local_name": "Nama Daerah / Populer",
   "description": "Deskripsi singkat komposisi bahan utama",
   "category_name": "Makanan Pokok / Lauk Hewani / Lauk Nabati / Sayuran / Buah / Snack / Minuman",
+  "photo_type": "series / range / guide",
   "calories_per_100g": 180.5,
   "protein_per_100g": 15.2,
   "fat_per_100g": 8.4,
@@ -288,6 +295,13 @@ func (c *Client) fallbackEstimation(foodName, description string) *FoodAIAnalysi
 		baseWeight = 200.0
 	}
 
+	photoType := "series"
+	if strings.Contains(nameLower, "ikan") || strings.Contains(nameLower, "pisang") || strings.Contains(nameLower, "paha") || strings.Contains(nameLower, "ayam goreng") || strings.Contains(nameLower, "telur") {
+		photoType = "range"
+	} else if strings.Contains(nameLower, "potong") || strings.Contains(nameLower, "kerupuk") || strings.Contains(nameLower, "biskuit") || strings.Contains(nameLower, "kue") {
+		photoType = "guide"
+	}
+
 	wA := baseWeight * 0.6
 	wB := baseWeight * 1.0
 	wC := baseWeight * 1.6
@@ -302,6 +316,7 @@ func (c *Client) fallbackEstimation(foodName, description string) *FoodAIAnalysi
 		LocalName:       foodName,
 		Description:     description,
 		CategoryName:    category,
+		PhotoType:       photoType,
 		CaloriesPer100g: cal,
 		ProteinPer100g:  prot,
 		FatPer100g:      fat,

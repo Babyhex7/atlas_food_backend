@@ -137,36 +137,45 @@ func (s *foodService) GetFoodDetail(id string) (*FoodResponse, error) {
 
 	for _, m := range methods {
 		var configData struct {
-			WeightGram    float64 `json:"weight_gram"`
-			ThumbnailURL  string  `json:"thumbnail_url"`
-			SetCode       string  `json:"setCode"`
-			SelectionType string  `json:"selectionType"`
+			WeightGram     float64 `json:"weight_gram"`
+			ThumbnailURL   string  `json:"thumbnail_url"`
+			SetCode        string  `json:"setCode"`
+			AsServedSetID  string  `json:"as_served_set_id"`
+			SelectionType  string  `json:"selectionType"`
 		}
 		_ = json.Unmarshal([]byte(m.Config), &configData)
 
-		// If as_served method with setCode, resolve AsServedSet → AsServedImages
-		if m.MethodType == "as_served" && configData.SetCode != "" {
-			set, setErr := s.repo.GetAsServedSetByCode(configData.SetCode)
-			if setErr == nil {
-				images, imgErr := s.repo.GetAsServedImagesBySetID(set.ID)
-				if imgErr == nil && len(images) > 0 {
-					for _, img := range images {
-						thumbURL := img.ThumbnailURL
-						if thumbURL == "" {
-							thumbURL = img.ImageURL
-						}
-						portionPhotos = append(portionPhotos, PortionPhoto{
-							ID:            img.ID,
-							Label:         img.Label,
-							ImageURL:      img.ImageURL,
-							ThumbnailURL:  thumbURL,
-							WeightGram:    img.WeightGram,
-							Description:   img.Description,
-							IsAiGenerated: img.IsAiGenerated,
-						})
-					}
-					continue
+		// If as_served method with setCode or as_served_set_id, resolve AsServedSet → AsServedImages
+		if m.MethodType == "as_served" {
+			var images []AsServedImage
+			var imgErr error
+
+			if configData.AsServedSetID != "" {
+				images, imgErr = s.repo.GetAsServedImagesBySetID(configData.AsServedSetID)
+			} else if configData.SetCode != "" {
+				set, setErr := s.repo.GetAsServedSetByCode(configData.SetCode)
+				if setErr == nil {
+					images, imgErr = s.repo.GetAsServedImagesBySetID(set.ID)
 				}
+			}
+
+			if imgErr == nil && len(images) > 0 {
+				for _, img := range images {
+					thumbURL := img.ThumbnailURL
+					if thumbURL == "" {
+						thumbURL = img.ImageURL
+					}
+					portionPhotos = append(portionPhotos, PortionPhoto{
+						ID:            img.ID,
+						Label:         img.Label,
+						ImageURL:      img.ImageURL,
+						ThumbnailURL:  thumbURL,
+						WeightGram:    img.WeightGram,
+						Description:   img.Description,
+						IsAiGenerated: img.IsAiGenerated,
+					})
+				}
+				continue
 			}
 		}
 

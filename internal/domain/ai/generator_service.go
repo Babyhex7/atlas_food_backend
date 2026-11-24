@@ -183,6 +183,7 @@ func (s *generatorService) GenerateFoodAI(ctx context.Context, req GenerateFoodA
 		Description:     analysis.Description,
 		CategoryID:      catID,
 		CategoryName:    analysis.CategoryName,
+		PhotoType:       analysis.PhotoType,
 		CaloriesPer100g: analysis.CaloriesPer100g,
 		ProteinPer100g:  analysis.ProteinPer100g,
 		FatPer100g:      analysis.FatPer100g,
@@ -202,6 +203,12 @@ func (s *generatorService) PublishFoodAI(ctx context.Context, req PublishFoodAIR
 
 	var foodID, foodCode, setID string
 
+	// Validasi & fallback photo_type (series, range, guide)
+	photoType := strings.ToLower(strings.TrimSpace(req.PhotoType))
+	if photoType != "range" && photoType != "guide" {
+		photoType = "series"
+	}
+
 	// Jalankan transaksi database
 	err := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		foodID = uuid.New().String()
@@ -216,7 +223,7 @@ func (s *generatorService) PublishFoodAI(ctx context.Context, req PublishFoodAIR
 			Name:          req.FoodName,
 			LocalName:     req.LocalName,
 			Description:   req.Description,
-			PhotoType:     "series",
+			PhotoType:     photoType,
 			CategoryID:    req.CategoryID,
 			IsActive:      true,
 			IsAiGenerated: true,
@@ -296,6 +303,8 @@ func (s *generatorService) PublishFoodAI(ctx context.Context, req PublishFoodAIR
 		// 5. Insert ke food_portion_size_methods
 		configJSON, _ := json.Marshal(map[string]interface{}{
 			"as_served_set_id": setID,
+			"setCode":          setCode,
+			"set_code":         setCode,
 		})
 		method := food.PortionSizeMethod{
 			FoodID:       foodID,
