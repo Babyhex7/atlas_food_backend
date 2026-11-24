@@ -51,6 +51,13 @@ Thumbs.db
 agent.md
 AGENTS.md
 
-# Scripts temp
-scripts/drive_downloads/
+# Scripts temp & local helpers
+scripts/*_downloads/
+scripts/*.jpg
+scripts/*.png
+scripts/vps_*.py
+scripts/*_vps_*.py
+scripts/query_vps_*.py
+
+
 
