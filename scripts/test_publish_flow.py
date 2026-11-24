@@ -32,7 +32,8 @@ pub_payload = json.dumps({
     'protein_per_100g': draft.get('protein_per_100g', 0),
     'fat_per_100g': draft.get('fat_per_100g', 0),
     'carbs_per_100g': draft.get('carbs_per_100g', 0),
-    'portions': draft.get('portions', [])
+    'portions': draft.get('portions', []),
+    'photo_type': draft.get('photo_type', 'series')
 }).encode('utf-8')
 
 req_pub = urllib.request.Request('https://atlasmakananku.id/api/v1/admin/ai/publish-food', data=pub_payload, headers={'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token})
@@ -59,7 +60,7 @@ req_detail = urllib.request.Request(f'https://atlasmakananku.id/api/v1/public/fo
 with urllib.request.urlopen(req_detail) as resp:
     food_detail = json.loads(resp.read().decode())['data']
     print(f"Detail Food Name: {food_detail.get('name')} | Photo Type: {food_detail.get('photo_type')}")
-    portions = food_detail.get('portions', [])
+    portions = food_detail.get('portion_photos', []) or food_detail.get('portions', [])
     print(f"Portions count: {len(portions)}")
     for p in portions:
         print(f"  * Porsi {p.get('label')}: {p.get('weight_gram')}g")
