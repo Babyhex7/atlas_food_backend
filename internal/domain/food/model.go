@@ -104,8 +104,8 @@ type PortionSizeMethod struct {
 	MethodType   string    `gorm:"type:enum('as_served','guide_image','weight');not null" json:"method_type"`
 	Label        string    `gorm:"type:varchar(255);not null" json:"label"`
 	Description  string    `gorm:"type:varchar(255)" json:"description"`
-	ImageURL     string    `gorm:"type:varchar(500)" json:"image_url"`
-	ThumbnailURL string    `gorm:"type:varchar(500)" json:"thumbnail_url"`
+	ImageURL     string    `gorm:"type:mediumtext" json:"image_url"`
+	ThumbnailURL string    `gorm:"type:mediumtext" json:"thumbnail_url"`
 	Config       string    `gorm:"type:json" json:"config"` // JSON string
 	DisplayOrder int       `gorm:"default:0" json:"display_order"`
 	IsActive     bool      `gorm:"default:true" json:"is_active"`
@@ -138,8 +138,8 @@ type AsServedImage struct {
 	ID           string    `gorm:"type:char(36);primaryKey;default:(UUID())" json:"id"`
 	SetID        string    `gorm:"type:char(36);not null;index" json:"set_id"`
 	Label        string    `gorm:"type:varchar(50);not null" json:"label"`
-	ImageURL     string    `gorm:"type:varchar(500);not null" json:"image_url"`
-	ThumbnailURL string    `gorm:"type:varchar(500)" json:"thumbnail_url"`
+	ImageURL     string    `gorm:"type:mediumtext;not null" json:"image_url"`
+	ThumbnailURL string    `gorm:"type:mediumtext" json:"thumbnail_url"`
 	WeightGram   float64   `gorm:"type:decimal(10,2);not null" json:"weight_gram"`
 	Description   string    `gorm:"type:varchar(255)" json:"description"`
 	DisplayOrder  int       `gorm:"default:0" json:"display_order"`
