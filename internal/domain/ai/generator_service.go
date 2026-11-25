@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -146,22 +147,28 @@ func (s *generatorService) GenerateFoodAI(ctx context.Context, req GenerateFoodA
 		return nil, utils.NewAppError(http.StatusInternalServerError, "AI_ERROR", "Gagal memproses estimasi AI: "+err.Error())
 	}
 
-	// 2. Generate 4 gambar porsi (A, B, C, D)
-	portionViews := make([]GeneratedPortionView, 0, len(analysis.Portions))
-	for _, p := range analysis.Portions {
-		imgURL, imgErr := s.gemini.GeneratePortionImage(ctx, p.VisualPrompt, analysis.FoodName, p.Code, p.WeightGram)
-		if imgErr != nil || imgURL == "" {
-			imgURL = p.ImageURL
-		}
-		portionViews = append(portionViews, GeneratedPortionView{
-			Code:         p.Code,
-			Label:        p.Label,
-			WeightGram:   p.WeightGram,
-			Description:  p.Description,
-			VisualPrompt: p.VisualPrompt,
-			ImageURL:     imgURL,
-		})
+	// 2. Generate 4 gambar porsi (A, B, C, D) secara paralel agar cepat dan tidak timeout
+	portionViews := make([]GeneratedPortionView, len(analysis.Portions))
+	var wg sync.WaitGroup
+	for idx, p := range analysis.Portions {
+		wg.Add(1)
+		go func(i int, pc gemini.PortionConcept) {
+			defer wg.Done()
+			imgURL, imgErr := s.gemini.GeneratePortionImage(ctx, pc.VisualPrompt, analysis.FoodName, pc.Code, pc.WeightGram)
+			if imgErr != nil || imgURL == "" {
+				imgURL = pc.ImageURL
+			}
+			portionViews[i] = GeneratedPortionView{
+				Code:         pc.Code,
+				Label:        pc.Label,
+				WeightGram:   pc.WeightGram,
+				Description:  pc.Description,
+				VisualPrompt: pc.VisualPrompt,
+				ImageURL:     imgURL,
+			}
+		}(idx, p)
 	}
+	wg.Wait()
 
 	// 3. Match kategori jika belum ada ID
 	catID := req.CategoryID

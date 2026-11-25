@@ -6,8 +6,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -16,6 +18,7 @@ import (
 // Client - client untuk berinteraksi dengan Google Gemini dan Imagen API
 type Client struct {
 	apiKey      string
+	hfAPIKey    string
 	model       string
 	imagenModel string
 	httpClient  *http.Client
@@ -65,6 +68,7 @@ func NewClient(apiKey, model, imagenModel string) *Client {
 
 	return &Client{
 		apiKey:      apiKey,
+		hfAPIKey:    strings.TrimSpace(os.Getenv("HF_API_KEY")),
 		model:       model,
 		imagenModel: imagenModel,
 		httpClient:  &http.Client{Timeout: 45 * time.Second},
@@ -207,114 +211,209 @@ Format Output WAJIB JSON persis seperti ini tanpa markdown tambahan:
 	return &analysis, nil
 }
 
-// GeneratePortionImage - panggil Gemini/Imagen API untuk render gambar porsi atau hasilkan visual placeholder
+// GeneratePortionImage - panggil Gemini/Imagen API untuk render gambar porsi, fallback ke Pollinations gratis, lalu SVG placeholder
 func (c *Client) GeneratePortionImage(ctx context.Context, prompt, foodName, portionLabel string, weightGram float64) (string, error) {
-	if c.apiKey == "" {
-		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
-	}
-
-	// Jika model adalah Gemini native image (mis. gemini-3.1-flash-image / gemini-2.5-flash-image), gunakan :generateContent
-	if strings.HasPrefix(strings.ToLower(c.imagenModel), "gemini-") {
-		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.imagenModel, c.apiKey)
-		reqPayload := map[string]interface{}{
-			"contents": []map[string]interface{}{
-				{
-					"role":  "user",
-					"parts": []map[string]interface{}{{"text": prompt}},
+	if c.apiKey != "" {
+		// Jika model adalah Gemini native image (mis. gemini-3.1-flash-image), gunakan :generateContent
+		if strings.HasPrefix(strings.ToLower(c.imagenModel), "gemini-") {
+			endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.imagenModel, c.apiKey)
+			reqPayload := map[string]interface{}{
+				"contents": []map[string]interface{}{
+					{
+						"role":  "user",
+						"parts": []map[string]interface{}{{"text": prompt}},
+					},
 				},
-			},
-			"generationConfig": map[string]interface{}{
-				"responseModalities": []string{"IMAGE"},
-			},
-		}
-		jsonBytes, _ := json.Marshal(reqPayload)
-		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBytes))
-		if err != nil {
-			return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
-		}
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := c.httpClient.Do(req)
-		if err != nil || resp.StatusCode != http.StatusOK {
-			if resp != nil {
-				resp.Body.Close()
+				"generationConfig": map[string]interface{}{
+					"responseModalities": []string{"IMAGE"},
+				},
 			}
-			return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
-		}
-		defer resp.Body.Close()
-
-		bodyBytes, _ := io.ReadAll(resp.Body)
-		var gemImgResp struct {
-			Candidates []struct {
-				Content struct {
-					Parts []struct {
-						InlineData *struct {
-							MimeType string `json:"mimeType"`
-							Data     string `json:"data"`
-						} `json:"inlineData"`
-					} `json:"parts"`
-				} `json:"content"`
-			} `json:"candidates"`
-		}
-		if err := json.Unmarshal(bodyBytes, &gemImgResp); err == nil {
-			for _, cand := range gemImgResp.Candidates {
-				for _, part := range cand.Content.Parts {
-					if part.InlineData != nil && part.InlineData.Data != "" {
-						mime := part.InlineData.MimeType
-						if mime == "" {
-							mime = "image/jpeg"
+			jsonBytes, _ := json.Marshal(reqPayload)
+			req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonBytes))
+			if err == nil {
+				req.Header.Set("Content-Type", "application/json")
+				resp, err := c.httpClient.Do(req)
+				if err == nil {
+					if resp.StatusCode == http.StatusOK {
+						bodyBytes, _ := io.ReadAll(resp.Body)
+						resp.Body.Close()
+						var gemImgResp struct {
+							Candidates []struct {
+								Content struct {
+									Parts []struct {
+										InlineData *struct {
+											MimeType string `json:"mimeType"`
+											Data     string `json:"data"`
+										} `json:"inlineData"`
+									} `json:"parts"`
+								} `json:"content"`
+							} `json:"candidates"`
 						}
-						return fmt.Sprintf("data:%s;base64,%s", mime, part.InlineData.Data), nil
+						if err := json.Unmarshal(bodyBytes, &gemImgResp); err == nil {
+							for _, cand := range gemImgResp.Candidates {
+								for _, part := range cand.Content.Parts {
+									if part.InlineData != nil && part.InlineData.Data != "" {
+										mime := part.InlineData.MimeType
+										if mime == "" {
+											mime = "image/jpeg"
+										}
+										return fmt.Sprintf("data:%s;base64,%s", mime, part.InlineData.Data), nil
+									}
+								}
+							}
+						}
+					} else {
+						resp.Body.Close()
+					}
+				}
+			}
+		} else {
+			// Endpoint legacy Google Imagen :predict
+			endpoint := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:predict?key=%s", c.imagenModel, c.apiKey)
+			reqPayload := map[string]interface{}{
+				"instances": []map[string]interface{}{
+					{"prompt": prompt},
+				},
+				"parameters": map[string]interface{}{
+					"sampleCount":      1,
+					"aspectRatio":      "1:1",
+					"outputMimeType":   "image/jpeg",
+					"personGeneration": "dont_allow",
+					"safetySetting":    "block_medium_and_above",
+				},
+			}
+			jsonBytes, _ := json.Marshal(reqPayload)
+			req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonBytes))
+			if err == nil {
+				req.Header.Set("Content-Type", "application/json")
+				resp, err := c.httpClient.Do(req)
+				if err == nil {
+					if resp.StatusCode == http.StatusOK {
+						bodyBytes, _ := io.ReadAll(resp.Body)
+						resp.Body.Close()
+						var imagenResp struct {
+							Predictions []struct {
+								BytesBase64Encoded string `json:"bytesBase64Encoded"`
+							} `json:"predictions"`
+						}
+						if err := json.Unmarshal(bodyBytes, &imagenResp); err == nil && len(imagenResp.Predictions) > 0 && imagenResp.Predictions[0].BytesBase64Encoded != "" {
+							return fmt.Sprintf("data:image/jpeg;base64,%s", imagenResp.Predictions[0].BytesBase64Encoded), nil
+						}
+					} else {
+						resp.Body.Close()
 					}
 				}
 			}
 		}
-		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
 	}
 
-	// Fallback ke endpoint legacy Google Imagen :predict
-	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:predict?key=%s", c.imagenModel, c.apiKey)
-	reqPayload := map[string]interface{}{
-		"instances": []map[string]interface{}{
-			{"prompt": prompt},
-		},
-		"parameters": map[string]interface{}{
-			"sampleCount":      1,
-			"aspectRatio":      "1:1",
-			"outputMimeType":   "image/jpeg",
-			"personGeneration": "dont_allow",
-			"safetySetting":    "block_medium_and_above",
-		},
+	// Tier 2 Fallback: HuggingFace Inference Router (FLUX.1-schnell via fal-ai) jika HF_API_KEY tersedia
+	if c.hfAPIKey != "" {
+		if hfURL, err := c.generateHuggingFaceImage(ctx, prompt); err == nil && hfURL != "" {
+			return hfURL, nil
+		}
 	}
 
-	jsonBytes, _ := json.Marshal(reqPayload)
-	req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBytes))
+	// Tier 3 Fallback: Pollinations.ai
+	if polURL, err := c.generatePollinationsImage(ctx, prompt, portionLabel); err == nil && polURL != "" {
+		return polURL, nil
+	}
+
+	// Tier 4 Last-Resort Fallback: SVG piring standar
+	return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+}
+
+// generateHuggingFaceImage - generate foto JPEG via HuggingFace Inference Router (fal-ai/flux/schnell)
+func (c *Client) generateHuggingFaceImage(ctx context.Context, prompt string) (string, error) {
+	if strings.TrimSpace(prompt) == "" {
+		return "", fmt.Errorf("prompt kosong")
+	}
+	endpoint := "https://router.huggingface.co/fal-ai/fal-ai/flux/schnell"
+	payload := map[string]interface{}{
+		"prompt":     prompt,
+		"image_size": "square",
+	}
+	jsonBytes, _ := json.Marshal(payload)
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewBuffer(jsonBytes))
 	if err != nil {
-		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+		return "", err
 	}
+	req.Header.Set("Authorization", "Bearer "+c.hfAPIKey)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := c.httpClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
-		}
-		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("hf HTTP %d", resp.StatusCode)
+	}
+
+	ctype := strings.ToLower(resp.Header.Get("Content-Type"))
+	bodyBytes, err := io.ReadAll(io.LimitReader(resp.Body, 5*1024*1024))
+	if err != nil {
+		return "", err
+	}
+	if strings.HasPrefix(ctype, "image/") && len(bodyBytes) >= 1024 {
+		return fmt.Sprintf("data:%s;base64,%s", strings.Split(ctype, ";")[0], base64.StdEncoding.EncodeToString(bodyBytes)), nil
+	}
+
+	// Beberapa provider mengembalikan JSON { images: [{ url: "..." }] }
+	var falResp struct {
+		Images []struct {
+			URL string `json:"url"`
+		} `json:"images"`
+	}
+	if err := json.Unmarshal(bodyBytes, &falResp); err == nil && len(falResp.Images) > 0 && falResp.Images[0].URL != "" {
+		return falResp.Images[0].URL, nil
+	}
+	return "", fmt.Errorf("hf unexpected response")
+}
+
+// generatePollinationsImage - generate foto JPEG realistis gratis via image.pollinations.ai
+func (c *Client) generatePollinationsImage(ctx context.Context, prompt, portionLabel string) (string, error) {
+	if strings.TrimSpace(prompt) == "" {
+		return "", fmt.Errorf("prompt kosong")
+	}
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(prompt + ":" + portionLabel))
+	seed := h.Sum32() % 100000
+
+	imgURL := fmt.Sprintf(
+		"https://image.pollinations.ai/prompt/%s?width=512&height=512&nologo=true&seed=%d",
+		url.PathEscape(prompt),
+		seed,
+	)
+
+	req, err := http.NewRequestWithContext(ctx, "GET", imgURL, nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", "AtlasFood-AI/1.0")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
 	}
 	defer resp.Body.Close()
 
-	bodyBytes, _ := io.ReadAll(resp.Body)
-	var imagenResp struct {
-		Predictions []struct {
-			BytesBase64Encoded string `json:"bytesBase64Encoded"`
-		} `json:"predictions"`
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("pollinations HTTP %d", resp.StatusCode)
 	}
 
-	if err := json.Unmarshal(bodyBytes, &imagenResp); err == nil && len(imagenResp.Predictions) > 0 && imagenResp.Predictions[0].BytesBase64Encoded != "" {
-		return fmt.Sprintf("data:image/jpeg;base64,%s", imagenResp.Predictions[0].BytesBase64Encoded), nil
+	ctype := resp.Header.Get("Content-Type")
+	if !strings.HasPrefix(strings.ToLower(ctype), "image/") {
+		return "", fmt.Errorf("unexpected content-type: %s", ctype)
 	}
 
-	return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+	imgBytes, err := io.ReadAll(io.LimitReader(resp.Body, 5*1024*1024))
+	if err != nil || len(imgBytes) < 1024 {
+		return "", fmt.Errorf("invalid image payload")
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(imgBytes)
+	return fmt.Sprintf("data:%s;base64,%s", strings.Split(ctype, ";")[0], encoded), nil
 }
 
 func containsWord(haystack, word string) bool {
