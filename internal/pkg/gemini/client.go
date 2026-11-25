@@ -53,13 +53,13 @@ func NewClient(apiKey, model, imagenModel string) *Client {
 	if model == "" {
 		model = os.Getenv("GEMINI_MODEL")
 		if model == "" {
-			model = "gemini-2.0-flash"
+			model = "gemini-3.1-flash-lite"
 		}
 	}
 	if imagenModel == "" {
 		imagenModel = os.Getenv("IMAGEN_MODEL")
 		if imagenModel == "" {
-			imagenModel = "imagen-3.0-generate-002"
+			imagenModel = "gemini-3.1-flash-image"
 		}
 	}
 
@@ -207,24 +207,83 @@ Format Output WAJIB JSON persis seperti ini tanpa markdown tambahan:
 	return &analysis, nil
 }
 
-// GeneratePortionImage - panggil Google Imagen 3 untuk render gambar porsi atau hasilkan visual placeholder
+// GeneratePortionImage - panggil Gemini/Imagen API untuk render gambar porsi atau hasilkan visual placeholder
 func (c *Client) GeneratePortionImage(ctx context.Context, prompt, foodName, portionLabel string, weightGram float64) (string, error) {
 	if c.apiKey == "" {
 		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
 	}
 
-	// Request ke Google Imagen 3 API
+	// Jika model adalah Gemini native image (mis. gemini-3.1-flash-image / gemini-2.5-flash-image), gunakan :generateContent
+	if strings.HasPrefix(strings.ToLower(c.imagenModel), "gemini-") {
+		url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent?key=%s", c.imagenModel, c.apiKey)
+		reqPayload := map[string]interface{}{
+			"contents": []map[string]interface{}{
+				{
+					"role":  "user",
+					"parts": []map[string]interface{}{{"text": prompt}},
+				},
+			},
+			"generationConfig": map[string]interface{}{
+				"responseModalities": []string{"IMAGE"},
+			},
+		}
+		jsonBytes, _ := json.Marshal(reqPayload)
+		req, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewBuffer(jsonBytes))
+		if err != nil {
+			return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		resp, err := c.httpClient.Do(req)
+		if err != nil || resp.StatusCode != http.StatusOK {
+			if resp != nil {
+				resp.Body.Close()
+			}
+			return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+		}
+		defer resp.Body.Close()
+
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		var gemImgResp struct {
+			Candidates []struct {
+				Content struct {
+					Parts []struct {
+						InlineData *struct {
+							MimeType string `json:"mimeType"`
+							Data     string `json:"data"`
+						} `json:"inlineData"`
+					} `json:"parts"`
+				} `json:"content"`
+			} `json:"candidates"`
+		}
+		if err := json.Unmarshal(bodyBytes, &gemImgResp); err == nil {
+			for _, cand := range gemImgResp.Candidates {
+				for _, part := range cand.Content.Parts {
+					if part.InlineData != nil && part.InlineData.Data != "" {
+						mime := part.InlineData.MimeType
+						if mime == "" {
+							mime = "image/jpeg"
+						}
+						return fmt.Sprintf("data:%s;base64,%s", mime, part.InlineData.Data), nil
+					}
+				}
+			}
+		}
+		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+	}
+
+	// Fallback ke endpoint legacy Google Imagen :predict
 	url := fmt.Sprintf("https://generativelanguage.googleapis.com/v1beta/models/%s:predict?key=%s", c.imagenModel, c.apiKey)
 	reqPayload := map[string]interface{}{
 		"instances": []map[string]interface{}{
 			{"prompt": prompt},
 		},
 		"parameters": map[string]interface{}{
-			"sampleCount":         1,
-			"aspectRatio":         "1:1",
-			"outputMimeType":      "image/jpeg",
-			"personGeneration":    "dont_allow",
-			"safetySetting":       "block_medium_and_above",
+			"sampleCount":      1,
+			"aspectRatio":      "1:1",
+			"outputMimeType":   "image/jpeg",
+			"personGeneration": "dont_allow",
+			"safetySetting":    "block_medium_and_above",
 		},
 	}
 
@@ -237,6 +296,9 @@ func (c *Client) GeneratePortionImage(ctx context.Context, prompt, foodName, por
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
+		if resp != nil {
+			resp.Body.Close()
+		}
 		return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
 	}
 	defer resp.Body.Close()
@@ -253,6 +315,15 @@ func (c *Client) GeneratePortionImage(ctx context.Context, prompt, foodName, por
 	}
 
 	return generateSVGPlatePlaceholder(foodName, portionLabel, weightGram), nil
+}
+
+func containsWord(haystack, word string) bool {
+	for _, token := range strings.Fields(haystack) {
+		if strings.Trim(token, ".,!?()[]{}\"'") == word {
+			return true
+		}
+	}
+	return false
 }
 
 // fallbackEstimation - estimasi berbasis heuristik gizi jika API sedang offline / belum ada key
@@ -286,7 +357,7 @@ func (c *Client) fallbackEstimation(foodName, description string) *FoodAIAnalysi
 		fat = 8.5
 		carb = 11.0
 		baseWeight = 80.0
-	} else if strings.Contains(nameLower, "es") || strings.Contains(nameLower, "teh") || strings.Contains(nameLower, "jus") {
+	} else if containsWord(nameLower, "es") || containsWord(nameLower, "teh") || containsWord(nameLower, "jus") || containsWord(nameLower, "kopi") {
 		category = "Minuman"
 		cal = 90.0
 		prot = 0.5

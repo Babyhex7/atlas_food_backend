@@ -130,8 +130,8 @@ func load() *Config {
 
 		// Gemini AI config
 		GeminiAPIKey: getEnv("GEMINI_API_KEY", ""),
-		GeminiModel:  getEnv("GEMINI_MODEL", "gemini-2.0-flash"),
-		ImagenModel:  getEnv("IMAGEN_MODEL", "imagen-3.0-generate-002"),
+		GeminiModel:  getEnv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+		ImagenModel:  getEnv("IMAGEN_MODEL", "gemini-3.1-flash-image"),
 
 		// Upload config
 		UploadPath:    getEnv("UPLOAD_PATH", "./uploads"),

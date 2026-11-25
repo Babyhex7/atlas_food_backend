@@ -169,8 +169,33 @@ func (s *generatorService) GenerateFoodAI(ctx context.Context, req GenerateFoodA
 		var matchedCat struct {
 			ID string `gorm:"column:id"`
 		}
+		catKeywords := map[string]string{
+			"sayuran": "AS",
+			"sayur":   "AS",
+			"buah":    "AB",
+			"snack":   "AK",
+			"kue":     "AK",
+			"minuman": "AMK",
+			"pokok":   "MP",
+			"hewani":  "LH",
+			"nabati":  "LN",
+		}
+		catLower := strings.ToLower(strings.TrimSpace(analysis.CategoryName))
 		searchPattern := "%" + analysis.CategoryName + "%"
-		if err := s.db.WithContext(ctx).Table("categories").
+		codeHint := ""
+		for kw, code := range catKeywords {
+			if strings.Contains(catLower, kw) {
+				codeHint = code
+				break
+			}
+		}
+		if codeHint != "" {
+			if err := s.db.WithContext(ctx).Table("categories").
+				Where("code = ? OR name LIKE ?", codeHint, searchPattern).
+				First(&matchedCat).Error; err == nil && matchedCat.ID != "" {
+				catID = &matchedCat.ID
+			}
+		} else if err := s.db.WithContext(ctx).Table("categories").
 			Where("name LIKE ? OR code LIKE ?", searchPattern, searchPattern).
 			First(&matchedCat).Error; err == nil && matchedCat.ID != "" {
 			catID = &matchedCat.ID
